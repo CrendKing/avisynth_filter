@@ -1,1 +1,1 @@
-regsvr32 /s avisynth_filter.ax
+regsvr32 avisynth_filter.ax
