@@ -8,9 +8,10 @@ Because the filter has different internal implementation and logic, you may find
 
 ## Install
 
-* Unpack
-* Run install.bat to register the filter `avisynth_filter.ax`
-* Enable the filter `AviSynth Filter` in video player
+* Before anything, install [AviSynth+](https://github.com/AviSynth/AviSynthPlus/). Make sure `AviSynth.dll` is either in system directories or at the same directory of this filter.
+* Unpack the archive.
+* Run install.bat to register the filter `avisynth_filter.ax`.
+* Enable the filter `AviSynth Filter` in video player.
 
 ## Uninstall
 
