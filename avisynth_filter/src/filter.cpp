@@ -40,6 +40,8 @@ static constexpr REGPINTYPES IN_PIN_TYPE_REG[] = {
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P016 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_YUY2 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_UYVY },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_RGB24 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_RGB32 },
 };
 static constexpr UINT IN_PIN_TYPE_COUNT = sizeof(IN_PIN_TYPE_REG) / sizeof(IN_PIN_TYPE_REG[0]);
 
@@ -51,6 +53,8 @@ static constexpr REGPINTYPES OUT_PIN_TYPE_REG[] = {
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P010 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P016 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_YUY2 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_RGB24 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_RGB32 },
 };
 static constexpr UINT OUT_PIN_TYPE_COUNT = sizeof(OUT_PIN_TYPE_REG) / sizeof(OUT_PIN_TYPE_REG[0]);
 
@@ -330,7 +334,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
                     break;
                 }
             }
-        } else {
+        } else if (_avsEnv == nullptr) {
             for (const MediaTypeFormat &elem : _upstreamTypes) {
                 DeleteMediaType(elem.mediaType);
             }
@@ -440,9 +444,9 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         outProps.dwSampleFlags |= AM_SAMPLE_STOPVALID;
     }
 
-    // when lateness incurs, reset the avs time to resync
+    // our reference time is either too far behind the stream time or too far ahead, reset to resync
     // (either by skipping frame when late or serving duplicate frames when ahead)
-    if (_avsRefTime < 0 || m_itrLate != 0) {
+    if (_avsRefTime < streamTime || _avsRefTime > inProps.tStart) {
         _avsRefTime = inProps.tStart;
     }
 
@@ -456,7 +460,7 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     std::cout << "late: " << m_itrLate << " ";
     */
 
-    _bufferHandler.CreateFrame(inProps.tStart, inProps.pbBuffer, _inBitmapInfo->biWidth, _avsEnv);
+    _bufferHandler.CreateFrame(inProps.tStart, inProps.pbBuffer, _inBitmapInfo->biWidth, _inBitmapInfo->biHeight, _avsEnv);
 
     AVS_VideoFrame *clipFrame;
     while (true) {
@@ -483,7 +487,7 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 
         BYTE *destBuf;
         CheckHr(extraSample->GetPointer(&destBuf));
-        _bufferHandler.WriteSample(clipFrame, destBuf, _outBitmapInfo->biWidth, _avsEnv);
+        _bufferHandler.WriteSample(clipFrame, destBuf, _outBitmapInfo->biWidth, _outBitmapInfo->biHeight, _avsEnv);
         avs_release_frame(clipFrame);
 
         CheckHr(m_pOutput->Deliver(extraSample));
@@ -493,7 +497,7 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     CheckHr(pOut2->SetProperties(FIELD_OFFSET(AM_SAMPLE2_PROPERTIES, pbBuffer), reinterpret_cast<BYTE *>(&outProps)));
     pOut2->Release();
 
-    _bufferHandler.WriteSample(clipFrame, outProps.pbBuffer, _outBitmapInfo->biWidth, _avsEnv);
+    _bufferHandler.WriteSample(clipFrame, outProps.pbBuffer, _outBitmapInfo->biWidth, _outBitmapInfo->biHeight, _avsEnv);
     avs_release_frame(clipFrame);
 
     _bufferHandler.GarbageCollect(streamTime);

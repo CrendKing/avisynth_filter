@@ -10,7 +10,7 @@ public:
         int avs;
         const CLSID &output;
         uint8_t bitsPerPixel;
-        uint8_t yPixelSize;  // in bytes
+        uint8_t yPixelSize;  // in bytes. 1 for 8-bit, 2 for 16-bit, etc
         uint8_t unitSizePerPixel;
     };
 

@@ -50,23 +50,23 @@ auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> AVS_VideoFrame 
 x unit stride means the stride has x * 1 bytes. For word-sized buffers (10-bit, 16-bit, etc), x unit stride means x * 2 bytes.
 */
 
-auto BufferHandler::CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, AVS_ScriptEnvironment *avsEnv) -> void {
+auto BufferHandler::CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, long height, AVS_ScriptEnvironment *avsEnv) -> void {
     AVS_VideoFrame *frame = avs_new_video_frame(avsEnv, _videoInfo);
 
-    BYTE *dstSlices[] = { avs_get_write_ptr_p(frame, AVS_PLANAR_Y), avs_get_write_ptr_p(frame, AVS_PLANAR_U), avs_get_write_ptr_p(frame, AVS_PLANAR_V) };
-    const int dstStrides[] = { avs_get_pitch_p(frame, AVS_PLANAR_Y), avs_get_pitch_p(frame, AVS_PLANAR_U) };
+    BYTE *dstSlices[] = { avs_get_write_ptr_p(frame, 0), avs_get_write_ptr_p(frame, AVS_PLANAR_U), avs_get_write_ptr_p(frame, AVS_PLANAR_V) };
+    const int dstStrides[] = { avs_get_pitch_p(frame, 0), avs_get_pitch_p(frame, AVS_PLANAR_U) };
 
-    Format::CopyFromInput(_formatIndex, srcBuffer, srcUnitStride, dstSlices, dstStrides, _videoInfo->width, _videoInfo->height, avsEnv);
+    Format::CopyFromInput(_formatIndex, srcBuffer, srcUnitStride, dstSlices, dstStrides, _videoInfo->width, height, avsEnv);
 
     std::lock_guard<std::shared_mutex> lock(_mutex);
     _frameBuffer.emplace_front(FrameInfo { frameTime, frame });
 }
 
-auto BufferHandler::WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride, AVS_ScriptEnvironment *avsEnv) const -> void {
+auto BufferHandler::WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride, long height, AVS_ScriptEnvironment *avsEnv) const -> void {
     const BYTE *srcSlices[] = { avs_get_read_ptr_p(srcFrame, AVS_PLANAR_Y), avs_get_read_ptr_p(srcFrame, AVS_PLANAR_U), avs_get_read_ptr_p(srcFrame, AVS_PLANAR_V) };
     const int srcStrides[] = { avs_get_pitch_p(srcFrame, AVS_PLANAR_Y), avs_get_pitch_p(srcFrame, AVS_PLANAR_U) };
 
-    Format::CopyToOutput(_formatIndex, srcSlices, srcStrides, dstBuffer, dstUnitStride, _videoInfo->width, _videoInfo->height, avsEnv);
+    Format::CopyToOutput(_formatIndex, srcSlices, srcStrides, dstBuffer, dstUnitStride, _videoInfo->width, height, avsEnv);
 }
 
 auto BufferHandler::GarbageCollect(REFERENCE_TIME streamTime) -> void {
