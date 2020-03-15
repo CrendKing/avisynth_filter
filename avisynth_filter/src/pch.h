@@ -8,6 +8,7 @@
 #include <commdlg.h>
 #include <cguid.h>
 #include <initguid.h>
+#include <shellapi.h>
 
 // baseclasses
 #include <streams.h>

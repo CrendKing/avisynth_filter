@@ -64,6 +64,10 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
                     m_pPageSite->OnStatusChange(PROPPAGESTATUS_DIRTY);
                 }
             }
+        } else if (LOWORD(wParam) == IDC_BUTTON_EDIT && HIWORD(wParam) == BN_CLICKED && !_avsFileValue.empty()) {
+            ShellExecute(hwnd, "edit", _avsFileValue.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+        } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD && HIWORD(wParam) == BN_CLICKED) {
+            _avsFileInterface->ReloadAvsFile();
         } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE && HIWORD(wParam) == BN_CLICKED) {
             char szFile[MAX_PATH] {};
 
@@ -77,8 +81,6 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
             if (GetOpenFileName(&ofn) == TRUE) {
                 SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
             }
-        } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD && HIWORD(wParam) == BN_CLICKED) {
-            _avsFileInterface->ReloadAvsFile();
         }
 
         break;

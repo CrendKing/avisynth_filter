@@ -6,8 +6,9 @@
 #define IDD_PROPPAGE                    101
 #define IDC_STATIC_AVS_FILE             1000
 #define IDC_EDIT_AVS_FILE               1001
-#define IDC_BUTTON_BROWSE               1002
+#define IDC_BUTTON_EDIT                 1002
 #define IDC_BUTTON_RELOAD               1003
+#define IDC_BUTTON_BROWSE               1004
 
 // Next default values for new objects
 //
