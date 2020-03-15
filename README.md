@@ -2,7 +2,7 @@
 
 A DirectShow filter that loads an AviSynth script and feed the frames to the video player.
 
-This filter exports an "avsfilter_source()" function to the avs script, which serves as an AviSynth source plugin. This function feeds the video samples from the upstream DirectShow filter to the script. Then it sends the processed frame data to the downstream. Basically this filter does what ffdshow's AviSynth plugin do, while being an bare minimum independent filter. Currently support NV12, YV12, P010 and P016 4:2:0 input formats (up from ffdshow's YV12 only).
+This filter exports an "avsfilter_source()" function to the avs script, which serves as an AviSynth source plugin. This function feeds the video samples from the upstream DirectShow filter to the script. Then it sends the processed frame data to the downstream. Basically this filter does what ffdshow's AviSynth plugin do, while being an bare minimum independent filter. Support most common input formats such as NV12, YUY2 and P010 etc.
 
 Because the filter has different internal implementation and logic, you may find some problems you experienced with ffdshow is gone. If you find any new problem, please file an issue.
 

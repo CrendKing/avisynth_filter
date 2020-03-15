@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "filter_prop.h"
-#include "g_constants.h"
+#include "constants.h"
 
 
 auto WINAPI CAviSynthFilterProp::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {

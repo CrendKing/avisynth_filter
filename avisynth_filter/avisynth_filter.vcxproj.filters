@@ -39,13 +39,10 @@
     <ClInclude Include="src\format.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\g_variables.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\source_clip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\g_constants.h">
+    <ClInclude Include="src\constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -66,9 +63,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\format.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\g_variables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\source_clip.cpp">

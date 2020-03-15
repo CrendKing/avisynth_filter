@@ -14,6 +14,7 @@ public:
     static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown *;
 
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
+    ~CAviSynthFilter();
 
     DECLARE_IUNKNOWN
 
@@ -41,6 +42,9 @@ private:
     static auto ValidateMediaType(const AM_MEDIA_TYPE *mediaType) -> HRESULT;
     static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
     auto CreateAvsVideoInfo(AVS_VideoInfo &videoInfo) const -> void;
+
+    AVS_ScriptEnvironment *_avsEnv;
+    AVS_Clip *_scriptClip;
 
     std::vector<MediaTypeFormat> _upstreamTypes;
 

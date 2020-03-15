@@ -1,8 +1,7 @@
 #include "pch.h"
 #include "filter.h"
 #include "format.h"
-#include "g_constants.h"
-#include "g_variables.h"
+#include "constants.h"
 #include "source_clip.h"
 #include "filter_prop.h"
 
@@ -18,31 +17,40 @@
 
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
-static AVS_Clip *g_scriptClip = nullptr;
+#ifdef _DEBUG
+#include <client/windows/handler/exception_handler.h>
+
+static google_breakpad::ExceptionHandler *g_exHandler;
 
 static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
-    if (bLoading == FALSE) {
-        if (g_scriptClip != nullptr) {
-            avs_release_clip(g_scriptClip);
-        }
-        if (g_env != nullptr) {
-            avs_delete_script_environment(g_env);
-        }
+    if (bLoading == TRUE) {
+        g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, L"", nullptr);
+    } else {
+        delete g_exHandler;
     }
 }
+#endif
 
 static constexpr REGPINTYPES IN_PIN_TYPE_REG[] = {
     { &MEDIATYPE_Video, &MEDIASUBTYPE_NV12 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_I420 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_IYUV },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_YV12 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P010 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P016 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_YUY2 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_UYVY },
 };
 static constexpr UINT IN_PIN_TYPE_COUNT = sizeof(IN_PIN_TYPE_REG) / sizeof(IN_PIN_TYPE_REG[0]);
 
 static constexpr REGPINTYPES OUT_PIN_TYPE_REG[] = {
     { &MEDIATYPE_Video, &MEDIASUBTYPE_NV12 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_I420 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_IYUV },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_YV12 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P010 },
     { &MEDIATYPE_Video, &MEDIASUBTYPE_P016 },
+    { &MEDIATYPE_Video, &MEDIASUBTYPE_YUY2 },
 };
 static constexpr UINT OUT_PIN_TYPE_COUNT = sizeof(OUT_PIN_TYPE_REG) / sizeof(OUT_PIN_TYPE_REG[0]);
 
@@ -82,7 +90,11 @@ CFactoryTemplate g_Templates[] = {
     { FILTER_NAME_WIDE
     , &CLSID_AviSynthFilter
     , CAviSynthFilter::CreateInstance
+#ifdef _DEBUG
     , InitRoutine
+#else
+    , nullptr
+#endif
     , &FILTER_REG },
 
     { PROPERTY_PAGE_NAME_WIDE
@@ -131,13 +143,23 @@ auto WINAPI CAviSynthFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUn
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME, pUnk, CLSID_AviSynthFilter)
+    , _avsEnv(nullptr)
+    , _scriptClip(nullptr)
     , _avsRefTime(-1)
     , _segmentDuration(-1)
     , _inBitmapInfo(nullptr)
     , _outBitmapInfo(nullptr)
     , _avsFile(_registry.ReadValue()) {
-    if (g_env == nullptr) {
-        g_env = avs_create_script_environment(AVISYNTH_INTERFACE_VERSION);
+}
+
+CAviSynthFilter::~CAviSynthFilter() {
+    if (_scriptClip != nullptr) {
+        _bufferHandler.GarbageCollect(LONGLONG_MAX);
+        avs_release_clip(_scriptClip);
+    }
+
+    if (_avsEnv != nullptr) {
+        avs_delete_script_environment(_avsEnv);
     }
 }
 
@@ -180,7 +202,7 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
         return VFW_S_NO_MORE_ITEMS;
     }
 
-    /**
+    /*
      * create a media type based on the current input media type while changing its subtype
      * also change fields in format if necessary
      *
@@ -195,21 +217,31 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
 
     const Format::PixelFormat inFormat = Format::FORMATS[inFormatIndex];
     const Format::PixelFormat outFormat = Format::FORMATS[outFormatIndex];
+    pMediaType->subtype = outFormat.output;
 
-    if (inFormat.unitSize != outFormat.unitSize) {
+    if (inFormat.bitsPerPixel != outFormat.bitsPerPixel) {
         BITMAPINFOHEADER *bmi = GetBitmapInfo(*pMediaType);
-        pMediaType->subtype = outFormat.output;
-        pMediaType->lSampleSize = pMediaType->lSampleSize * outFormat.unitSize / inFormat.unitSize;
-        bmi->biBitCount = bmi->biBitCount * outFormat.unitSize / inFormat.unitSize;
+        pMediaType->lSampleSize = pMediaType->lSampleSize * outFormat.bitsPerPixel / inFormat.bitsPerPixel;
+        bmi->biBitCount = bmi->biBitCount * outFormat.bitsPerPixel / inFormat.bitsPerPixel;
         bmi->biCompression = FOURCCMap(&outFormat.output).GetFOURCC();
-        bmi->biSizeImage = bmi->biSizeImage * outFormat.unitSize / inFormat.unitSize;
+        bmi->biSizeImage = bmi->biSizeImage * outFormat.bitsPerPixel / inFormat.bitsPerPixel;
     }
 
     return S_OK;
 }
 
 auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    // the actual check is in CompleteConnect(). we want to allow all media types for the output pin
+    HRESULT hr;
+
+    CheckHr(ValidateMediaType(mtOut));
+
+    const int formatIndex = Format::LookupOutput(mtOut->subtype);
+    if (formatIndex == -1) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
+    }
+
+    // the actual check for compatible subtype is in CompleteConnect(). we want to allow all video media types for the output pin
+
     return S_OK;
 }
 
@@ -234,7 +266,7 @@ auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTI
 auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> HRESULT {
     HRESULT hr;
 
-    /**
+    /*
      * Our media type negotiation logic
      *
      * The upstream's output pin supports N media types. The downstream's input pin supports M media types.
@@ -287,6 +319,10 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
 
     if (m_pInput->IsConnected() && m_pOutput->IsConnected()) {
         const int formatIndex = Format::LookupOutput(m_pOutput->CurrentMediaType().subtype);
+        if (formatIndex == -1) {
+            return E_UNEXPECTED;
+        }
+
         if (Format::FORMATS[formatIndex].input != m_pInput->CurrentMediaType().subtype) {
             for (const MediaTypeFormat &elem : _upstreamTypes) {
                 if (elem.formatIndex == formatIndex) {
@@ -302,13 +338,15 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
             _inBitmapInfo = GetBitmapInfo(m_pInput->CurrentMediaType());
             _outBitmapInfo = GetBitmapInfo(m_pOutput->CurrentMediaType());
 
+            _avsEnv = avs_create_script_environment(AVISYNTH_INTERFACE_VERSION);
+
             _avsFilter = {};
-            _avsFilter.env = g_env;
+            _avsFilter.env = _avsEnv;
             _avsFilter.user_data = &_bufferHandler;
             _avsFilter.get_frame = filter_get_frame;
             _avsFilter.get_parity = filter_get_parity;
 
-            avs_add_function(g_env, "avsfilter_source", "", CreateAvsFilterSource, &_avsFilter);
+            avs_add_function(_avsEnv, "avsfilter_source", "", CreateAvsFilterSource, &_avsFilter);
         }
     }
 
@@ -350,8 +388,8 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     }
 
     if (resetClip) {
-        if (g_scriptClip != nullptr) {
-            avs_release_clip(g_scriptClip);
+        if (_scriptClip != nullptr) {
+            avs_release_clip(_scriptClip);
         }
 
         CreateAvsVideoInfo(_avsFilter.vi);
@@ -360,9 +398,9 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         if (_avsFile.empty()) {
             AVS_Value evalArgs[] = { avs_new_value_string("return avsfilter_source()")
                                    , avs_new_value_string(EVAL_FILENAME) };
-            importResult = avs_invoke(g_env, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
+            importResult = avs_invoke(_avsEnv, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
         } else {
-            importResult = avs_invoke(g_env, "Import", avs_new_value_string(_avsFile.c_str()), nullptr);
+            importResult = avs_invoke(_avsEnv, "Import", avs_new_value_string(_avsFile.c_str()), nullptr);
         }
 
         if (!avs_is_clip(importResult)) {
@@ -379,21 +417,32 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
             errorScript.append("\")");
             AVS_Value evalArgs[] = { avs_new_value_string(errorScript.c_str())
                                    , avs_new_value_string(EVAL_FILENAME) };
-            importResult = avs_invoke(g_env, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
+            importResult = avs_invoke(_avsEnv, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
         }
 
-        g_scriptClip = avs_take_clip(importResult, g_env);
+        _scriptClip = avs_take_clip(importResult, _avsEnv);
         avs_release_value(importResult);
     }
 
-    const AVS_VideoInfo *avsVideoInfo = avs_get_video_info(g_scriptClip);
+    const AVS_VideoInfo *avsVideoInfo = avs_get_video_info(_scriptClip);
     if (resetClip) {
         _bufferHandler.Reset(m_pInput->CurrentMediaType().subtype, avsVideoInfo);
     }
     const REFERENCE_TIME timePerFrame = avsVideoInfo->fps_denominator * UNITS / avsVideoInfo->fps_numerator;
 
-    // when render is starving for frames, we should skip the extra samples
-    if (_avsRefTime < 0 || m_itrLate > 0) {
+    // some streaming/capture sources may not set the sample time. use stream time instead
+
+    if ((outProps.dwSampleFlags & AM_SAMPLE_TIMEVALID) == 0) {
+        inProps.tStart = streamTime;
+        outProps.dwSampleFlags |= AM_SAMPLE_TIMEVALID;
+    }
+    if ((outProps.dwSampleFlags & AM_SAMPLE_STOPVALID) == 0) {
+        outProps.dwSampleFlags |= AM_SAMPLE_STOPVALID;
+    }
+
+    // when lateness incurs, reset the avs time to resync
+    // (either by skipping frame when late or serving duplicate frames when ahead)
+    if (_avsRefTime < 0 || m_itrLate != 0) {
         _avsRefTime = inProps.tStart;
     }
 
@@ -404,15 +453,17 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     std::cout << "timePerFrame: " << timePerFrame << " ";
     std::cout << "streamFrame: " << streamTime / timePerFrame << " ";
     std::cout << "sampleFrame: " << inProps.tStart / timePerFrame << " ";
-    std::cout << "avsFrame: " << _avsRefTime / timePerFrame << " ";
+    std::cout << "late: " << m_itrLate << " ";
     */
 
-    _bufferHandler.CreateFrame(inProps.tStart, inProps.pbBuffer, _inBitmapInfo->biWidth);
+    _bufferHandler.CreateFrame(inProps.tStart, inProps.pbBuffer, _inBitmapInfo->biWidth, _avsEnv);
 
     AVS_VideoFrame *clipFrame;
     while (true) {
         const int frameNb = _avsRefTime / timePerFrame;
-        clipFrame = avs_get_frame(g_scriptClip, frameNb);
+        clipFrame = avs_get_frame(_scriptClip, frameNb);
+
+        //std::cout << "frameNb: " << frameNb << " ";
 
         outProps.tStart = _avsRefTime;
         outProps.tStop = _avsRefTime + timePerFrame;
@@ -432,7 +483,7 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 
         BYTE *destBuf;
         CheckHr(extraSample->GetPointer(&destBuf));
-        _bufferHandler.WriteSample(clipFrame, destBuf, _outBitmapInfo->biWidth);
+        _bufferHandler.WriteSample(clipFrame, destBuf, _outBitmapInfo->biWidth, _avsEnv);
         avs_release_frame(clipFrame);
 
         CheckHr(m_pOutput->Deliver(extraSample));
@@ -442,10 +493,12 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     CheckHr(pOut2->SetProperties(FIELD_OFFSET(AM_SAMPLE2_PROPERTIES, pbBuffer), reinterpret_cast<BYTE *>(&outProps)));
     pOut2->Release();
 
-    _bufferHandler.WriteSample(clipFrame, outProps.pbBuffer, _outBitmapInfo->biWidth);
+    _bufferHandler.WriteSample(clipFrame, outProps.pbBuffer, _outBitmapInfo->biWidth, _avsEnv);
     avs_release_frame(clipFrame);
 
     _bufferHandler.GarbageCollect(streamTime);
+
+    //std::cout << std::endl;
 
     return S_OK;
 }
@@ -519,11 +572,11 @@ auto CAviSynthFilter::CreateAvsVideoInfo(AVS_VideoInfo &videoInfo) const -> void
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
 
     videoInfo = {};
-    videoInfo.width = vih->rcSource.right;
-    videoInfo.height = vih->rcSource.bottom;
+    videoInfo.width = _inBitmapInfo->biWidth;
+    videoInfo.height = abs(_inBitmapInfo->biHeight);
     videoInfo.fps_numerator = UNITS;
     videoInfo.fps_denominator = static_cast<unsigned int>(vih->AvgTimePerFrame);
-    videoInfo.num_frames = _segmentDuration < 0 ? INFINITE_NUM_FRAMES : _segmentDuration / vih->AvgTimePerFrame;
+    videoInfo.num_frames = _segmentDuration < 0 ? NUM_FRAMES_FOR_INFINITE_STREAM : _segmentDuration / vih->AvgTimePerFrame;
 
     const int formatIndex = Format::LookupInput(mediaType.subtype);
     videoInfo.pixel_type = Format::FORMATS[formatIndex].avs;

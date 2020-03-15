@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "buffer_handler.h"
 #include "format.h"
-#include "g_variables.h"
 
 
 auto BufferHandler::Reset(const CLSID &inFormat, const AVS_VideoInfo *videoInfo) -> void {
@@ -51,23 +50,23 @@ auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> AVS_VideoFrame 
 x unit stride means the stride has x * 1 bytes. For word-sized buffers (10-bit, 16-bit, etc), x unit stride means x * 2 bytes.
 */
 
-auto BufferHandler::CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride) -> void {
-    AVS_VideoFrame *frame = avs_new_video_frame(g_env, _videoInfo);
+auto BufferHandler::CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, AVS_ScriptEnvironment *avsEnv) -> void {
+    AVS_VideoFrame *frame = avs_new_video_frame(avsEnv, _videoInfo);
 
     BYTE *dstSlices[] = { avs_get_write_ptr_p(frame, AVS_PLANAR_Y), avs_get_write_ptr_p(frame, AVS_PLANAR_U), avs_get_write_ptr_p(frame, AVS_PLANAR_V) };
     const int dstStrides[] = { avs_get_pitch_p(frame, AVS_PLANAR_Y), avs_get_pitch_p(frame, AVS_PLANAR_U) };
 
-    Format::Copy(_formatIndex, srcBuffer, srcUnitStride, dstSlices, dstStrides, _videoInfo->width, _videoInfo->height);
+    Format::CopyFromInput(_formatIndex, srcBuffer, srcUnitStride, dstSlices, dstStrides, _videoInfo->width, _videoInfo->height, avsEnv);
 
     std::lock_guard<std::shared_mutex> lock(_mutex);
     _frameBuffer.emplace_front(FrameInfo { frameTime, frame });
 }
 
-auto BufferHandler::WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride) const -> void {
+auto BufferHandler::WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride, AVS_ScriptEnvironment *avsEnv) const -> void {
     const BYTE *srcSlices[] = { avs_get_read_ptr_p(srcFrame, AVS_PLANAR_Y), avs_get_read_ptr_p(srcFrame, AVS_PLANAR_U), avs_get_read_ptr_p(srcFrame, AVS_PLANAR_V) };
     const int srcStrides[] = { avs_get_pitch_p(srcFrame, AVS_PLANAR_Y), avs_get_pitch_p(srcFrame, AVS_PLANAR_U) };
 
-    Format::Copy(_formatIndex, srcSlices, srcStrides, dstBuffer, dstUnitStride, _videoInfo->width, _videoInfo->height);
+    Format::CopyToOutput(_formatIndex, srcSlices, srcStrides, dstBuffer, dstUnitStride, _videoInfo->width, _videoInfo->height, avsEnv);
 }
 
 auto BufferHandler::GarbageCollect(REFERENCE_TIME streamTime) -> void {

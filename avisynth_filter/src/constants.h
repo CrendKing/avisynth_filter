@@ -18,7 +18,7 @@ DEFINE_GUID(IID_IAvsFile,
 #define WidenHelper(str)  L##str
 #define Widen(str)        WidenHelper(str)
 
-#ifdef DEBUG
+#ifdef _DEBUG
 #define FILTER_NAME_SUFFIX " [Debug]"
 #else
 #define FILTER_NAME_SUFFIX
@@ -37,9 +37,17 @@ constexpr wchar_t *PROPERTY_PAGE_NAME_WIDE = Widen(PROPERTY_PAGE_FULL);
 
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 
-// stream without duration could last forever. use half of INT_MAX as fake number of frames
-// avoid using INT_MAX because some filter may perform calculation on it, resulting overflow
-constexpr int INFINITE_NUM_FRAMES = (INT_MAX >> 1) + 1;
+/*
+ * Stream without duration could last forever. Use a large power as the fake number of frames.
+ * Avoid using too large number because some AviSynth filters allocate memory based on the number of frames.
+ * Also, some filters may perform calculation on it, resulting overflow.
+ * Same as ffdshow, uses a highly composite number 10810800, which could last 50 hours for a 60fps stream.
+ */
+constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
 
 constexpr char *REGISTRY_KEY_NAME = "Software\\AviSynthFilter";
 constexpr char *REGISTRY_AVS_FILE_VALUE_NAME = "AvsFile";
+
+// 30323449-0000-0010-8000-00AA00389B71  'I420' == MEDIASUBTYPE_I420
+constexpr GUID MEDIASUBTYPE_I420 =
+{ 0x30323449, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71} };

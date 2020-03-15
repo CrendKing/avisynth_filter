@@ -21,10 +21,9 @@
   <ItemGroup>
     <ClInclude Include="src\buffer_handler.h" />
     <ClInclude Include="src\format.h" />
-    <ClInclude Include="src\g_variables.h" />
     <ClInclude Include="src\filter.h" />
     <ClInclude Include="src\filter_prop.h" />
-    <ClInclude Include="src\g_constants.h" />
+    <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\avs_file.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\registry.h" />
@@ -34,7 +33,6 @@
   <ItemGroup>
     <ClCompile Include="src\buffer_handler.cpp" />
     <ClCompile Include="src\format.cpp" />
-    <ClCompile Include="src\g_variables.cpp" />
     <ClCompile Include="src\filter.cpp" />
     <ClCompile Include="src\filter_prop.cpp" />
     <ClCompile Include="src\pch.cpp">

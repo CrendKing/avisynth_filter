@@ -7,8 +7,8 @@ class BufferHandler {
 public:
     auto Reset(const CLSID &inFormat, const AVS_VideoInfo *videoInfo) -> void;
     auto GetNearestFrame(REFERENCE_TIME frameTime) -> AVS_VideoFrame *;
-    auto CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride) -> void;
-    auto WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride) const -> void;
+    auto CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, AVS_ScriptEnvironment *avsEnv) -> void;
+    auto WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride, AVS_ScriptEnvironment *avsEnv) const -> void;
     auto GarbageCollect(REFERENCE_TIME streamTime) -> void;
 
 private:
