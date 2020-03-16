@@ -41,7 +41,7 @@ private:
 
     static auto ValidateMediaType(const AM_MEDIA_TYPE *mediaType) -> HRESULT;
     static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
-    auto CreateScriptClip() -> void;
+    auto CreateScriptClip() -> bool;
     auto UpdateAvsVideoInfo() -> void;
 
     AVS_ScriptEnvironment *_avsEnv;

@@ -122,6 +122,11 @@ static auto AVSC_CC CreateAvsFilterSource(AVS_ScriptEnvironment *env, AVS_Value 
     return ret;
 }
 
+static auto AVSC_CC CreateAvsFilterDisconnect(AVS_ScriptEnvironment *env, AVS_Value args, void *user_data) -> AVS_Value {
+    // the void type is internal in AviSynth and cannot be instantiated by user script, ideal for disconnect heuristic
+    return avs_void;
+}
+
 auto WINAPI CAviSynthFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
     auto newFilter = new CAviSynthFilter(pUnk, phr);
 
@@ -318,9 +323,12 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
             _avsFilter.get_parity = filter_get_parity;
 
             avs_add_function(_avsEnv, "avsfilter_source", "", CreateAvsFilterSource, &_avsFilter);
+            avs_add_function(_avsEnv, "avsfilter_disconnect", "", CreateAvsFilterDisconnect, nullptr);
         }
 
-        CreateScriptClip();
+        if (!CreateScriptClip()) {
+            return E_ABORT;
+        }
     }
 
     if (m_pInput->IsConnected() && m_pOutput->IsConnected()) {
@@ -346,12 +354,12 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
         }
     }
 
-    return CVideoTransformFilter::CompleteConnect(dir, pReceivePin);
+    return S_OK;
 }
 
 auto CAviSynthFilter::NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate) -> HRESULT {
     _segmentDuration = tStop - tStart;
-    _avsRefTime = -1;
+    ReloadAvsFile();
     return CVideoTransformFilter::NewSegment(tStart, tStop, dRate);
 }
 
@@ -375,8 +383,11 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 
     if (inProps.dwSampleFlags & AM_SAMPLE_TYPECHANGED || _avsRefTime < 0) {
         _inBitmapInfo = GetBitmapInfo(m_pInput->CurrentMediaType());
-        CreateScriptClip();
+        if (!CreateScriptClip()) {
+            return E_UNEXPECTED;
+        }
     }
+
     if (outProps.dwSampleFlags & AM_SAMPLE_TYPECHANGED) {
         _outBitmapInfo = GetBitmapInfo(m_pOutput->CurrentMediaType());
     }
@@ -508,26 +519,33 @@ auto CAviSynthFilter::GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADE
     return bitmapInfo;
 }
 
-auto CAviSynthFilter::CreateScriptClip() -> void {
+/**
+ * Create new AviSynth script clip with current input media type.
+ */
+auto CAviSynthFilter::CreateScriptClip() -> bool {
+    UpdateAvsVideoInfo();
+
     if (_scriptClip != nullptr) {
         avs_release_clip(_scriptClip);
     }
 
-    UpdateAvsVideoInfo();
-
-    AVS_Value importResult;
+    AVS_Value invokeResult;
     if (_avsFile.empty()) {
         AVS_Value evalArgs[] = { avs_new_value_string("return avsfilter_source()")
                                , avs_new_value_string(EVAL_FILENAME) };
-        importResult = avs_invoke(_avsEnv, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
+        invokeResult = avs_invoke(_avsEnv, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
     } else {
-        importResult = avs_invoke(_avsEnv, "Import", avs_new_value_string(_avsFile.c_str()), nullptr);
+        invokeResult = avs_invoke(_avsEnv, "Import", avs_new_value_string(_avsFile.c_str()), nullptr);
     }
 
-    if (!avs_is_clip(importResult)) {
+    if (!avs_defined(invokeResult)) {
+        return false;
+    }
+
+    if (!avs_is_clip(invokeResult)) {
         std::string errorScript;
-        if (avs_is_error(importResult)) {
-            errorScript = avs_as_error(importResult);
+        if (avs_is_error(invokeResult)) {
+            errorScript = avs_as_error(invokeResult);
             std::replace(errorScript.begin(), errorScript.end(), '"', '\'');
             std::replace(errorScript.begin(), errorScript.end(), '\n', ' ');
         } else {
@@ -538,19 +556,21 @@ auto CAviSynthFilter::CreateScriptClip() -> void {
         errorScript.append("\")");
         AVS_Value evalArgs[] = { avs_new_value_string(errorScript.c_str())
                                , avs_new_value_string(EVAL_FILENAME) };
-        importResult = avs_invoke(_avsEnv, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
+        invokeResult = avs_invoke(_avsEnv, "Eval", avs_new_value_array(evalArgs, 2), nullptr);
     }
 
-    _scriptClip = avs_take_clip(importResult, _avsEnv);
-    avs_release_value(importResult);
+    _scriptClip = avs_take_clip(invokeResult, _avsEnv);
+    avs_release_value(invokeResult);
 
     _avsVideoInfo = avs_get_video_info(_scriptClip);
     _timePerFrame = _avsVideoInfo->fps_denominator * UNITS / _avsVideoInfo->fps_numerator;
     _bufferHandler.Reset(m_pInput->CurrentMediaType().subtype, _avsVideoInfo);
+
+    return true;
 }
 
 /**
- * Create AVS video info from current input media type.
+ * Update AVS video info from current input media type.
  */
 auto CAviSynthFilter::UpdateAvsVideoInfo() -> void {
     const CMediaType &mediaType = m_pInput->CurrentMediaType();
