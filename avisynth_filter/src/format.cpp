@@ -13,7 +13,7 @@ const std::vector<Format::PixelFormat> Format::FORMATS = {
 
     // packed formats such as YUY2 are twice as wide as unpacked formats per pixel
     { MEDIASUBTYPE_YUY2, AVS_CS_YUY2, MEDIASUBTYPE_YUY2, 16, 1, 2 },
-    { MEDIASUBTYPE_UYVY, AVS_CS_YUY2, MEDIASUBTYPE_YUY2, 16, 1, 2 },
+    { MEDIASUBTYPE_UYVY, AVS_CS_YUY2, MEDIASUBTYPE_UYVY, 16, 1, 2 },
     { MEDIASUBTYPE_RGB24, AVS_CS_BGR24, MEDIASUBTYPE_RGB24, 24, 1, 3 },
     { MEDIASUBTYPE_RGB32, AVS_CS_BGR32, MEDIASUBTYPE_RGB32, 24, 1, 4 },
 };

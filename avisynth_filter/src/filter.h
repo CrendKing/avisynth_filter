@@ -41,15 +41,18 @@ private:
 
     static auto ValidateMediaType(const AM_MEDIA_TYPE *mediaType) -> HRESULT;
     static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
-    auto CreateAvsVideoInfo(AVS_VideoInfo &videoInfo) const -> void;
+    auto CreateScriptClip() -> void;
+    auto UpdateAvsVideoInfo() -> void;
 
     AVS_ScriptEnvironment *_avsEnv;
     AVS_Clip *_scriptClip;
+    const AVS_VideoInfo *_avsVideoInfo;
 
     std::vector<MediaTypeFormat> _upstreamTypes;
 
-    REFERENCE_TIME _avsRefTime;
     REFERENCE_TIME _segmentDuration;
+    REFERENCE_TIME _timePerFrame;
+    REFERENCE_TIME _avsRefTime;
 
     const BITMAPINFOHEADER *_inBitmapInfo;
     const BITMAPINFOHEADER *_outBitmapInfo;
