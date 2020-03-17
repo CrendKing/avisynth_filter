@@ -38,6 +38,12 @@ constexpr wchar_t *PROPERTY_PAGE_NAME_WIDE = Widen(PROPERTY_PAGE_FULL);
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 
 /*
+ * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
+ * Default to 25 FPS in such cases.
+ */
+constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
+
+/*
  * Stream without duration could last forever. Use a large power as the fake number of frames.
  * Avoid using too large number because some AviSynth filters allocate memory based on the number of frames.
  * Also, some filters may perform calculation on it, resulting overflow.

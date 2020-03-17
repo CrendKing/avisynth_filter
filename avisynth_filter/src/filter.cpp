@@ -6,6 +6,8 @@
 #include "filter_prop.h"
 
 
+#define LOGGING
+
 #ifdef _DEBUG
 #pragma comment(lib, "strmbasd.lib")
 #else
@@ -19,17 +21,24 @@
 
 #ifdef _DEBUG
 #include <client/windows/handler/exception_handler.h>
-
 static google_breakpad::ExceptionHandler *g_exHandler;
+#endif
 
 static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
     if (bLoading == TRUE) {
+#ifdef _DEBUG
         g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, L"", nullptr);
+#endif
+
+#ifdef LOGGING
+        freopen("C:\\avs.log", "w", stdout);
+#endif
     } else {
+#ifdef _DEBUG
         delete g_exHandler;
+#endif
     }
 }
-#endif
 
 static constexpr REGPINTYPES PIN_TYPE_REG[] = {
     { &MEDIATYPE_Video, &MEDIASUBTYPE_NV12 },
@@ -81,11 +90,7 @@ CFactoryTemplate g_Templates[] = {
     { FILTER_NAME_WIDE
     , &CLSID_AviSynthFilter
     , CAviSynthFilter::CreateInstance
-#ifdef _DEBUG
     , InitRoutine
-#else
-    , nullptr
-#endif
     , &FILTER_REG },
 
     { PROPERTY_PAGE_NAME_WIDE
@@ -407,14 +412,15 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     if (_avsRefTime < 0) {
         _avsRefTime = inProps.tStart;
     }
-    /*
-    std::cout << "streamTime: " << streamTime << " ";
-    std::cout << "sampleTime: " << inProps.tStart << " ";
+    
+#ifdef LOGGING
+    std::cout << "late: " << std::setw(10) << m_itrLate << " ";
     std::cout << "timePerFrame: " << _timePerFrame << " ";
-    std::cout << "streamFrameNb: " << streamTime / _timePerFrame << " ";
-    std::cout << "sampleFrameNb: " << inProps.tStart / _timePerFrame << " ";
-    std::cout << "late: " << m_itrLate << " ";
-    */
+    std::cout << "streamTime: " << std::setw(10) << streamTime << " ";
+    std::cout << "streamFrameNb: " << std::setw(4) << streamTime / _timePerFrame << " ";
+    std::cout << "sampleTime: " << std::setw(10) << inProps.tStart << " ";
+    std::cout << "sampleFrameNb: " << std::setw(4) << inProps.tStart / _timePerFrame << " ";
+#endif
 
     while (true) {
         const int avsFrameNb = _avsRefTime / _timePerFrame;
@@ -424,7 +430,9 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         outProps.tStop = outProps.tStart + _timePerFrame;
         _avsRefTime = outProps.tStop;
 
-        //std::cout << "frameNb: " << avsFrameNb << " at " << outProps.tStart << " ";
+#ifdef LOGGING
+        std::cout << "frameNb: " << std::setw(4) << avsFrameNb << " at " << std::setw(10) << outProps.tStart << " ";
+#endif
 
         if (outProps.tStop <= inProps.tStart) {
             IMediaSample *extraSample;
@@ -451,7 +459,9 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 
             _bufferHandler.GarbageCollect(streamTime);
 
-            //std::cout << std::endl;
+#ifdef LOGGING
+            std::cout << std::endl;
+#endif
 
             return S_OK;
         }
@@ -573,16 +583,18 @@ auto CAviSynthFilter::CreateScriptClip() -> bool {
  * Update AVS video info from current input media type.
  */
 auto CAviSynthFilter::UpdateAvsVideoInfo() -> void {
-    const CMediaType &mediaType = m_pInput->CurrentMediaType();
+    CMediaType &mediaType = m_pInput->CurrentMediaType();
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
-    BITMAPINFOHEADER *bitmapInfo = GetBitmapInfo(m_pInput->CurrentMediaType());
+    BITMAPINFOHEADER *bitmapInfo = GetBitmapInfo(mediaType);
+
+    const REFERENCE_TIME frameTime = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
     _avsFilter.vi = {};
     _avsFilter.vi.width = bitmapInfo->biWidth;
     _avsFilter.vi.height = abs(bitmapInfo->biHeight);
     _avsFilter.vi.fps_numerator = UNITS;
-    _avsFilter.vi.fps_denominator = static_cast<unsigned int>(vih->AvgTimePerFrame);
-    _avsFilter.vi.num_frames = _segmentDuration < 0 ? NUM_FRAMES_FOR_INFINITE_STREAM : _segmentDuration / vih->AvgTimePerFrame;
+    _avsFilter.vi.fps_denominator = frameTime;
+    _avsFilter.vi.num_frames = _segmentDuration < 0 ? NUM_FRAMES_FOR_INFINITE_STREAM : _segmentDuration / frameTime;
 
     const int formatIndex = Format::LookupInput(mediaType.subtype);
     _avsFilter.vi.pixel_type = Format::FORMATS[formatIndex].avs;
