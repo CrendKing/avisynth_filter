@@ -15,15 +15,19 @@
 #include <dvdmedia.h>
 
 // AviSynth
-#include <avisynth_c.h>
+#define AVS_LINKAGE_DLLIMPORT
+#include <avisynth.h>
 
 #include <algorithm>
+#include <atomic>
 #include <deque>
-#include <shared_mutex>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
-#include <iostream>
-#include <iomanip>
+#ifdef _DEBUG
+#define LOGGING
+#endif
 
 #include "resource.h"

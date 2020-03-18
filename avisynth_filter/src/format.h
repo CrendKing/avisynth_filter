@@ -16,8 +16,8 @@ public:
 
     static auto LookupInput(const CLSID &input) -> int;
     static auto LookupOutput(const CLSID &output) -> int;
-    static auto CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitStride, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, AVS_ScriptEnvironment *avsEnv) -> void;
-    static auto CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstUnitStride, int rowSize, int height, AVS_ScriptEnvironment *avsEnv) -> void;
+    static auto CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitStride, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstUnitStride, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
 
     static const std::vector<PixelFormat> FORMATS;
 

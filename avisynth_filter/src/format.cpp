@@ -4,18 +4,18 @@
 
 
 const std::vector<Format::PixelFormat> Format::FORMATS = {
-    { MEDIASUBTYPE_NV12, AVS_CS_YV12, MEDIASUBTYPE_NV12, 12, 1, 1 },
-    { MEDIASUBTYPE_I420, AVS_CS_YV12, MEDIASUBTYPE_I420, 12, 1, 1 },
-    { MEDIASUBTYPE_IYUV, AVS_CS_YV12, MEDIASUBTYPE_IYUV, 12, 1, 1 },
-    { MEDIASUBTYPE_YV12, AVS_CS_YV12, MEDIASUBTYPE_YV12, 12, 1, 1 },
-    { MEDIASUBTYPE_P010, AVS_CS_YUV420P10, MEDIASUBTYPE_P010, 24, 2, 1 },
-    { MEDIASUBTYPE_P016, AVS_CS_YUV420P16, MEDIASUBTYPE_P016, 24, 2, 1 },
+    { MEDIASUBTYPE_NV12, VideoInfo::CS_YV12, MEDIASUBTYPE_NV12, 12, 1, 1 },
+    { MEDIASUBTYPE_I420, VideoInfo::CS_YV12, MEDIASUBTYPE_I420, 12, 1, 1 },
+    { MEDIASUBTYPE_IYUV, VideoInfo::CS_YV12, MEDIASUBTYPE_IYUV, 12, 1, 1 },
+    { MEDIASUBTYPE_YV12, VideoInfo::CS_YV12, MEDIASUBTYPE_YV12, 12, 1, 1 },
+    { MEDIASUBTYPE_P010, VideoInfo::CS_YUV420P10, MEDIASUBTYPE_P010, 24, 2, 1 },
+    { MEDIASUBTYPE_P016, VideoInfo::CS_YUV420P16, MEDIASUBTYPE_P016, 24, 2, 1 },
 
     // packed formats such as YUY2 are twice as wide as unpacked formats per pixel
-    { MEDIASUBTYPE_YUY2, AVS_CS_YUY2, MEDIASUBTYPE_YUY2, 16, 1, 2 },
-    { MEDIASUBTYPE_UYVY, AVS_CS_YUY2, MEDIASUBTYPE_UYVY, 16, 1, 2 },
-    { MEDIASUBTYPE_RGB24, AVS_CS_BGR24, MEDIASUBTYPE_RGB24, 24, 1, 3 },
-    { MEDIASUBTYPE_RGB32, AVS_CS_BGR32, MEDIASUBTYPE_RGB32, 24, 1, 4 },
+    { MEDIASUBTYPE_YUY2, VideoInfo::CS_YUY2, MEDIASUBTYPE_YUY2, 16, 1, 2 },
+    { MEDIASUBTYPE_UYVY, VideoInfo::CS_YUY2, MEDIASUBTYPE_UYVY, 16, 1, 2 },
+    { MEDIASUBTYPE_RGB24, VideoInfo::CS_BGR24, MEDIASUBTYPE_RGB24, 24, 1, 3 },
+    { MEDIASUBTYPE_RGB32, VideoInfo::CS_BGR32, MEDIASUBTYPE_RGB32, 24, 1, 4 },
 };
 
 auto Format::LookupInput(const CLSID &input) -> int {
@@ -38,7 +38,7 @@ auto Format::LookupOutput(const CLSID &output) -> int {
     return -1;
 }
 
-auto Format::CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitStride, BYTE *dstSlices[], const int dstStrides[], int width, int height, AVS_ScriptEnvironment *avsEnv) -> void {
+auto Format::CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitStride, BYTE *dstSlices[], const int dstStrides[], int width, int height, IScriptEnvironment *avsEnv) -> void {
     const PixelFormat &format = FORMATS[formatIndex];
 
     const int absHeight = abs(height);
@@ -48,7 +48,7 @@ auto Format::CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitSt
 
     const BYTE *srcDefaultPlane;
     int srcDefaultPlaneStride;
-    if ((format.avs & AVS_CS_BGR) != 0 && height < 0) {
+    if ((format.avs & VideoInfo::CS_BGR) != 0 && height < 0) {
         // positive height for RGB format is bottom-up DIB, negative is top-down
         // AviSynth is always bottom-up
         srcDefaultPlane = srcBuffer + srcDefaultPlaneSize - srcStride;
@@ -58,9 +58,9 @@ auto Format::CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitSt
         srcDefaultPlaneStride = srcStride;
     }
 
-    avs_bit_blt(avsEnv, dstSlices[0], dstStrides[0], srcDefaultPlane, srcDefaultPlaneStride, rowSize, absHeight);
+    avsEnv->BitBlt(dstSlices[0], dstStrides[0], srcDefaultPlane, srcDefaultPlaneStride, rowSize, absHeight);
 
-    if ((format.avs & AVS_CS_INTERLEAVED) == 0) {
+    if ((format.avs & VideoInfo::CS_INTERLEAVED) == 0) {
         // 4:2:0 unpacked formats
 
         if (format.input == MEDIASUBTYPE_IYUV || format.input == MEDIASUBTYPE_I420 || format.input == MEDIASUBTYPE_YV12) {
@@ -81,8 +81,8 @@ auto Format::CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitSt
                 srcV = srcPlane2;
             }
 
-            avs_bit_blt(avsEnv, dstSlices[1], dstStrides[1], srcU, srcStride / 2, rowSize / 2, absHeight / 2);
-            avs_bit_blt(avsEnv, dstSlices[2], dstStrides[1], srcV, srcStride / 2, rowSize / 2, absHeight / 2);
+            avsEnv->BitBlt(dstSlices[1], dstStrides[1], srcU, srcStride / 2, rowSize / 2, absHeight / 2);
+            avsEnv->BitBlt(dstSlices[2], dstStrides[1], srcV, srcStride / 2, rowSize / 2, absHeight / 2);
         } else {
             // interleaved U and V planes. copy byte by byte
             // consider using intrinsics for better performance
@@ -106,7 +106,7 @@ auto Format::CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitSt
     }
 }
 
-auto Format::CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstUnitStride, int width, int height, AVS_ScriptEnvironment *avsEnv) -> void {
+auto Format::CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstUnitStride, int width, int height, IScriptEnvironment *avsEnv) -> void {
     const PixelFormat &format = FORMATS[formatIndex];
 
     const int absHeight = abs(height);
@@ -116,7 +116,7 @@ auto Format::CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int sr
 
     BYTE *dstDefaultPlane;
     int dstDefaultPlaneStride;
-    if ((format.avs & AVS_CS_BGR) != 0 && height < 0) {
+    if ((format.avs & VideoInfo::CS_BGR) != 0 && height < 0) {
         dstDefaultPlane = dstBuffer + dstDefaultPlaneSize - dstStride;
         dstDefaultPlaneStride = -dstStride;
     } else {
@@ -124,9 +124,9 @@ auto Format::CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int sr
         dstDefaultPlaneStride = dstStride;
     }
 
-    avs_bit_blt(avsEnv, dstDefaultPlane, dstDefaultPlaneStride, srcSlices[0], srcStrides[0], rowSize, absHeight);
+    avsEnv->BitBlt(dstDefaultPlane, dstDefaultPlaneStride, srcSlices[0], srcStrides[0], rowSize, absHeight);
 
-    if ((format.avs & AVS_CS_INTERLEAVED) == 0) {
+    if ((format.avs & VideoInfo::CS_INTERLEAVED) == 0) {
         if (format.output == MEDIASUBTYPE_IYUV || format.output == MEDIASUBTYPE_I420 || format.output == MEDIASUBTYPE_YV12) {
             BYTE *dstPlane1 = dstBuffer + dstDefaultPlaneSize;
             BYTE *dstPlane2 = dstPlane1 + dstDefaultPlaneSize / 4;
@@ -141,8 +141,8 @@ auto Format::CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int sr
                 dstV = dstPlane2;
             }
 
-            avs_bit_blt(avsEnv, dstU, dstStride / 2, srcSlices[1], srcStrides[1], rowSize / 2, absHeight / 2);
-            avs_bit_blt(avsEnv, dstV, dstStride / 2, srcSlices[2], srcStrides[1], rowSize / 2, absHeight / 2);
+            avsEnv->BitBlt(dstU, dstStride / 2, srcSlices[1], srcStrides[1], rowSize / 2, absHeight / 2);
+            avsEnv->BitBlt(dstV, dstStride / 2, srcSlices[2], srcStrides[1], rowSize / 2, absHeight / 2);
         } else {
             BYTE *dstUVStart = dstBuffer + dstDefaultPlaneSize;
 

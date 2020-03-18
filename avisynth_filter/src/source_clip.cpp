@@ -1,13 +1,28 @@
 #include "pch.h"
 #include "source_clip.h"
-#include "buffer_handler.h"
 
 
-auto AVSC_CC filter_get_frame(AVS_FilterInfo *fi, int frameNb) -> AVS_VideoFrame * {
-    const REFERENCE_TIME frameTime = frameNb * fi->vi.fps_denominator * UNITS / fi->vi.fps_numerator;
-    return reinterpret_cast<BufferHandler *>(fi->user_data)->GetNearestFrame(frameTime);
+SourceClip::SourceClip(const VideoInfo &videoInfo, BufferHandler &bufferHandler)
+    : _videoInfo(videoInfo)
+    , _bufferHandler(bufferHandler) {
 }
 
-auto AVSC_CC filter_get_parity(AVS_FilterInfo *, int frameNb) -> int {
+auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
+    const REFERENCE_TIME frameTime = frameNb * _videoInfo.fps_denominator * UNITS / _videoInfo.fps_numerator;
+    return _bufferHandler.GetNearestFrame(frameTime);
+}
+
+auto SourceClip::GetParity(int frameNb) -> bool {
+    return false;
+}
+
+auto SourceClip::GetAudio(void *buf, int64_t start, int64_t count, IScriptEnvironment *env) -> void {
+}
+
+auto SourceClip::SetCacheHints(int cachehints, int frame_range) -> int {
     return 0;
+}
+
+auto SourceClip::GetVideoInfo() -> const VideoInfo & {
+    return _videoInfo;
 }

@@ -1,6 +1,9 @@
 #pragma once
 
 #include "pch.h"
+
+#include <atomic>
+
 #include "buffer_handler.h"
 #include "registry.h"
 #include "avs_file.h"
@@ -21,12 +24,12 @@ public:
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
 
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
-    auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
+    auto GetMediaType(int iPosition, CMediaType *pMediaType)->HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> HRESULT override;
-    auto NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate) -> HRESULT override;
-    auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
+    auto Transform(IMediaSample *pIn, IMediaSample *pOut)->HRESULT override;
+    auto EndFlush()->HRESULT override;
 
     auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
     auto STDMETHODCALLTYPE GetAvsFile(std::string &avsFile) const -> HRESULT override;
@@ -41,24 +44,39 @@ private:
 
     static auto ValidateMediaType(const AM_MEDIA_TYPE *mediaType) -> HRESULT;
     static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
-    auto CreateScriptClip() -> bool;
-    auto UpdateAvsVideoInfo() -> void;
 
-    AVS_ScriptEnvironment *_avsEnv;
-    AVS_Clip *_scriptClip;
-    const AVS_VideoInfo *_avsVideoInfo;
+    auto DeliveryThreadProc() -> void;
+    auto StopDelivery() -> void;
+    auto CreateScriptClip() -> bool;
+    auto UpdateSourceVideoInfo() -> void;
+    auto GetStreamTime() -> REFERENCE_TIME;
+
+    BufferHandler _bufferHandler;
+
+    IScriptEnvironment2 *_avsEnv;
+    PClip _avsScriptClip;
+
+    VideoInfo _avsSourceVideoInfo;
+    VideoInfo _avsScriptVideoInfo;
 
     std::vector<MediaTypeFormat> _upstreamTypes;
-
-    REFERENCE_TIME _segmentDuration;
-    REFERENCE_TIME _timePerFrame;
-    REFERENCE_TIME _avsRefTime;
 
     const BITMAPINFOHEADER *_inBitmapInfo;
     const BITMAPINFOHEADER *_outBitmapInfo;
 
-    BufferHandler _bufferHandler;
-    AVS_FilterInfo _avsFilter;
+    REFERENCE_TIME _timePerFrame;
+
+    std::thread _deliveryThread;
+    std::mutex _threadMutex;
+    std::condition_variable _threadCondition;
+
+    std::atomic<bool> _threadPaused;
+    std::atomic<bool> _threadShutdown;
+    std::atomic<int> _deliveryFrameNb;
+    std::atomic<int> _inSampleFrameNb;
+
+    bool _rejectConnection;
+    bool _reloadAvsFile;
 
     Registry _registry;
     std::string _avsFile;

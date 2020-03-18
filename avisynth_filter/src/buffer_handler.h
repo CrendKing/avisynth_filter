@@ -1,25 +1,35 @@
 #pragma once
 
 #include "pch.h"
+#include "constants.h"
 
 
 class BufferHandler {
 public:
-    auto Reset(const CLSID &inFormat, const AVS_VideoInfo *videoInfo) -> void;
-    auto GetNearestFrame(REFERENCE_TIME frameTime) -> AVS_VideoFrame *;
-    auto CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, long height, AVS_ScriptEnvironment *avsEnv) -> void;
-    auto WriteSample(const AVS_VideoFrame *srcFrame, BYTE *dstBuffer, long dstUnitStride, long height, AVS_ScriptEnvironment *avsEnv) const -> void;
-    auto GarbageCollect(REFERENCE_TIME streamTime) -> void;
+    BufferHandler();
+
+    auto Reset(const CLSID &inFormat, const VideoInfo *videoInfo) -> void;
+    auto GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame;
+    auto CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, long height, IScriptEnvironment *avsEnv) -> void;
+    auto WriteSample(const PVideoFrame srcFrame, BYTE *dstBuffer, long dstUnitStride, long height, IScriptEnvironment *avsEnv) const -> void;
+    auto GarbageCollect(REFERENCE_TIME frameTime) -> void;
+    auto StartDraining() -> void;
+    auto StopDraining() -> void;
+    auto Flush() -> void;
 
 private:
-    struct FrameInfo {
+    struct TimedFrame {
+        PVideoFrame frame;
         REFERENCE_TIME time;
-        AVS_VideoFrame *frame;
     };
 
-    std::deque<FrameInfo> _frameBuffer;
-    std::shared_mutex _mutex;
+    std::deque<TimedFrame> _frameBuffer;
+
+    std::mutex _bufferMutex;
+    std::condition_variable _bufferCondition;
+
+    std::atomic<bool> _draining;
 
     int _formatIndex;
-    const AVS_VideoInfo *_videoInfo;
+    const VideoInfo *_videoInfo;
 };

@@ -44,12 +44,15 @@ constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
 
 /*
- * Stream without duration could last forever. Use a large power as the fake number of frames.
+ * Stream could last forever. Use a large power as the fake number of frames.
  * Avoid using too large number because some AviSynth filters allocate memory based on the number of frames.
  * Also, some filters may perform calculation on it, resulting overflow.
  * Same as ffdshow, uses a highly composite number 10810800, which could last 50 hours for a 60fps stream.
  */
 constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
+
+// Special tag to reset delivery thread's current frame number to the input sample frame number.
+constexpr int DELIVER_FRAME_NB_RESET = -1;
 
 constexpr char *REGISTRY_KEY_NAME = "Software\\AviSynthFilter";
 constexpr char *REGISTRY_AVS_FILE_VALUE_NAME = "AvsFile";
