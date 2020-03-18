@@ -24,10 +24,11 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <vector>
+
+#include "resource.h"
 
 #ifdef _DEBUG
 #define LOGGING
 #endif
-
-#include "resource.h"

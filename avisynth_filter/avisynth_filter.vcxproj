@@ -24,10 +24,10 @@
     <ClInclude Include="src\filter.h" />
     <ClInclude Include="src\filter_prop.h" />
     <ClInclude Include="src\constants.h" />
-    <ClInclude Include="src\avs_file.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\registry.h" />
     <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\source_clip.h" />
   </ItemGroup>
   <ItemGroup>
@@ -43,6 +43,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ClCompile Include="src\registry.cpp" />
+    <ClCompile Include="src\settings.cpp" />
     <ClCompile Include="src\source_clip.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -6,7 +6,7 @@ This filter exports an "avsfilter_source()" function to the AviSynth script, whi
 
 If you used ffdshow's AviSynth plugin, you may find this filter similar in many ways. On top of that, this filter is actively adding new features. Support most common input formats such as NV12, YUY2 and P010 etc.
 
-Because this filter uses it's own multi-threading logic to handle frames, you must NOT use any prefetcher in your script. There is no performance benefit of using it in an use case like live video playing since the number of buffered frames is determined by the DirectShow source filter.
+Because this filter uses it's own multi-threading logic to handle frames, you must NOT use any prefetcher in your script.
 
 ## Install
 

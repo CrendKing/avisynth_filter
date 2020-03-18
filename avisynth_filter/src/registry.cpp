@@ -14,24 +14,41 @@ Registry::~Registry() {
     }
 }
 
-auto Registry::ReadValue() const -> std::string {
-    std::string avsFile;
+auto Registry::ReadString(const char *valueName) const -> std::string {
+    std::string ret;
 
     if (_registryKey) {
-        char buf[MAX_PATH];
-        DWORD len = MAX_PATH;
+        char buffer[MAX_PATH];
+        DWORD bufferSize = MAX_PATH;
 
-        const LSTATUS registryStatus = RegGetValue(_registryKey, nullptr, REGISTRY_AVS_FILE_VALUE_NAME, RRF_RT_REG_SZ, nullptr, buf, &len);
+        const LSTATUS registryStatus = RegGetValue(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer, &bufferSize);
         if (registryStatus == ERROR_SUCCESS) {
-            avsFile = std::string(buf, len).c_str();
+            ret = std::string(buffer, bufferSize).c_str();
         }
     }
 
-    return avsFile;
+    return ret;
 }
 
-auto Registry::WriteValue(const std::string &avsFile) const -> void {
+auto Registry::ReadNumber(const char *valueName) const -> DWORD {
+    DWORD ret = DWORD_MAX;
+
     if (_registryKey) {
-        RegSetValueEx(_registryKey, REGISTRY_AVS_FILE_VALUE_NAME, 0, REG_SZ, reinterpret_cast<const BYTE *>(avsFile.c_str()), avsFile.size());
+        DWORD valueSize = sizeof(ret);
+        RegGetValue(_registryKey, nullptr, valueName, RRF_RT_REG_DWORD, nullptr, &ret, &valueSize);
+    }
+
+    return ret;
+}
+
+auto Registry::WriteString(const char *valueName, const std::string &valueString) const -> void {
+    if (_registryKey) {
+        RegSetValueEx(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), valueString.size());
+    }
+}
+
+auto Registry::WriteNumber(const char *valueName, DWORD valueNumber) const -> void {
+    if (_registryKey) {
+        RegSetValueEx(_registryKey, valueName, 0, REG_DWORD, reinterpret_cast<const BYTE *>(&valueNumber), sizeof(valueNumber));
     }
 }

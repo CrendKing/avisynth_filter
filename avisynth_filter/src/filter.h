@@ -1,40 +1,34 @@
 #pragma once
 
 #include "pch.h"
-
-#include <atomic>
-
 #include "buffer_handler.h"
-#include "registry.h"
-#include "avs_file.h"
+#include "settings.h"
 
 
 class CAviSynthFilter
     : public CVideoTransformFilter
-    , public IAvsFile
     , public ISpecifyPropertyPages {
+    friend class CAvsFilterSettings;
+
 public:
     static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown *;
 
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
-    ~CAviSynthFilter();
 
     DECLARE_IUNKNOWN
 
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
 
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
-    auto GetMediaType(int iPosition, CMediaType *pMediaType)->HRESULT override;
+    auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> HRESULT override;
-    auto Transform(IMediaSample *pIn, IMediaSample *pOut)->HRESULT override;
-    auto EndFlush()->HRESULT override;
+    auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
+    auto BeginFlush()->HRESULT override;
+    auto STDMETHODCALLTYPE Stop() -> HRESULT override;
 
     auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
-    auto STDMETHODCALLTYPE GetAvsFile(std::string &avsFile) const -> HRESULT override;
-    auto STDMETHODCALLTYPE UpdateAvsFile(const std::string &avsFile) -> HRESULT override;
-    auto STDMETHODCALLTYPE ReloadAvsFile() -> HRESULT override;
 
 private:
     struct MediaTypeFormat {
@@ -49,8 +43,8 @@ private:
     auto StopDelivery() -> void;
     auto CreateScriptClip() -> bool;
     auto UpdateSourceVideoInfo() -> void;
-    auto GetStreamTime() -> REFERENCE_TIME;
 
+    CAvsFilterSettings _settings;
     BufferHandler _bufferHandler;
 
     IScriptEnvironment2 *_avsEnv;
@@ -66,18 +60,18 @@ private:
 
     REFERENCE_TIME _timePerFrame;
 
+    std::mutex _transformMutex;
+    std::condition_variable _transformCondition;
+
     std::thread _deliveryThread;
     std::mutex _threadMutex;
     std::condition_variable _threadCondition;
 
-    std::atomic<bool> _threadPaused;
-    std::atomic<bool> _threadShutdown;
+    std::atomic<bool> _shutdown;
+    std::atomic<bool> _deliveryPaused;
     std::atomic<int> _deliveryFrameNb;
     std::atomic<int> _inSampleFrameNb;
 
     bool _rejectConnection;
     bool _reloadAvsFile;
-
-    Registry _registry;
-    std::string _avsFile;
 };

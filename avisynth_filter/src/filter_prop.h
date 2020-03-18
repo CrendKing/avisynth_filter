@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pch.h"
-#include "avs_file.h"
+#include "settings.h"
 
 
 class CAviSynthFilterProp : public CBasePropertyPage {
@@ -12,13 +12,16 @@ public:
 
 private:
     auto OnConnect(IUnknown *pUnk) -> HRESULT override;
-    auto OnDisconnect() -> HRESULT override;
     auto OnActivate() -> HRESULT override;
     auto OnApplyChanges() -> HRESULT override;
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;
 
     auto GetText() -> std::string;
+    auto SetDirty() -> void;
 
-    IAvsFile *_avsFileInterface;
-    std::string _avsFileValue;
+    IAvsFilterSettings *_settings;
+    std::string _avsFile;
+    int _bufferBack;
+    int _bufferAhead;
+    std::unordered_set<int> _formatIndices;
 };
