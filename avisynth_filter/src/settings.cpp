@@ -1,15 +1,52 @@
 #include "pch.h"
 #include "settings.h"
-#include "filter.h"
 #include "constants.h"
 #include "format.h"
 
 
-CAvsFilterSettings::CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr)
-    : CUnknown(SETTINGS_NAME, pUnk, phr) {
+auto CALLBACK CAvsFilterSettings::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+    CAvsFilterSettings *newInstance = new CAvsFilterSettings(pUnk, phr);
+
+    if (newInstance == nullptr) {
+        *phr = E_OUTOFMEMORY;
+    }
+
+    return newInstance;
 }
 
-auto CAvsFilterSettings::LoadSettings() -> void {
+CAvsFilterSettings::CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr)
+    : CUnknown(NAME(SETTINGS_NAME), pUnk, phr) {
+}
+
+auto STDMETHODCALLTYPE CAvsFilterSettings::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT {
+    CheckPointer(ppv, E_POINTER);
+
+    if (riid == IID_ISpecifyPropertyPages) {
+        return GetInterface(static_cast<ISpecifyPropertyPages *>(this), ppv);
+    }
+
+    if (riid == IID_IAvsFilterSettings) {
+        return GetInterface(static_cast<IAvsFilterSettings *>(this), ppv);
+    }
+
+    return CUnknown::NonDelegatingQueryInterface(riid, ppv);
+}
+
+auto STDMETHODCALLTYPE CAvsFilterSettings::GetPages(CAUUID *pPages) -> HRESULT {
+    CheckPointer(pPages, E_POINTER);
+
+    pPages->pElems = static_cast<GUID *>(CoTaskMemAlloc(sizeof(GUID)));
+    if (pPages->pElems == nullptr) {
+        return E_OUTOFMEMORY;
+    }
+
+    pPages->cElems = 1;
+    pPages->pElems[0] = CLSID_AvsPropertyPage;
+
+    return S_OK;
+}
+
+auto STDMETHODCALLTYPE CAvsFilterSettings::LoadSettings() -> void {
     _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
 
     const DWORD regBufferBack = _registry.ReadNumber(REGISTRY_VALUE_NAME_BUFFER_BACK);
@@ -38,10 +75,10 @@ auto CAvsFilterSettings::LoadSettings() -> void {
     }
 }
 
-auto CAvsFilterSettings::SaveSettings() const -> void {
+auto STDMETHODCALLTYPE CAvsFilterSettings::SaveSettings() const -> void {
     DWORD regFormatIndices = 0;
-    for (int f : _formatIndices) {
-        regFormatIndices |= (1 << f);
+    for (int i : _formatIndices) {
+        regFormatIndices |= (1 << i);
     }
 
     _registry.WriteString(REGISTRY_VALUE_NAME_AVS_FILE, _avsFile);
@@ -50,44 +87,44 @@ auto CAvsFilterSettings::SaveSettings() const -> void {
     _registry.WriteNumber(REGISTRY_VALUE_NAME_FORMATS, regFormatIndices);
 }
 
-auto CAvsFilterSettings::GetAvsFile() const -> const std::string & {
+auto STDMETHODCALLTYPE CAvsFilterSettings::GetAvsFile() const -> const std::string & {
     return _avsFile;
 }
 
-auto CAvsFilterSettings::SetAvsFile(const std::string &avsFile) -> void {
+auto STDMETHODCALLTYPE CAvsFilterSettings::SetAvsFile(const std::string &avsFile) -> void {
     _avsFile = avsFile;
 }
 
 
-auto CAvsFilterSettings::GetReloadAvsFile() const -> bool {
+auto STDMETHODCALLTYPE CAvsFilterSettings::GetReloadAvsFile() const -> bool {
     return _reloadAvsFile;
 }
 
-auto CAvsFilterSettings::SetReloadAvsFile(bool reload) -> void {
+auto STDMETHODCALLTYPE CAvsFilterSettings::SetReloadAvsFile(bool reload) -> void {
     _reloadAvsFile = reload;
 }
 
-auto CAvsFilterSettings::GetBufferBack() const -> int {
+auto STDMETHODCALLTYPE CAvsFilterSettings::GetBufferBack() const -> int {
     return _bufferBack;
 }
 
-auto CAvsFilterSettings::SetBufferBack(int bufferBack) -> void {
+auto STDMETHODCALLTYPE CAvsFilterSettings::SetBufferBack(int bufferBack) -> void {
     _bufferBack = bufferBack;
 }
 
-auto CAvsFilterSettings::GetBufferAhead() const -> int {
+auto STDMETHODCALLTYPE CAvsFilterSettings::GetBufferAhead() const -> int {
     return _bufferAhead;
 }
 
-auto CAvsFilterSettings::SetBufferAhead(int bufferAhead) -> void {
+auto STDMETHODCALLTYPE CAvsFilterSettings::SetBufferAhead(int bufferAhead) -> void {
     _bufferAhead = bufferAhead;
 }
 
-auto CAvsFilterSettings::GetFormats() const -> const std::unordered_set<int> & {
+auto STDMETHODCALLTYPE CAvsFilterSettings::GetFormats() const -> const std::unordered_set<int> & {
     return _formatIndices;
 }
 
-auto CAvsFilterSettings::SetFormats(const std::unordered_set<int> &formatIndices) -> void {
+auto STDMETHODCALLTYPE CAvsFilterSettings::SetFormats(const std::unordered_set<int> &formatIndices) -> void {
     _formatIndices = formatIndices;
 }
 

@@ -12,6 +12,7 @@ public:
 
 private:
     auto OnConnect(IUnknown *pUnk) -> HRESULT override;
+    auto OnDisconnect()->HRESULT override;
     auto OnActivate() -> HRESULT override;
     auto OnApplyChanges() -> HRESULT override;
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;

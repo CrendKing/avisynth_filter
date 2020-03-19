@@ -3,24 +3,33 @@
 #include "constants.h"
 
 
-auto WINAPI CAviSynthFilterProp::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    CAviSynthFilterProp *newProp = new CAviSynthFilterProp(pUnk, phr);
+auto CALLBACK CAviSynthFilterProp::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+    CAviSynthFilterProp *newInstance = new CAviSynthFilterProp(pUnk, phr);
 
-    if (newProp == nullptr && phr != nullptr) {
+    if (newInstance == nullptr) {
         *phr = E_OUTOFMEMORY;
     }
 
-    return newProp;
+    return newInstance;
 }
 
 CAviSynthFilterProp::CAviSynthFilterProp(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(PROPERTY_PAGE_NAME, pUnk, IDD_PROPPAGE, IDS_TITLE)
+    : CBasePropertyPage(NAME(PROPERTY_PAGE_NAME), pUnk, IDD_PROPPAGE, IDS_TITLE)
     , _settings(nullptr) {
 }
 
 auto CAviSynthFilterProp::OnConnect(IUnknown *pUnk) -> HRESULT {
     CheckPointer(pUnk, E_POINTER);
     return pUnk->QueryInterface(IID_IAvsFilterSettings, reinterpret_cast<void **>(&_settings));
+}
+
+auto CAviSynthFilterProp::OnDisconnect() -> HRESULT {
+    if (_settings != nullptr) {
+        _settings->Release();
+        _settings = nullptr;
+    }
+
+    return S_OK;
 }
 
 auto CAviSynthFilterProp::OnActivate() -> HRESULT {
@@ -65,9 +74,9 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
     {
         if (HIWORD(wParam) == EN_CHANGE) {
             if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
-                char buf[MAX_PATH];
-                const UINT len = GetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, buf, MAX_PATH);
-                const std::string newValue = std::string(buf, len).c_str();
+                char buf[STR_MAX_LENGTH];
+                StringFromResource(buf, IDC_EDIT_AVS_FILE);
+                const std::string newValue = std::string(buf, STR_MAX_LENGTH).c_str();
 
                 if (newValue != _avsFile) {
                     _avsFile = newValue;

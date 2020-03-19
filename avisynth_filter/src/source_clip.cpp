@@ -8,7 +8,7 @@ SourceClip::SourceClip(const VideoInfo &videoInfo, BufferHandler &bufferHandler)
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    const REFERENCE_TIME frameTime = frameNb * _videoInfo.fps_denominator * UNITS / _videoInfo.fps_numerator;
+    const REFERENCE_TIME frameTime = frameNb * llMulDiv(_videoInfo.fps_denominator, UNITS, _videoInfo.fps_numerator, 0);
     return _bufferHandler.GetNearestFrame(frameTime);
 }
 

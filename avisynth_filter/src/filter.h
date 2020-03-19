@@ -6,8 +6,7 @@
 
 
 class CAviSynthFilter
-    : public CVideoTransformFilter
-    , public ISpecifyPropertyPages {
+    : public CVideoTransformFilter {
 public:
     static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown *;
 
@@ -17,7 +16,6 @@ public:
     DECLARE_IUNKNOWN
 
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
-    auto STDMETHODCALLTYPE GetPages(CAUUID *pPages)->HRESULT override;
 
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
     auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
@@ -36,10 +34,11 @@ private:
     static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
 
     auto ValidateMediaType(const AM_MEDIA_TYPE *mediaType, PIN_DIRECTION dir) const -> HRESULT;
-    auto CreateScriptClip() -> bool;
+    auto DeleteAviSynth() -> void;
+    auto ReloadAviSynth() -> void;
     auto UpdateSourceVideoInfo() -> void;
 
-    CAvsFilterSettings _settings;
+    CAvsFilterSettings *_settings;
     BufferHandler _bufferHandler;
 
     IScriptEnvironment2 *_avsEnv;
@@ -49,7 +48,7 @@ private:
     VideoInfo _avsScriptVideoInfo;
 
     std::vector<MediaTypeFormat> _upstreamTypes;
-    bool _rejectConnection;
+    bool _isConnectingPins;
 
     const BITMAPINFOHEADER *_inBitmapInfo;
     const BITMAPINFOHEADER *_outBitmapInfo;
@@ -58,4 +57,6 @@ private:
 
     int _inSampleFrameNb;
     int _deliveryFrameNb;
+
+    std::mutex _avsMutex;
 };

@@ -31,7 +31,7 @@ This function takes no argument.
 
 This function serves as a heuristic to disconnect the AviSynth Filter from DirectShow filter graph. Put at the end of the script file.
 
-It can be used to avoid unnecessary processing and improve performance if the script does not modify the source. Must NOT be used during live reloading.
+It can be used to avoid unnecessary processing and improve performance if the script does not modify the source. Avoid to use it during live reloading.
 
 This function takes no argument.
 

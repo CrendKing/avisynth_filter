@@ -5,51 +5,54 @@
 
 
 DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
-    virtual auto LoadSettings() -> void = 0;
-    virtual auto SaveSettings() const -> void = 0;
+    virtual auto STDMETHODCALLTYPE LoadSettings() -> void = 0;
+    virtual auto STDMETHODCALLTYPE SaveSettings() const -> void = 0;
 
-    virtual auto GetAvsFile() const -> const std::string & = 0;
-    virtual auto SetAvsFile(const std::string & avsFile) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsFile() const -> const std::string & = 0;
+    virtual auto STDMETHODCALLTYPE SetAvsFile(const std::string & avsFile) -> void = 0;
 
-    virtual auto GetReloadAvsFile() const -> bool = 0;
-    virtual auto SetReloadAvsFile(bool reload) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetReloadAvsFile() const -> bool = 0;
+    virtual auto STDMETHODCALLTYPE SetReloadAvsFile(bool reload) -> void = 0;
 
-    virtual auto GetBufferBack() const -> int = 0;
-    virtual auto SetBufferBack(int bufferBack) -> void = 0;
-    virtual auto GetBufferAhead() const -> int = 0;
-    virtual auto SetBufferAhead(int bufferBack) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetBufferBack() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE SetBufferBack(int bufferBack) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetBufferAhead() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE SetBufferAhead(int bufferBack) -> void = 0;
 
-    virtual auto GetFormats() const -> const std::unordered_set<int> & = 0;
-    virtual auto SetFormats(const std::unordered_set<int> & formatIndices) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetFormats() const -> const std::unordered_set<int> & = 0;
+    virtual auto STDMETHODCALLTYPE SetFormats(const std::unordered_set<int> & formatIndices) -> void = 0;
 };
-
-class CAviSynthFilter;
 
 class CAvsFilterSettings
     : public IAvsFilterSettings
-    , CUnknown {
-
+    , public ISpecifyPropertyPages
+    , public CUnknown {
 public:
+    static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown *;
+
     CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr);
 
     DECLARE_IUNKNOWN
 
-    auto LoadSettings() -> void override;
-    auto SaveSettings() const -> void override;
+    auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
+    auto STDMETHODCALLTYPE GetPages(CAUUID *pPages)->HRESULT override;
 
-    auto GetAvsFile() const -> const std::string & override;
-    auto SetAvsFile(const std::string &avsFile) -> void override;
+    auto STDMETHODCALLTYPE LoadSettings() -> void override;
+    auto STDMETHODCALLTYPE SaveSettings() const -> void override;
 
-    auto GetReloadAvsFile() const -> bool override;
-    auto SetReloadAvsFile(bool reload) -> void override;
+    auto STDMETHODCALLTYPE GetAvsFile() const -> const std::string & override;
+    auto STDMETHODCALLTYPE SetAvsFile(const std::string &avsFile) -> void override;
 
-    auto GetBufferBack() const -> int override;
-    auto SetBufferBack(int bufferBack) -> void override;
-    auto GetBufferAhead() const -> int override;
-    auto SetBufferAhead(int bufferAhead) -> void override;
+    auto STDMETHODCALLTYPE GetReloadAvsFile() const -> bool override;
+    auto STDMETHODCALLTYPE SetReloadAvsFile(bool reload) -> void override;
 
-    auto GetFormats() const -> const std::unordered_set<int> & override;
-    auto SetFormats(const std::unordered_set<int> &formatIndices) -> void override;
+    auto STDMETHODCALLTYPE GetBufferBack() const -> int override;
+    auto STDMETHODCALLTYPE SetBufferBack(int bufferBack) -> void override;
+    auto STDMETHODCALLTYPE GetBufferAhead() const -> int override;
+    auto STDMETHODCALLTYPE SetBufferAhead(int bufferAhead) -> void override;
+
+    auto STDMETHODCALLTYPE GetFormats() const -> const std::unordered_set<int> & override;
+    auto STDMETHODCALLTYPE SetFormats(const std::unordered_set<int> &formatIndices) -> void override;
 
     auto IsFormatSupported(int formatIndex) const -> bool;
 

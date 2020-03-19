@@ -32,3 +32,9 @@
 #ifdef _DEBUG
 #define LOGGING
 #endif
+
+//#define MINIDUMP
+
+#ifdef MINIDUMP
+#include <client/windows/handler/exception_handler.h>
+#endif
