@@ -11,10 +11,6 @@ DEFINE_GUID(CLSID_AviSynthFilter,
 DEFINE_GUID(CLSID_AvsPropertyPage,
             0x90c56868, 0x7d47, 0x4aa2, 0xa4, 0x2d, 0x6, 0x40, 0x6a, 0x6d, 0xb3, 0x5f);
 
-// {BC067674-9400-4119-925D-49CDF689F79C}
-DEFINE_GUID(CLSID_AvsFilterSettings,
-            0xbc067674, 0x9400, 0x4119, 0x92, 0x5d, 0x49, 0xcd, 0xf6, 0x89, 0xf7, 0x9c);
-
 // {871B4CAB-7E31-4E2C-8A9B-ED9AD64702DF}
 DEFINE_GUID(IID_IAvsFilterSettings,
             0x871b4cab, 0x7e31, 0x4e2c, 0x8a, 0x9b, 0xed, 0x9a, 0xd6, 0x47, 0x2, 0xdf);
@@ -28,7 +24,6 @@ DEFINE_GUID(IID_IAvsFilterSettings,
 #define FILTER_NAME_SUFFIX
 #endif // DEBUG
 #define PROPERTY_PAGE_SUFFIX " Property Page"
-#define SETTINGS_SUFFIX " Settings"
 
 #define FILTER_NAME_BASE "AviSynth Filter"
 #define FILTER_NAME_FULL FILTER_NAME_BASE FILTER_NAME_SUFFIX
@@ -40,9 +35,6 @@ constexpr wchar_t *FILTER_NAME_WIDE = Widen(FILTER_NAME_FULL);
 
 constexpr char *PROPERTY_PAGE_NAME = PROPERTY_PAGE_FULL;
 constexpr wchar_t *PROPERTY_PAGE_NAME_WIDE = Widen(PROPERTY_PAGE_FULL);
-
-constexpr char *SETTINGS_NAME = SETTINGS_FULL;
-constexpr wchar_t *SETTINGS_NAME_WIDE = Widen(SETTINGS_FULL);
 
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 

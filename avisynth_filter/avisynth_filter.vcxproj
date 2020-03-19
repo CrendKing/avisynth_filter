@@ -44,7 +44,6 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ClCompile Include="src\registry.cpp" />
-    <ClCompile Include="src\settings.cpp" />
     <ClCompile Include="src\source_clip.cpp" />
   </ItemGroup>
   <ItemGroup>

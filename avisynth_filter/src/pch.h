@@ -29,9 +29,7 @@
 
 #include "resource.h"
 
-#ifdef _DEBUG
-#define LOGGING
-#endif
+//#define LOGGING
 
 //#define MINIDUMP
 

@@ -41,7 +41,18 @@ static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
 #ifdef MINIDUMP
         delete g_exHandler;
 #endif // MINIDUMP
-  }
+    }
+}
+
+template <typename T>
+static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+    CUnknown *newInstance = new T(pUnk, phr);
+
+    if (newInstance == nullptr) {
+        *phr = E_OUTOFMEMORY;
+    }
+
+    return newInstance;
 }
 
 static constexpr REGPINTYPES PIN_TYPE_REG[] = {
@@ -93,19 +104,13 @@ static constexpr AMOVIESETUP_FILTER FILTER_REG = {
 CFactoryTemplate g_Templates[] = {
     { FILTER_NAME_WIDE
     , &CLSID_AviSynthFilter
-    , CAviSynthFilter::CreateInstance
+    , CreateInstance<CAviSynthFilter>
     , InitRoutine
     , &FILTER_REG },
 
     { PROPERTY_PAGE_NAME_WIDE
     , &CLSID_AvsPropertyPage
-    , CAviSynthFilterProp::CreateInstance
-    , nullptr
-    , nullptr },
-
-    { SETTINGS_NAME_WIDE
-    , &CLSID_AvsFilterSettings
-    , CAvsFilterSettings::CreateInstance
+    , CreateInstance<CAviSynthFilterProp>
     , nullptr
     , nullptr },
 };

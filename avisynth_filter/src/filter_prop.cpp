@@ -3,16 +3,6 @@
 #include "constants.h"
 
 
-auto CALLBACK CAviSynthFilterProp::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    CAviSynthFilterProp *newInstance = new CAviSynthFilterProp(pUnk, phr);
-
-    if (newInstance == nullptr) {
-        *phr = E_OUTOFMEMORY;
-    }
-
-    return newInstance;
-}
-
 CAviSynthFilterProp::CAviSynthFilterProp(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(PROPERTY_PAGE_NAME), pUnk, IDD_PROPPAGE, IDS_TITLE)
     , _settings(nullptr) {
@@ -50,7 +40,7 @@ auto CAviSynthFilterProp::OnActivate() -> HRESULT {
     SendDlgItemMessage(m_Dlg, IDC_SPIN_BUFFER_BACK, UDM_SETACCEL, 1, reinterpret_cast<LPARAM>(&accels));
     SendDlgItemMessage(m_Dlg, IDC_SPIN_BUFFER_AHEAD, UDM_SETACCEL, 1, reinterpret_cast<LPARAM>(&accels));
 
-    _formatIndices = _settings->GetFormats();
+    _formatIndices = _settings->GetSupportedFormats();
     for (const int formatIndex : _formatIndices) {
         CheckDlgButton(m_Dlg, IDC_FORMAT_NV12 + formatIndex, 1);
     }
@@ -62,7 +52,7 @@ auto CAviSynthFilterProp::OnApplyChanges() -> HRESULT {
     _settings->SetAvsFile(_avsFile);
     _settings->SetBufferBack(_bufferBack);
     _settings->SetBufferAhead(_bufferAhead);
-    _settings->SetFormats(_formatIndices);
+    _settings->SetSupportedFormats(_formatIndices);
     _settings->SaveSettings();
 
     return S_OK;
@@ -75,7 +65,7 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
         if (HIWORD(wParam) == EN_CHANGE) {
             if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
                 char buf[STR_MAX_LENGTH];
-                StringFromResource(buf, IDC_EDIT_AVS_FILE);
+                GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
                 const std::string newValue = std::string(buf, STR_MAX_LENGTH).c_str();
 
                 if (newValue != _avsFile) {
