@@ -5,9 +5,8 @@
 #include "format.h"
 
 
-CAvsFilterSettings::CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr, CAviSynthFilter &filter)
-    : CUnknown(SETTINGS_NAME, pUnk, phr)
-    , _filter(filter) {
+CAvsFilterSettings::CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr)
+    : CUnknown(SETTINGS_NAME, pUnk, phr) {
 }
 
 auto CAvsFilterSettings::LoadSettings() -> void {
@@ -59,8 +58,13 @@ auto CAvsFilterSettings::SetAvsFile(const std::string &avsFile) -> void {
     _avsFile = avsFile;
 }
 
-auto CAvsFilterSettings::ReloadAvsFile() -> void {
-    _filter._reloadAvsFile = true;
+
+auto CAvsFilterSettings::GetReloadAvsFile() const -> bool {
+    return _reloadAvsFile;
+}
+
+auto CAvsFilterSettings::SetReloadAvsFile(bool reload) -> void {
+    _reloadAvsFile = reload;
 }
 
 auto CAvsFilterSettings::GetBufferBack() const -> int {

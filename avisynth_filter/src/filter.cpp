@@ -68,8 +68,8 @@ static constexpr REGFILTERPINS PIN_REG[] = {
     , FALSE                // Does the filter create multiple instances?
     , &CLSID_NULL          // filter CLSID the pin connects to (obsolete)
     , nullptr              // pin name the pin connects to (obsolete)
-    , PIN_TYPE_COUNT    // pin media type count
-    , PIN_TYPE_REG },   // pin media types
+    , PIN_TYPE_COUNT       // pin media type count
+    , PIN_TYPE_REG },      // pin media types
 
     { nullptr              // pin name (obsolete)
     , FALSE                // is pin rendered?
@@ -78,8 +78,8 @@ static constexpr REGFILTERPINS PIN_REG[] = {
     , FALSE                // Does the filter create multiple instances?
     , &CLSID_NULL          // filter CLSID the pin connects to (obsolete)
     , nullptr              // pin name the pin connects to (obsolete)
-    , PIN_TYPE_COUNT   // pin media type count
-    , PIN_TYPE_REG },  // pin media types
+    , PIN_TYPE_COUNT       // pin media type count
+    , PIN_TYPE_REG },      // pin media types
 };
 
 static constexpr ULONG PIN_COUNT = sizeof(PIN_REG) / sizeof(PIN_REG[0]);
@@ -100,7 +100,7 @@ CFactoryTemplate g_Templates[] = {
     , &FILTER_REG },
 
     { PROPERTY_PAGE_NAME_WIDE
-    , &CLSID_PropertyPage
+    , &CLSID_AvsPropertyPage
     , CAviSynthFilterProp::CreateInstance
     , nullptr
     , nullptr },
@@ -131,7 +131,7 @@ auto __cdecl CreateAvsFilterDisconnect(AVSValue args, void *user_data, IScriptEn
 }
 
 auto WINAPI CAviSynthFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    auto newFilter = new CAviSynthFilter(pUnk, phr);
+    CAviSynthFilter *newFilter = new CAviSynthFilter(pUnk, phr);
 
     if (newFilter == nullptr && phr != nullptr) {
         *phr = E_OUTOFMEMORY;
@@ -142,23 +142,38 @@ auto WINAPI CAviSynthFilter::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUn
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME, pUnk, CLSID_AviSynthFilter)
-    , _settings(pUnk, phr, *this)
+    , _settings(pUnk, phr)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
     , _inBitmapInfo(nullptr)
     , _outBitmapInfo(nullptr)
-    , _shutdown(false)
-    , _rejectConnection(false)
-    , _reloadAvsFile(false) {
+    , _rejectConnection(false) {
     _settings.LoadSettings();
 }
 
-auto CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT {
+CAviSynthFilter::~CAviSynthFilter() {
+    for (const MediaTypeFormat &elem : _upstreamTypes) {
+        DeleteMediaType(elem.mediaType);
+    }
+
+    if (_avsScriptClip != nullptr) {
+        _avsScriptClip = nullptr;
+    }
+
+    _bufferHandler.Flush();
+
+    if (_avsEnv != nullptr) {
+        _avsEnv->DeleteScriptEnvironment();
+    }
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT {
     CheckPointer(ppv, E_POINTER);
 
     if (riid == IID_IAvsFilterSettings) {
         return GetInterface(static_cast<IAvsFilterSettings *>(&_settings), ppv);
     }
+
     if (riid == IID_ISpecifyPropertyPages) {
         return GetInterface(static_cast<ISpecifyPropertyPages *>(this), ppv);
     }
@@ -166,21 +181,22 @@ auto CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HR
     return CVideoTransformFilter::NonDelegatingQueryInterface(riid, ppv);
 }
 
-auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    HRESULT hr;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
+    CheckPointer(pPages, E_POINTER);
 
-    CheckHr(ValidateMediaType(mtIn));
-
-    const int formatIndex = Format::LookupInput(mtIn->subtype);
-    if (formatIndex == -1) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
+    pPages->pElems = static_cast<GUID *>(CoTaskMemAlloc(sizeof(GUID)));
+    if (pPages->pElems == nullptr) {
+        return E_OUTOFMEMORY;
     }
 
-    if (!_settings.IsFormatSupported(formatIndex)) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    }
+    pPages->cElems = 1;
+    pPages->pElems[0] = CLSID_AvsPropertyPage;
 
     return S_OK;
+}
+
+auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
+    return ValidateMediaType(mtIn, PINDIR_INPUT);
 }
 
 auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT {
@@ -224,22 +240,8 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
 }
 
 auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    HRESULT hr;
-
-    CheckHr(ValidateMediaType(mtOut));
-
-    const int formatIndex = Format::LookupOutput(mtOut->subtype);
-    if (formatIndex == -1) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    }
-
-    if (!_settings.IsFormatSupported(formatIndex)) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    }
-
     // the actual check for compatible subtype is in CompleteConnect(). we want to allow all video media types for the output pin
-
-    return S_OK;
+    return ValidateMediaType(mtOut, PINDIR_OUTPUT);
 }
 
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
@@ -252,8 +254,7 @@ auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTI
     ALLOCATOR_PROPERTIES actual;
     CheckHr(pAlloc->SetProperties(pProperties, &actual));
 
-    if (pProperties->cBuffers > actual.cBuffers ||
-        pProperties->cbBuffer > actual.cbBuffer) {
+    if (pProperties->cBuffers > actual.cBuffers || pProperties->cbBuffer > actual.cbBuffer) {
         return E_FAIL;
     }
 
@@ -347,13 +348,12 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
             for (const MediaTypeFormat &elem : _upstreamTypes) {
                 DeleteMediaType(elem.mediaType);
             }
+            _upstreamTypes.clear();
 
             _inBitmapInfo = GetBitmapInfo(m_pInput->CurrentMediaType());
             _outBitmapInfo = GetBitmapInfo(m_pOutput->CurrentMediaType());
 
-            _deliveryPaused = true;
             _deliveryFrameNb = DELIVER_FRAME_NB_RESET;
-            _deliveryThread = std::thread(&CAviSynthFilter::DeliveryThreadProc, this);
         }
     }
 
@@ -363,14 +363,21 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> H
 auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT {
     HRESULT hr;
 
+    CRefTime streamTime;
+    CheckHr(StreamTime(streamTime));
+    streamTime = min(streamTime, m_tStart);
+
     REFERENCE_TIME inStartTime, inStopTime;
-    CheckHr(pIn->GetTime(&inStartTime, &inStopTime));
+    hr = pIn->GetTime(&inStartTime, &inStopTime);
+    if (FAILED(hr)) {
+        inStartTime = streamTime;
+    }
 
     AM_MEDIA_TYPE *inMediaType;
     if (pIn->GetMediaType(&inMediaType) == S_OK) {
         DeleteMediaType(inMediaType);
         _inBitmapInfo = GetBitmapInfo(m_pInput->CurrentMediaType());
-        _reloadAvsFile = true;
+        _settings.SetReloadAvsFile(true);
     }
 
     AM_MEDIA_TYPE *outMediaType;
@@ -379,14 +386,10 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         _outBitmapInfo = GetBitmapInfo(m_pOutput->CurrentMediaType());
     }
 
-    BYTE *inBuffer;
-    CheckHr(pIn->GetPointer(&inBuffer));
-    _bufferHandler.CreateFrame(inStartTime, inBuffer, _inBitmapInfo->biWidth, _inBitmapInfo->biHeight, _avsEnv);
+    if (_settings.GetReloadAvsFile()) {
+        _settings.SetReloadAvsFile(false);
 
-    if (_reloadAvsFile) {
-        _reloadAvsFile = false;
-
-        StopDelivery();
+        _bufferHandler.Flush();
 
         if (!CreateScriptClip()) {
             return E_UNEXPECTED;
@@ -396,96 +399,62 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     _inSampleFrameNb = inStartTime / _timePerFrame;
 
     if (_deliveryFrameNb == DELIVER_FRAME_NB_RESET) {
-        _deliveryFrameNb.exchange(_inSampleFrameNb);
-        _deliveryPaused = false;
+        _deliveryFrameNb = _inSampleFrameNb;
     }
 
-    _threadCondition.notify_one();
+    BYTE *inBuffer;
+    CheckHr(pIn->GetPointer(&inBuffer));
+    _bufferHandler.CreateFrame(inStartTime, inBuffer, _inBitmapInfo->biWidth, _inBitmapInfo->biHeight, _avsEnv);
 
-    {
-        std::unique_lock<std::mutex> lock(_transformMutex);
-        _transformCondition.wait(lock, [&] {
-            if (_shutdown || _deliveryPaused) {
-                return true;
-            }
+    while (_deliveryFrameNb + _settings.GetBufferAhead() <= _inSampleFrameNb) {
+        IMediaSample *outSample = nullptr;
+        CheckHr(InitializeOutputSample(nullptr, &outSample));
 
-            return _deliveryFrameNb + _settings.GetBufferAhead() >= _inSampleFrameNb;
-        });
+        REFERENCE_TIME outStartTime = _deliveryFrameNb * _timePerFrame;
+        REFERENCE_TIME outStopTime = outStartTime + _timePerFrame;
+        CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
+
+        BYTE *outBuffer;
+        CheckHr(outSample->GetPointer(&outBuffer));
+
+        const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
+        _bufferHandler.WriteSample(clipFrame, outBuffer, _outBitmapInfo->biWidth, _outBitmapInfo->biHeight, _avsEnv);
+
+        CheckHr(m_pOutput->Deliver(outSample));
+
+        outSample->Release();
+        outSample = nullptr;
+
+        const REFERENCE_TIME backBufferTime = (_deliveryFrameNb - _settings.GetBufferBack()) * _timePerFrame;
+        _bufferHandler.GarbageCollect(backBufferTime, inStartTime);
+
+#ifdef LOGGING
+        printf("Delivery frameNb: %4i at %10lli inSampleFrameNb: %4i\n", _deliveryFrameNb, outStartTime, _inSampleFrameNb);
+#endif
+
+        _deliveryFrameNb += 1;
     }
 
 #ifdef LOGGING
-    CRefTime streamTime;
-    CheckHr(StreamTime(streamTime));
-    streamTime = min(streamTime, m_tStart);
-
     printf("late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4lli\n",
-           m_itrLate, _timePerFrame, streamTime, streamTime / _timePerFrame, inStartTime, inStartTime / _timePerFrame);
-    fflush(stdout);
+           m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inStartTime, inStartTime / _timePerFrame);
 #endif
 
     /*
-     * returning S_OK will cause pOut to be delivered by CVideoTransformFilter::Receive()
-     * returning S_FALSE will not deliver pOut, AND send notification about quality change
-     * we only want pOut not deliver, thus returning a success code that's neither S_OK or S_FALSE
+     * Returning S_FALSE because we deliver (or not deliver if condition not met) output samples ourselves.
+     * This will cause parent class to send quality change event (which is undesirable but OK), and returning NOERROR further up.
+     * We need that NOERROR in case upstream calls our input pin's ReceiveMultiple().
+     * Alternatively, we can reimplement Receive() all by ourselves, which seems overkill at this moment.
+     * Another option is to pOut->SetTime with some time that will never be shown, such as LONGLONG_MIN, but seems too hacky.
      */
-    return S_FALSE + 1;
+    return S_FALSE;
 }
 
 auto CAviSynthFilter::BeginFlush() -> HRESULT {
-    StopDelivery();
+    _bufferHandler.GarbageCollect(LONGLONG_MAX, LONGLONG_MIN);
+    _deliveryFrameNb = DELIVER_FRAME_NB_RESET;
+
     return CVideoTransformFilter::BeginFlush();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::Stop() -> HRESULT {
-    _shutdown = true;
-    _transformCondition.notify_one();
-    _threadCondition.notify_one();
-
-    if (_deliveryThread.joinable()) {
-        _bufferHandler.StartDraining();
-        _deliveryThread.join();
-        _bufferHandler.StopDraining();
-    }
-
-    if (_avsScriptClip != nullptr) {
-        _avsScriptClip = nullptr;
-    }
-
-    if (_avsEnv != nullptr) {
-        _avsEnv->DeleteScriptEnvironment();
-    }
-
-    return CVideoTransformFilter::Stop();
-}
-
-auto CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
-    if (pPages == nullptr) {
-        return E_POINTER;
-    }
-
-    pPages->cElems = 1;
-    pPages->pElems = static_cast<GUID *>(CoTaskMemAlloc(sizeof(GUID)));
-    if (pPages->pElems == nullptr) {
-        return E_OUTOFMEMORY;
-    }
-
-    pPages->pElems[0] = CLSID_PropertyPage;
-    return S_OK;
-}
-
-/**
- * Check if the media type has valid VideoInfo * format block.
- */
-auto CAviSynthFilter::ValidateMediaType(const AM_MEDIA_TYPE *mediaType) -> HRESULT {
-    if (mediaType->majortype != MEDIATYPE_Video) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    }
-
-    if (FAILED(CheckVideoInfoType(mediaType)) && FAILED(CheckVideoInfo2Type(mediaType))) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    }
-
-    return S_OK;
 }
 
 /**
@@ -503,83 +472,34 @@ auto CAviSynthFilter::GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADE
     return bitmapInfo;
 }
 
-auto CAviSynthFilter::DeliveryThreadProc() -> void {
-    IMediaSample *pOut = nullptr;
-
-    while (true) {
-        std::unique_lock<std::mutex> lock(_threadMutex);
-
-        _threadCondition.wait(lock, [&] {
-            if (_shutdown) {
-                return true;
-            }
-
-            if (_deliveryPaused) {
-                return false;
-            }
-
-            return _deliveryFrameNb <= _inSampleFrameNb;
-        });
-
-        if (_shutdown) {
-            break;
-        }
-
-        if (_deliveryPaused) {
-            continue;
-        }
-
-        if (FAILED(InitializeOutputSample(nullptr, &pOut))) {
-            break;
-        }
-
-        REFERENCE_TIME outStartTime = _deliveryFrameNb * _timePerFrame;
-        REFERENCE_TIME outStopTime = outStartTime + _timePerFrame;
-        if (FAILED(pOut->SetTime(&outStartTime, &outStopTime))) {
-            break;
-        }
-
-        BYTE *outBuffer;
-        if (FAILED(pOut->GetPointer(&outBuffer))) {
-            break;
-        }
-
-        const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
-        _bufferHandler.WriteSample(clipFrame, outBuffer, _outBitmapInfo->biWidth, _outBitmapInfo->biHeight, _avsEnv);
-
-        if (FAILED(m_pOutput->Deliver(pOut))) {
-            break;
-        }
-
-        pOut->Release();
-        pOut = nullptr;
-
-        const REFERENCE_TIME backBufferTime = (_deliveryFrameNb - _settings.GetBufferBack()) * _timePerFrame;
-        _bufferHandler.GarbageCollect(backBufferTime);
-
-#ifdef LOGGING
-        printf("Delivery frameNb: %4i at %10lli inSampleFrameNb: %4i\n", _deliveryFrameNb.load(), outStartTime, _inSampleFrameNb.load());
-#endif
-
-        _deliveryFrameNb += 1;
-        _transformCondition.notify_one();
+/**
+ * Check if the media type has valid VideoInfo * format block.
+ */
+auto CAviSynthFilter::ValidateMediaType(const AM_MEDIA_TYPE *mediaType, PIN_DIRECTION dir) const -> HRESULT {
+    if (mediaType->majortype != MEDIATYPE_Video) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
     }
 
-    if (pOut != nullptr) {
-        pOut->Release();
+    if (FAILED(CheckVideoInfoType(mediaType)) && FAILED(CheckVideoInfo2Type(mediaType))) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
     }
-}
 
-auto CAviSynthFilter::StopDelivery() -> void {
-    _deliveryPaused = true;
-    _transformCondition.notify_one();
-    _bufferHandler.StartDraining();
-
-    {
-        std::lock_guard<std::mutex> lock(_threadMutex);
-        _bufferHandler.StopDraining();
-        _deliveryFrameNb = DELIVER_FRAME_NB_RESET;
+    int formatIndex;
+    if (dir == PINDIR_INPUT) {
+        formatIndex = Format::LookupInput(mediaType->subtype);
+    } else {
+        formatIndex = Format::LookupOutput(mediaType->subtype);
     }
+
+    if (formatIndex == -1) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
+    }
+
+    if (!_settings.IsFormatSupported(formatIndex)) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
+    }
+
+    return S_OK;
 }
 
 /**

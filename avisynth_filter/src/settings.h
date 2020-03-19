@@ -10,7 +10,9 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 
     virtual auto GetAvsFile() const -> const std::string & = 0;
     virtual auto SetAvsFile(const std::string & avsFile) -> void = 0;
-    virtual auto ReloadAvsFile() -> void = 0;
+
+    virtual auto GetReloadAvsFile() const -> bool = 0;
+    virtual auto SetReloadAvsFile(bool reload) -> void = 0;
 
     virtual auto GetBufferBack() const -> int = 0;
     virtual auto SetBufferBack(int bufferBack) -> void = 0;
@@ -19,7 +21,6 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 
     virtual auto GetFormats() const -> const std::unordered_set<int> & = 0;
     virtual auto SetFormats(const std::unordered_set<int> & formatIndices) -> void = 0;
-    virtual auto IsFormatSupported(int formatIndex) const -> bool = 0;
 };
 
 class CAviSynthFilter;
@@ -29,7 +30,7 @@ class CAvsFilterSettings
     , CUnknown {
 
 public:
-    CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr, CAviSynthFilter &filter);
+    CAvsFilterSettings(LPUNKNOWN pUnk, HRESULT *phr);
 
     DECLARE_IUNKNOWN
 
@@ -38,7 +39,9 @@ public:
 
     auto GetAvsFile() const -> const std::string & override;
     auto SetAvsFile(const std::string &avsFile) -> void override;
-    auto ReloadAvsFile() -> void override;
+
+    auto GetReloadAvsFile() const -> bool override;
+    auto SetReloadAvsFile(bool reload) -> void override;
 
     auto GetBufferBack() const -> int override;
     auto SetBufferBack(int bufferBack) -> void override;
@@ -47,14 +50,16 @@ public:
 
     auto GetFormats() const -> const std::unordered_set<int> & override;
     auto SetFormats(const std::unordered_set<int> &formatIndices) -> void override;
-    auto IsFormatSupported(int formatIndex) const -> bool override;
+
+    auto IsFormatSupported(int formatIndex) const -> bool;
 
 private:
-    CAviSynthFilter &_filter;
     Registry _registry;
 
     std::string _avsFile;
     int _bufferBack;
     int _bufferAhead;
     std::unordered_set<int> _formatIndices;
+
+    bool _reloadAvsFile;
 };

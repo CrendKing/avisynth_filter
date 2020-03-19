@@ -19,10 +19,7 @@ CAviSynthFilterProp::CAviSynthFilterProp(LPUNKNOWN pUnk, HRESULT *phr)
 }
 
 auto CAviSynthFilterProp::OnConnect(IUnknown *pUnk) -> HRESULT {
-    if (pUnk == nullptr) {
-        return E_POINTER;
-    }
-
+    CheckPointer(pUnk, E_POINTER);
     return pUnk->QueryInterface(IID_IAvsFilterSettings, reinterpret_cast<void **>(&_settings));
 }
 
@@ -68,7 +65,10 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
     {
         if (HIWORD(wParam) == EN_CHANGE) {
             if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
-                std::string newValue = GetText();
+                char buf[MAX_PATH];
+                const UINT len = GetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, buf, MAX_PATH);
+                const std::string newValue = std::string(buf, len).c_str();
+
                 if (newValue != _avsFile) {
                     _avsFile = newValue;
                     SetDirty();
@@ -91,7 +91,7 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
             if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
                 ShellExecute(hwnd, "edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
             } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
-                _settings->ReloadAvsFile();
+                _settings->SetReloadAvsFile(true);
             } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
                 char szFile[MAX_PATH] {};
 
@@ -140,16 +140,6 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
     }
 
     return CBasePropertyPage::OnReceiveMessage(hwnd, uMsg, wParam, lParam);
-}
-
-auto CAviSynthFilterProp::GetText() -> std::string {
-    std::string ret;
-
-    char buf[MAX_PATH];
-    const UINT len = GetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, buf, MAX_PATH);
-    ret = std::string(buf, len).c_str();
-
-    return ret;
 }
 
 void CAviSynthFilterProp::SetDirty() {
