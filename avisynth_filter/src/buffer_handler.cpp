@@ -1,17 +1,12 @@
 #include "pch.h"
 #include "buffer_handler.h"
-#include "format.h"
 
 
-BufferHandler::BufferHandler()
-    : _formatIndex(-1)
-    , _videoInfo(nullptr) {
-}
+auto BufferHandler::WriteSample(const Format::MediaTypeInfo &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void {
+    const BYTE *srcSlices[] = { srcFrame->GetReadPtr(), srcFrame->GetReadPtr(PLANAR_U), srcFrame->GetReadPtr(PLANAR_V) };
+    const int srcStrides[] = { srcFrame->GetPitch(), srcFrame->GetPitch(PLANAR_U), srcFrame->GetPitch(PLANAR_V) };
 
-auto BufferHandler::Reset(const CLSID &inFormat, const VideoInfo *videoInfo) -> void {
-    _formatIndex = Format::LookupInput(inFormat);
-    _videoInfo = videoInfo;
-    Flush();
+    Format::CopyToOutput(format.formatIndex, srcSlices, srcStrides, dstBuffer, format.bmi.biWidth, srcFrame->GetRowSize(), format.bmi.biHeight, avsEnv);
 }
 
 auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
@@ -32,13 +27,17 @@ auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
     These will be the requested times: 0, 1000, 2000, etc.
     */
 
-    std::shared_lock<std::shared_mutex> lock(_bufferMutex);
-
 #ifdef LOGGING
-    printf("Queue size: %2lli GetFrame at: %10lli Back: %10lli Front: %10lli Served ", _frameBuffer.size(), frameTime, _frameBuffer.back().time, _frameBuffer.front().time);
+    printf("GetFrame at: %10lli", frameTime);
 #endif
 
-    const TimedFrame *ret = nullptr;
+    const std::shared_lock<std::shared_mutex> lock(_bufferMutex);
+
+#ifdef LOGGING
+    printf(" Queue size: %2u Back: %10lli Front: %10lli Served", _frameBuffer.size(), _frameBuffer.back().time, _frameBuffer.front().time);
+#endif
+
+    const TimedFrame *ret = &_frameBuffer.back();
 
     if (frameTime >= _frameBuffer.back().time) {
         for (const TimedFrame &buf : _frameBuffer) {
@@ -50,11 +49,10 @@ auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
                 break;
             }
         }
-    } else {
 #ifdef LOGGING
+    } else {
         printf("(2):");
 #endif
-        ret = &_frameBuffer.back();
     }
 
 #ifdef LOGGING
@@ -69,15 +67,15 @@ auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
 x unit stride means the stride has x * 1 bytes. For word-sized buffers (10-bit, 16-bit, etc), x unit stride means x * 2 bytes.
 */
 
-auto BufferHandler::CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer, long srcUnitStride, long height, IScriptEnvironment *avsEnv) -> void {
-    const PVideoFrame frame = avsEnv->NewVideoFrame(*_videoInfo);
+auto BufferHandler::CreateFrame(const Format::MediaTypeInfo &format, REFERENCE_TIME frameTime, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void {
+    const PVideoFrame frame = avsEnv->NewVideoFrame(format.videoInfo, sizeof(__m128i));
 
     BYTE *dstSlices[] = { frame->GetWritePtr(), frame->GetWritePtr(PLANAR_U), frame->GetWritePtr(PLANAR_V) };
-    const int dstStrides[] = { frame->GetPitch(), frame->GetPitch(PLANAR_U) };
+    const int dstStrides[] = { frame->GetPitch(), frame->GetPitch(PLANAR_U), frame->GetPitch(PLANAR_V) };
 
-    Format::CopyFromInput(_formatIndex, srcBuffer, srcUnitStride, dstSlices, dstStrides, _videoInfo->width, height, avsEnv);
+    Format::CopyFromInput(format.formatIndex, srcBuffer, format.bmi.biWidth, dstSlices, dstStrides, frame->GetRowSize(), format.bmi.biHeight, avsEnv);
 
-    std::lock_guard<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
 
     if (_frameBuffer.empty() || _frameBuffer.front().time < frameTime) {
         _frameBuffer.emplace_front(TimedFrame { frame, frameTime });
@@ -86,15 +84,12 @@ auto BufferHandler::CreateFrame(REFERENCE_TIME frameTime, const BYTE *srcBuffer,
     }
 }
 
-auto BufferHandler::WriteSample(const PVideoFrame srcFrame, BYTE *dstBuffer, long dstUnitStride, long height, IScriptEnvironment *avsEnv) const -> void {
-    const BYTE *srcSlices[] = { srcFrame->GetReadPtr(), srcFrame->GetReadPtr(PLANAR_U), srcFrame->GetReadPtr(PLANAR_V) };
-    const int srcStrides[] = { srcFrame->GetPitch(), srcFrame->GetPitch(PLANAR_U) };
-
-    Format::CopyToOutput(_formatIndex, srcSlices, srcStrides, dstBuffer, dstUnitStride, _videoInfo->width, height, avsEnv);
-}
-
 auto BufferHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> void {
-    std::lock_guard<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
+
+#ifdef LOGGING
+    printf("Buffer GC: %10lli ~ %10lli Pre size: %2u", min, max, _frameBuffer.size());
+#endif
 
     while (_frameBuffer.size() > 1 && _frameBuffer.back().time < min) {
         _frameBuffer.pop_back();
@@ -105,11 +100,12 @@ auto BufferHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> vo
     }
 
 #ifdef LOGGING
-    printf("Buffer GC: %10lli ~ %10lli Post size: %lli\n", min, max, _frameBuffer.size());
+    printf(" Post size: %2u\n", _frameBuffer.size());
 #endif
 }
 
 auto BufferHandler::Flush() -> void {
-    std::lock_guard<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
+
     _frameBuffer.clear();
 }

@@ -5,48 +5,34 @@
 
 class Format {
 public:
-    struct PixelFormat {
-        const CLSID &input;
-        int avs;
-        const CLSID &output;
-        uint8_t bitsPerPixel;
-        uint8_t yPixelSize;  // in bytes. 1 for 8-bit, 2 for 16-bit, etc
-        uint8_t unitSizePerPixel;
+    struct FormatInfo {
+        const CLSID &mediaSubtype;
+        int avsType;
+        uint8_t bitCount;
+
+        // in case of planar formats, these numbers are for the default plane
+        uint8_t bytesPerComponent;
+        uint8_t componentsPerPixel;
     };
 
-    static auto LookupInput(const CLSID &input) -> int;
-    static auto LookupOutput(const CLSID &output) -> int;
-    static auto CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcUnitStride, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
-    static auto CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstUnitStride, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    struct MediaTypeInfo {
+        int formatIndex;
+        VideoInfo videoInfo;
+        BITMAPINFOHEADER bmi;
 
-    static const std::vector<PixelFormat> FORMATS;
+        auto operator!=(const MediaTypeInfo &other) const -> bool;
+    };
+
+    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> int;
+    static auto LookupAvsType(int avsType) -> std::vector<int>;
+    static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
+    static auto GetMediaTypeInfo(const AM_MEDIA_TYPE &mediaType) -> Format::MediaTypeInfo;
+    static auto CopyFromInput(int formatIndex, const BYTE *srcBuffer, int srcPixelStride, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyToOutput(int formatIndex, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstPixelStride, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+
+    static const std::vector<FormatInfo> FORMATS;
 
 private:
-    template <typename T>
-    static auto Deinterleave(const T *src, int srcStride, T *dst1, T *dst2, int dstStride, int width, int height) -> void {
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                dst1[x] = src[x * 2 + 0];
-                dst2[x] = src[x * 2 + 1];
-            }
-
-            src += srcStride;
-            dst1 += dstStride;
-            dst2 += dstStride;
-        }
-    }
-
-    template <typename T>
-    static auto Interleave(const T *src1, const T *src2, int srcStride, T *dst, int dstStride, int width, int height) -> void {
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                dst[x * 2 + 0] = src1[x];
-                dst[x * 2 + 1] = src2[x];
-            }
-
-            src1 += srcStride;
-            src2 += srcStride;
-            dst += dstStride;
-        }
-    }
+    static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void;
+    static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, uint8_t bytesPerComponent) -> void;
 };

@@ -10,7 +10,7 @@ public:
 
 private:
     auto OnConnect(IUnknown *pUnk) -> HRESULT override;
-    auto OnDisconnect()->HRESULT override;
+    auto OnDisconnect() -> HRESULT override;
     auto OnActivate() -> HRESULT override;
     auto OnApplyChanges() -> HRESULT override;
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;
@@ -21,5 +21,5 @@ private:
     std::string _avsFile;
     int _bufferBack;
     int _bufferAhead;
-    std::unordered_set<int> _formatIndices;
+    DWORD _formatBits;
 };

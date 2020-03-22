@@ -2,7 +2,7 @@
 #include "constants.h"
 #include "filter.h"
 #include "filter_prop.h"
-#include "settings.h"
+#include "format.h"
 
 
 #ifdef _DEBUG
@@ -14,6 +14,54 @@
 
 #pragma comment(lib, "AviSynth.lib")
 
+#pragma comment(lib, "D:\\Setting\\Profile\\Desktop\\Crash\\CrashRpt_v.1.4.3_r1645\\lib\\CrashRpt1403.lib")
+//#pragma comment(lib, "D:\\Setting\\Profile\\Desktop\\Crash\\CrashRpt_v.1.4.3_r1645\\lib\\x64\\CrashRpt1403.lib")
+
+static REGFILTERPINS PIN_REG[] = {
+    { nullptr              // pin name (obsolete)
+    , FALSE                // is pin rendered?
+    , FALSE                // is this output pin?
+    , FALSE                // Can the filter create zero instances?
+    , FALSE                // Does the filter create multiple instances?
+    , &CLSID_NULL          // filter CLSID the pin connects to (obsolete)
+    , nullptr              // pin name the pin connects to (obsolete)
+    , 0                    // pin media type count (to be filled in FillPinTypes())
+    , nullptr },           // pin media types (to be filled in FillPinTypes())
+
+    { nullptr              // pin name (obsolete)
+    , FALSE                // is pin rendered?
+    , TRUE                 // is this output pin?
+    , FALSE                // Can the filter create zero instances?
+    , FALSE                // Does the filter create multiple instances?
+    , &CLSID_NULL          // filter CLSID the pin connects to (obsolete)
+    , nullptr              // pin name the pin connects to (obsolete)
+    , 0                    // pin media type count (to be filled in FillPinTypes())
+    , nullptr },           // pin media types (to be filled in FillPinTypes())
+};
+
+static constexpr ULONG PIN_COUNT = sizeof(PIN_REG) / sizeof(PIN_REG[0]);
+
+static constexpr AMOVIESETUP_FILTER FILTER_REG = {
+    &CLSID_AviSynthFilter,  // filter CLSID
+    FILTER_NAME_WIDE,       // filter name
+    MERIT_DO_NOT_USE,       // filter merit
+    PIN_COUNT,              // pin count
+    PIN_REG                 // pin information
+};
+
+static std::vector<REGPINTYPES> g_PinTypes;
+
+static void FillPinTypes() {
+    for (const Format::FormatInfo &info : Format::FORMATS) {
+        g_PinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
+    }
+
+    PIN_REG[0].nMediaTypes = static_cast<UINT>(g_PinTypes.size());
+    PIN_REG[0].lpMediaType = g_PinTypes.data();
+    PIN_REG[1].nMediaTypes = static_cast<UINT>(g_PinTypes.size());
+    PIN_REG[1].lpMediaType = g_PinTypes.data();
+}
+
 #ifdef MINIDUMP
 static google_breakpad::ExceptionHandler *g_exHandler;
 #endif // MINIDUMP
@@ -24,12 +72,18 @@ FILE *g_loggingStream = nullptr;
 
 static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
     if (bLoading == TRUE) {
+        FillPinTypes();
+
+        /*CR_INSTALL_INFO cri {};
+        cri.cb = sizeof(CR_INSTALL_INFO);
+        cri.dwFlags = CR_INST_ALL_POSSIBLE_HANDLERS;
+        crInstall(&cri);*/
 #ifdef MINIDUMP
         g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, L"", nullptr);
 #endif // MINIDUMP
 
 #ifdef LOGGING
-        freopen_s(&g_loggingStream, "C:\\avs.log", "a", stdout);
+        freopen_s(&g_loggingStream, ".\\avisynth_filter.log", "w", stdout);
 #endif // LOGGING
     } else {
 #ifdef LOGGING
@@ -41,6 +95,7 @@ static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
 #ifdef MINIDUMP
         delete g_exHandler;
 #endif // MINIDUMP
+        //crUninstall();
     }
 }
 
@@ -54,52 +109,6 @@ static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * 
 
     return newInstance;
 }
-
-static constexpr REGPINTYPES PIN_TYPE_REG[] = {
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_NV12 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_YV12 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_I420 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_IYUV },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_P010 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_P016 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_YUY2 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_UYVY },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_RGB24 },
-    { &MEDIATYPE_Video, &MEDIASUBTYPE_RGB32 },
-};
-static constexpr UINT PIN_TYPE_COUNT = sizeof(PIN_TYPE_REG) / sizeof(PIN_TYPE_REG[0]);
-
-static constexpr REGFILTERPINS PIN_REG[] = {
-    { nullptr              // pin name (obsolete)
-    , FALSE                // is pin rendered?
-    , FALSE                // is this output pin?
-    , FALSE                // Can the filter create zero instances?
-    , FALSE                // Does the filter create multiple instances?
-    , &CLSID_NULL          // filter CLSID the pin connects to (obsolete)
-    , nullptr              // pin name the pin connects to (obsolete)
-    , PIN_TYPE_COUNT       // pin media type count
-    , PIN_TYPE_REG },      // pin media types
-
-    { nullptr              // pin name (obsolete)
-    , FALSE                // is pin rendered?
-    , TRUE                 // is this output pin?
-    , FALSE                // Can the filter create zero instances?
-    , FALSE                // Does the filter create multiple instances?
-    , &CLSID_NULL          // filter CLSID the pin connects to (obsolete)
-    , nullptr              // pin name the pin connects to (obsolete)
-    , PIN_TYPE_COUNT       // pin media type count
-    , PIN_TYPE_REG },      // pin media types
-};
-
-static constexpr ULONG PIN_COUNT = sizeof(PIN_REG) / sizeof(PIN_REG[0]);
-
-static constexpr AMOVIESETUP_FILTER FILTER_REG = {
-    &CLSID_AviSynthFilter,  // filter CLSID
-    FILTER_NAME_WIDE,       // filter name
-    MERIT_DO_NOT_USE,       // filter merit
-    PIN_COUNT,              // pin count
-    PIN_REG                 // pin information
-};
 
 CFactoryTemplate g_Templates[] = {
     { FILTER_NAME_WIDE

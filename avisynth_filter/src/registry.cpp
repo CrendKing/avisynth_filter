@@ -31,7 +31,7 @@ auto Registry::ReadString(const char *valueName) const -> std::string {
 }
 
 auto Registry::ReadNumber(const char *valueName) const -> DWORD {
-    DWORD ret = DWORD_MAX;
+    DWORD ret = INVALID_REGISTRY_NUMBER;
 
     if (_registryKey) {
         DWORD valueSize = sizeof(ret);
@@ -43,7 +43,7 @@ auto Registry::ReadNumber(const char *valueName) const -> DWORD {
 
 auto Registry::WriteString(const char *valueName, const std::string &valueString) const -> void {
     if (_registryKey) {
-        RegSetValueEx(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), valueString.size());
+        RegSetValueEx(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), static_cast<DWORD>(valueString.size()));
     }
 }
 

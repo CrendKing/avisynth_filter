@@ -40,9 +40,11 @@ auto CAviSynthFilterProp::OnActivate() -> HRESULT {
     SendDlgItemMessage(m_Dlg, IDC_SPIN_BUFFER_BACK, UDM_SETACCEL, 1, reinterpret_cast<LPARAM>(&accels));
     SendDlgItemMessage(m_Dlg, IDC_SPIN_BUFFER_AHEAD, UDM_SETACCEL, 1, reinterpret_cast<LPARAM>(&accels));
 
-    _formatIndices = _settings->GetSupportedFormats();
-    for (const int formatIndex : _formatIndices) {
-        CheckDlgButton(m_Dlg, IDC_FORMAT_NV12 + formatIndex, 1);
+    _formatBits = _settings->GetInputFormats();
+    for (int i = 0; i < sizeof(_formatBits) * 8; ++i) {
+        if ((_formatBits & (1 << i)) != 0) {
+            CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_NV12 + i, 1);
+        }
     }
 
     return S_OK;
@@ -52,7 +54,7 @@ auto CAviSynthFilterProp::OnApplyChanges() -> HRESULT {
     _settings->SetAvsFile(_avsFile);
     _settings->SetBufferBack(_bufferBack);
     _settings->SetBufferAhead(_bufferAhead);
-    _settings->SetSupportedFormats(_formatIndices);
+    _settings->SetInputFormats(_formatBits);
     _settings->SaveSettings();
 
     return S_OK;
@@ -105,13 +107,13 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
                     SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
                 }
             } else {
-                const int formatIndex = LOWORD(wParam) - IDC_FORMAT_NV12;
+                const int formatIndex = LOWORD(wParam) - IDC_INPUT_FORMAT_NV12;
                 const bool buttonChecked = (IsDlgButtonChecked(hwnd, LOWORD(wParam)) == BST_CHECKED);
 
                 if (buttonChecked) {
-                    _formatIndices.emplace(formatIndex);
+                    _formatBits |= 1 << formatIndex;
                 } else {
-                    _formatIndices.erase(formatIndex);
+                    _formatBits &= ~(1 << formatIndex);
                 }
 
                 SetDirty();

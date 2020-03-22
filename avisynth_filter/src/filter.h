@@ -2,6 +2,7 @@
 
 #include "pch.h"
 #include "buffer_handler.h"
+#include "format.h"
 #include "settings.h"
 #include "registry.h"
 
@@ -23,12 +24,13 @@ public:
     auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
-    auto CompleteConnect(PIN_DIRECTION dir, IPin *pReceivePin) -> HRESULT override;
+    auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
+    auto StartStreaming() -> HRESULT override;
     auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
     auto BeginFlush() -> HRESULT override;
 
     // ISpecifyPropertyPages
-    auto STDMETHODCALLTYPE GetPages(CAUUID *pPages)->HRESULT override;
+    auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
@@ -40,22 +42,25 @@ public:
     auto STDMETHODCALLTYPE SetBufferBack(int bufferBack) -> void override;
     auto STDMETHODCALLTYPE GetBufferAhead() const -> int override;
     auto STDMETHODCALLTYPE SetBufferAhead(int bufferAhead) -> void override;
-    auto STDMETHODCALLTYPE GetSupportedFormats() const -> const std::unordered_set<int> & override;
-    auto STDMETHODCALLTYPE SetSupportedFormats(const std::unordered_set<int> &formatIndices) -> void override;
+    auto STDMETHODCALLTYPE GetInputFormats() const ->DWORD override;
+    auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
 private:
-    struct MediaTypeFormat {
-        AM_MEDIA_TYPE *mediaType;
+    struct IndexedMediaType {
         int formatIndex;
+        AM_MEDIA_TYPE *mediaType;
     };
 
-    static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
+    static auto IsTypeExistForIndex(const std::vector<IndexedMediaType> &container, int formatIndex) -> bool;
+    static auto FindFirstMatchingType(const std::vector<IndexedMediaType> &container, int formatIndex) -> const IndexedMediaType *;
 
     auto LoadSettings() -> void;
-    auto ValidateMediaType(const AM_MEDIA_TYPE *mediaType, PIN_DIRECTION dir) const -> HRESULT;
+    auto ValidateMediaType(PIN_DIRECTION direction, const AM_MEDIA_TYPE *mediaType) const -> HRESULT;
+    auto GenerateMediaType(int formatIndex, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
+    auto DeleteIndexedMediaTypes() -> void;
     auto DeleteAviSynth() -> void;
     auto ReloadAviSynth() -> void;
-    auto UpdateSourceVideoInfo() -> void;
+    auto ReloadAviSynth(int forceFormatIndex) -> void;
 
     // filter related variables
 
@@ -67,11 +72,12 @@ private:
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
 
-    std::vector<MediaTypeFormat> _upstreamTypes;
     bool _isConnectingPins;
+    std::vector<IndexedMediaType> _indexedInputTypes;
+    std::vector<IndexedMediaType> _acceptableOutputTypes;
 
-    const BITMAPINFOHEADER *_inBitmapInfo;
-    const BITMAPINFOHEADER *_outBitmapInfo;
+    Format::MediaTypeInfo _inputMediaTypeInfo;
+    Format::MediaTypeInfo _outputMediaTypeInfo;
 
     REFERENCE_TIME _timePerFrame;
 
@@ -87,7 +93,7 @@ private:
     std::string _avsFile;
     int _bufferBack;
     int _bufferAhead;
-    std::unordered_set<int> _supportedFormats;
+    DWORD _inputFormatBits;
 
     bool _reloadAvsFile;
 };

@@ -19,24 +19,24 @@
 #define IDC_EDIT_BUFFER_AHEAD           1010
 #define IDC_SPIN_BUFFER_AHEAD           1011
 
-#define IDC_FORMATS                     1012
-#define IDC_FORMAT_8BIT                 1013
-#define IDC_FORMAT_10BIT                1014
-#define IDC_FORMAT_16BIT                1015
-#define IDC_FORMAT_420                  1016
-#define IDC_FORMAT_422                  1017
-#define IDC_FORMAT_RGB                  1018
+#define IDC_INPUT_FORMATS               1012
+#define IDC_INPUT_FORMAT_8BIT           1013
+#define IDC_INPUT_FORMAT_10BIT          1014
+#define IDC_INPUT_FORMAT_16BIT          1015
+#define IDC_INPUT_FORMAT_420            1016
+#define IDC_INPUT_FORMAT_422            1017
+#define IDC_INPUT_FORMAT_RGB            1018
 
-#define IDC_FORMAT_NV12                 1019
-#define IDC_FORMAT_I420                 1020
-#define IDC_FORMAT_IYUV                 1021
-#define IDC_FORMAT_YV12                 1022
-#define IDC_FORMAT_P010                 1023
-#define IDC_FORMAT_P016                 1024
-#define IDC_FORMAT_YUY2                 1025
-#define IDC_FORMAT_UYVY                 1026
-#define IDC_FORMAT_RGB24                1027
-#define IDC_FORMAT_RGB32                1028
+#define IDC_INPUT_FORMAT_NV12           1019
+#define IDC_INPUT_FORMAT_I420           1020
+#define IDC_INPUT_FORMAT_IYUV           1021
+#define IDC_INPUT_FORMAT_YV12           1022
+#define IDC_INPUT_FORMAT_P010           1023
+#define IDC_INPUT_FORMAT_P016           1024
+#define IDC_INPUT_FORMAT_YUY2           1025
+#define IDC_INPUT_FORMAT_UYVY           1026
+#define IDC_INPUT_FORMAT_RGB32          1027
+#define IDC_INPUT_FORMAT_RGB24          1028
 
 // Next default values for new objects
 //

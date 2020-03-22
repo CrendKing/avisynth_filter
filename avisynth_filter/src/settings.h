@@ -17,6 +17,6 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetBufferAhead() const -> int = 0;
     virtual auto STDMETHODCALLTYPE SetBufferAhead(int bufferBack) -> void = 0;
 
-    virtual auto STDMETHODCALLTYPE GetSupportedFormats() const -> const std::unordered_set<int> & = 0;
-    virtual auto STDMETHODCALLTYPE SetSupportedFormats(const std::unordered_set<int> & formatIndices) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
+    virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;
 };
