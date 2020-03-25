@@ -6,10 +6,10 @@
 
 class BufferHandler {
 public:
-    static auto WriteSample(const Format::MediaTypeInfo &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void;
+    static auto WriteSample(const Format::VideoFormat &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void;
 
     auto GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame;
-    auto CreateFrame(const Format::MediaTypeInfo &format, REFERENCE_TIME frameTime, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void;
+    auto CreateFrame(const Format::VideoFormat &format, REFERENCE_TIME frameTime, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void;
     auto GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> void;
     auto Flush() -> void;
 

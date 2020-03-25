@@ -25,24 +25,16 @@
 // intrinsics for fast (de-)interleaving array
 #include <immintrin.h>
 
+#include <client/windows/handler/exception_handler.h>
+
 #include <algorithm>
 #include <atomic>
 #include <deque>
 #include <shared_mutex>
 #include <string>
 #include <thread>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
-
-//#define LOGGING
-
-//#define MINIDUMP
-
-#ifdef MINIDUMP
-#include <client/windows/handler/exception_handler.h>
-#endif
-
-#include <D:\Setting\Profile\Desktop\Crash\CrashRpt_v.1.4.3_r1645\include\CrashRpt.h>
 
 #pragma warning(pop)
 

@@ -14,9 +14,6 @@
 
 #pragma comment(lib, "AviSynth.lib")
 
-#pragma comment(lib, "D:\\Setting\\Profile\\Desktop\\Crash\\CrashRpt_v.1.4.3_r1645\\lib\\CrashRpt1403.lib")
-//#pragma comment(lib, "D:\\Setting\\Profile\\Desktop\\Crash\\CrashRpt_v.1.4.3_r1645\\lib\\x64\\CrashRpt1403.lib")
-
 static REGFILTERPINS PIN_REG[] = {
     { nullptr              // pin name (obsolete)
     , FALSE                // is pin rendered?
@@ -52,7 +49,7 @@ static constexpr AMOVIESETUP_FILTER FILTER_REG = {
 static std::vector<REGPINTYPES> g_PinTypes;
 
 static void FillPinTypes() {
-    for (const Format::FormatInfo &info : Format::FORMATS) {
+    for (const Format::Definition &info : Format::DEFINITIONS) {
         g_PinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
     }
 
@@ -62,40 +59,29 @@ static void FillPinTypes() {
     PIN_REG[1].lpMediaType = g_PinTypes.data();
 }
 
+//#define LOGGING
+//#define MINIDUMP
+
 #ifdef MINIDUMP
 static google_breakpad::ExceptionHandler *g_exHandler;
-#endif // MINIDUMP
-
-#ifdef LOGGING
-FILE *g_loggingStream = nullptr;
-#endif // LOGGING
+#endif
 
 static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
     if (bLoading == TRUE) {
         FillPinTypes();
 
-        /*CR_INSTALL_INFO cri {};
-        cri.cb = sizeof(CR_INSTALL_INFO);
-        cri.dwFlags = CR_INST_ALL_POSSIBLE_HANDLERS;
-        crInstall(&cri);*/
+#ifdef LOGGING
+        // also require HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\DirectShow\Debug\avisynth_filter.ax\LogToFile set to a file path
+        DbgSetModuleLevel(LOG_TRACE, 2);
+#endif // LOGGING
+
 #ifdef MINIDUMP
-        g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, L"", nullptr);
+        g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, static_cast<HANDLE>(nullptr), nullptr);
 #endif // MINIDUMP
-
-#ifdef LOGGING
-        freopen_s(&g_loggingStream, ".\\avisynth_filter.log", "w", stdout);
-#endif // LOGGING
     } else {
-#ifdef LOGGING
-        if (g_loggingStream != nullptr) {
-            fclose(g_loggingStream);
-        }
-#endif // LOGGING
-
 #ifdef MINIDUMP
         delete g_exHandler;
 #endif // MINIDUMP
-        //crUninstall();
     }
 }
 
@@ -133,7 +119,7 @@ STDAPI DllUnregisterServer() {
     return AMovieDllRegisterServer2(FALSE);
 }
 
-extern "C" DECLSPEC_NOINLINE BOOL WINAPI DllEntryPoint(HINSTANCE hInstance, ULONG ulReason, __inout_opt LPVOID pv);
+extern "C" DECLSPEC_NOINLINE BOOL WINAPI DllEntryPoint(HINSTANCE hInstance, ULONG ulReason, LPVOID pv);
 
 auto APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) -> BOOL {
     return DllEntryPoint(hModule, ul_reason_for_call, lpReserved);

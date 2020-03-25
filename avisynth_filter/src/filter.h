@@ -20,6 +20,8 @@ public:
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
 
     // CVideoTransformFilter
+    auto CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT override;
+    auto BreakConnect(PIN_DIRECTION direction) -> HRESULT override;
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
     auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
@@ -28,6 +30,8 @@ public:
     auto StartStreaming() -> HRESULT override;
     auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
     auto BeginFlush() -> HRESULT override;
+    
+    auto STDMETHODCALLTYPE Pause() -> HRESULT override;
 
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
@@ -46,21 +50,23 @@ public:
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
 private:
-    struct IndexedMediaType {
-        int formatIndex;
-        AM_MEDIA_TYPE *mediaType;
+    struct DefinitionPair {
+        int input;
+        int output;
     };
 
-    static auto IsTypeExistForIndex(const std::vector<IndexedMediaType> &container, int formatIndex) -> bool;
-    static auto FindFirstMatchingType(const std::vector<IndexedMediaType> &container, int formatIndex) -> const IndexedMediaType *;
+    static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
 
     auto LoadSettings() -> void;
-    auto ValidateMediaType(PIN_DIRECTION direction, const AM_MEDIA_TYPE *mediaType) const -> HRESULT;
-    auto GenerateMediaType(int formatIndex, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
-    auto DeleteIndexedMediaTypes() -> void;
-    auto DeleteAviSynth() -> void;
+    auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int;
+    auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
+    auto DeletePinTypes() -> void;
     auto ReloadAviSynth() -> void;
-    auto ReloadAviSynth(int forceFormatIndex) -> void;
+    auto ReloadAviSynth(const AM_MEDIA_TYPE *mediaType, bool allowDisconnect) -> bool;
+    auto DeleteAviSynth() -> void;
+
+    auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
+    auto FindCompatibleInputByOutput(int outputDefinition) const -> int;
 
     // filter related variables
 
@@ -72,12 +78,12 @@ private:
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
 
-    bool _isConnectingPins;
-    std::vector<IndexedMediaType> _indexedInputTypes;
-    std::vector<IndexedMediaType> _acceptableOutputTypes;
+    std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
+    std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
+    std::vector<DefinitionPair> _compatibleDefinitions;
 
-    Format::MediaTypeInfo _inputMediaTypeInfo;
-    Format::MediaTypeInfo _outputMediaTypeInfo;
+    Format::VideoFormat _inputFormat;
+    Format::VideoFormat _outputFormat;
 
     REFERENCE_TIME _timePerFrame;
 

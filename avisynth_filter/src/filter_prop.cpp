@@ -107,13 +107,13 @@ auto CAviSynthFilterProp::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, 
                     SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
                 }
             } else {
-                const int formatIndex = LOWORD(wParam) - IDC_INPUT_FORMAT_NV12;
+                const int definition = LOWORD(wParam) - IDC_INPUT_FORMAT_NV12;
                 const bool buttonChecked = (IsDlgButtonChecked(hwnd, LOWORD(wParam)) == BST_CHECKED);
 
                 if (buttonChecked) {
-                    _formatBits |= 1 << formatIndex;
+                    _formatBits |= 1 << definition;
                 } else {
-                    _formatBits &= ~(1 << formatIndex);
+                    _formatBits &= ~(1 << definition);
                 }
 
                 SetDirty();

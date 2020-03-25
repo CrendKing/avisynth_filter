@@ -2,11 +2,11 @@
 #include "buffer_handler.h"
 
 
-auto BufferHandler::WriteSample(const Format::MediaTypeInfo &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void {
+auto BufferHandler::WriteSample(const Format::VideoFormat &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void {
     const BYTE *srcSlices[] = { srcFrame->GetReadPtr(), srcFrame->GetReadPtr(PLANAR_U), srcFrame->GetReadPtr(PLANAR_V) };
     const int srcStrides[] = { srcFrame->GetPitch(), srcFrame->GetPitch(PLANAR_U), srcFrame->GetPitch(PLANAR_V) };
 
-    Format::CopyToOutput(format.formatIndex, srcSlices, srcStrides, dstBuffer, format.bmi.biWidth, srcFrame->GetRowSize(), format.bmi.biHeight, avsEnv);
+    Format::CopyToOutput(format.definition, srcSlices, srcStrides, dstBuffer, format.bmi.biWidth, srcFrame->GetRowSize(), format.bmi.biHeight, avsEnv);
 }
 
 auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
@@ -27,53 +27,34 @@ auto BufferHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
     These will be the requested times: 0, 1000, 2000, etc.
     */
 
-#ifdef LOGGING
-    printf("GetFrame at: %10lli", frameTime);
-#endif
-
     const std::shared_lock<std::shared_mutex> lock(_bufferMutex);
-
-#ifdef LOGGING
-    printf(" Queue size: %2u Back: %10lli Front: %10lli Served", _frameBuffer.size(), _frameBuffer.back().time, _frameBuffer.front().time);
-#endif
 
     const TimedFrame *ret = &_frameBuffer.back();
 
+    uint8_t dbgFromBack = 1;
     if (frameTime >= _frameBuffer.back().time) {
         for (const TimedFrame &buf : _frameBuffer) {
             if (frameTime >= buf.time) {
-#ifdef LOGGING
-                printf("(1):");
-#endif
                 ret = &buf;
+                dbgFromBack = 2;
                 break;
             }
         }
-#ifdef LOGGING
-    } else {
-        printf("(2):");
-#endif
     }
 
-#ifdef LOGGING
-    printf(" %10lli\n", ret->time);
-#endif
+    DbgLog((LOG_TRACE, 2, "GetFrame at: %10lli Queue size: %2u Back: %10lli Front: %10lli Served(%u): %10lli",
+           frameTime, _frameBuffer.size(), _frameBuffer.back().time, _frameBuffer.front().time, dbgFromBack, ret->time));
 
     return ret->frame;
 }
 
-/*
-"unit stride" means the stride in unit of the size for each pixel. For example, for 8-bit char-sized buffers,
-x unit stride means the stride has x * 1 bytes. For word-sized buffers (10-bit, 16-bit, etc), x unit stride means x * 2 bytes.
-*/
-
-auto BufferHandler::CreateFrame(const Format::MediaTypeInfo &format, REFERENCE_TIME frameTime, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void {
+auto BufferHandler::CreateFrame(const Format::VideoFormat &format, REFERENCE_TIME frameTime, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void {
     const PVideoFrame frame = avsEnv->NewVideoFrame(format.videoInfo, sizeof(__m128i));
 
     BYTE *dstSlices[] = { frame->GetWritePtr(), frame->GetWritePtr(PLANAR_U), frame->GetWritePtr(PLANAR_V) };
     const int dstStrides[] = { frame->GetPitch(), frame->GetPitch(PLANAR_U), frame->GetPitch(PLANAR_V) };
 
-    Format::CopyFromInput(format.formatIndex, srcBuffer, format.bmi.biWidth, dstSlices, dstStrides, frame->GetRowSize(), format.bmi.biHeight, avsEnv);
+    Format::CopyFromInput(format.definition, srcBuffer, format.bmi.biWidth, dstSlices, dstStrides, frame->GetRowSize(), format.bmi.biHeight, avsEnv);
 
     const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
 
@@ -87,9 +68,7 @@ auto BufferHandler::CreateFrame(const Format::MediaTypeInfo &format, REFERENCE_T
 auto BufferHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> void {
     const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
 
-#ifdef LOGGING
-    printf("Buffer GC: %10lli ~ %10lli Pre size: %2u", min, max, _frameBuffer.size());
-#endif
+    const size_t dbgPreSize = _frameBuffer.size();
 
     while (_frameBuffer.size() > 1 && _frameBuffer.back().time < min) {
         _frameBuffer.pop_back();
@@ -99,9 +78,7 @@ auto BufferHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> vo
         _frameBuffer.pop_front();
     }
 
-#ifdef LOGGING
-    printf(" Post size: %2u\n", _frameBuffer.size());
-#endif
+    DbgLog((LOG_TRACE, 2, "Buffer GC: %10lli ~ %10lli Pre size: %2u Post size: %2u", min, max, dbgPreSize, _frameBuffer.size()));
 }
 
 auto BufferHandler::Flush() -> void {

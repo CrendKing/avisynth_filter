@@ -35,6 +35,8 @@ This function serves as a heuristic to disconnect the AviSynth Filter from Direc
 
 It can be used to avoid unnecessary processing and improve performance if the script does not modify the source. Avoid to use it during live reloading.
 
+A good example is if your script applies modifications based on video metadata (e.g. FPS < 30), without using this function, even if the condition does not hold the filter still needs to copy every frame. At best, it wastes both CPU and memory resource for nothing. At worst, it breaks hardware acceleration chain for certain filters. For instance, when [LAV Filters](https://github.com/Nevcairiel/LAVFilters) connects directly to [madVR](http://www.madvr.com/) in D3D11 mode, the GPU decoded frames are not copied to memory. If any filter goes between them, the frame needs to be copied.
+
 This function takes no argument.
 
 ## Example script
@@ -56,3 +58,7 @@ if (fps < 20) {
 ## Build
 
 A build script `build.bat` is included to automate the process. It obtains dependencies and triggers compiling. The project depends on the DirectShow filter base classes from https://github.com/microsoft/Windows-classic-samples. Microsoft has not updated the sample for long time, and the sample solution is still on Visual Studio 2005. One needs to upgrade the solution before building it.
+
+## Credit
+
+Many thanks to Milardo from Doom9's Forum (https://forum.doom9.org/member.php?u=159393) for help testing the project.

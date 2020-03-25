@@ -55,7 +55,7 @@ constexpr int DELIVER_FRAME_NB_RESET = -1;
 
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 
-constexpr int INVALID_FORMAT_INDEX = -1;
+constexpr int INVALID_DEFINITION = -1;
 constexpr DWORD INVALID_REGISTRY_NUMBER = DWORD_MAX;
 
 /*
