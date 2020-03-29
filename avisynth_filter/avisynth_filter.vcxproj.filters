@@ -30,7 +30,7 @@
     <ClInclude Include="src\filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\buffer_handler.h">
+    <ClInclude Include="src\frame_handler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\source_clip.h">
@@ -59,7 +59,7 @@
     <ClCompile Include="src\filter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\buffer_handler.cpp">
+    <ClCompile Include="src\frame_handler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\source_clip.cpp">

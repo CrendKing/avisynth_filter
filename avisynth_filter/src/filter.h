@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pch.h"
-#include "buffer_handler.h"
+#include "frame_handler.h"
 #include "format.h"
 #include "settings.h"
 #include "registry.h"
@@ -70,7 +70,7 @@ private:
 
     // filter related variables
 
-    BufferHandler _bufferHandler;
+    FrameHandler _frameHandler;
 
     IScriptEnvironment2 *_avsEnv;
     PClip _avsScriptClip;

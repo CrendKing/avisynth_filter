@@ -264,17 +264,17 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     }
 
     const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
-    _bufferHandler.GarbageCollect(gcMinTime, inputStartTime);
+    _frameHandler.GarbageCollect(gcMinTime, inputStartTime);
 
     BYTE *inputBuffer;
     CheckHr(pIn->GetPointer(&inputBuffer));
-    _bufferHandler.CreateFrame(_inputFormat, inputStartTime, inputBuffer, _avsEnv);
+    _frameHandler.CreateFrame(_inputFormat, inputStartTime, inputBuffer, _avsEnv);
 
     while (_deliveryFrameNb + _bufferAhead <= inSampleFrameNb) {
         IMediaSample *outSample = nullptr;
         CheckHr(InitializeOutputSample(nullptr, &outSample));
 
-        // despite missing sample times from upstream, we always set times for output samples in case downstream needs them
+        // even if missing sample times from upstream, we always set times for output samples in case downstream needs them
         REFERENCE_TIME outStartTime = _deliveryFrameNb * _timePerFrame;
         REFERENCE_TIME outStopTime = outStartTime + _timePerFrame;
         CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
@@ -283,7 +283,7 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         CheckHr(outSample->GetPointer(&outBuffer));
 
         const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
-        BufferHandler::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
+        FrameHandler::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
 
         CheckHr(m_pOutput->Deliver(outSample));
 
@@ -488,7 +488,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE *mediaType, bool allowD
     _avsSourceVideoInfo = Format::GetVideoFormat(*mediaType).videoInfo;
 
     _avsEnv = CreateScriptEnvironment2();
-    _avsEnv->AddFunction("avsfilter_source", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _bufferHandler));
+    _avsEnv->AddFunction("avsfilter_source", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
     _avsEnv->AddFunction("avsfilter_disconnect", "", CreateAvsFilterDisconnect, nullptr);
 
     AVSValue invokeResult;
@@ -544,7 +544,7 @@ auto CAviSynthFilter::DeleteAviSynth() -> void {
         _avsScriptClip = nullptr;
     }
 
-    _bufferHandler.Flush();
+    _frameHandler.Flush();
 
     if (_avsEnv != nullptr) {
         _avsEnv->DeleteScriptEnvironment();

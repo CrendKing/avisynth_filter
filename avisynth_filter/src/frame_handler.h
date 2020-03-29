@@ -4,7 +4,7 @@
 #include "format.h"
 
 
-class BufferHandler {
+class FrameHandler {
 public:
     static auto WriteSample(const Format::VideoFormat &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void;
 
@@ -19,6 +19,6 @@ private:
         REFERENCE_TIME time;
     };
 
-    std::deque<TimedFrame> _frameBuffer;
+    std::deque<TimedFrame> _buffer;
     std::shared_mutex _bufferMutex;
 };

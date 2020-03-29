@@ -1,12 +1,12 @@
 #pragma once
 
 #include "pch.h"
-#include "buffer_handler.h"
+#include "frame_handler.h"
 
 
 class SourceClip : public IClip {
 public:
-    SourceClip(const VideoInfo &videoInfo, BufferHandler &bufferHandler);
+    SourceClip(const VideoInfo &videoInfo, FrameHandler &frameHandler);
 
     auto __stdcall GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame override;
     auto __stdcall GetParity(int frameNb) -> bool override;
@@ -16,5 +16,5 @@ public:
 
 private:
     const VideoInfo &_videoInfo;
-    BufferHandler &_bufferHandler;
+    FrameHandler &_frameHandler;
 };
