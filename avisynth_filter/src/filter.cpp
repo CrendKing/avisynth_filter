@@ -243,69 +243,56 @@ auto CAviSynthFilter::StartStreaming() -> HRESULT {
 auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT {
     HRESULT hr;
 
-    if (_reloadAvsFile) {
-        _reloadAvsFile = false;
-        ReloadAviSynth();
-    }
-
     CRefTime streamTime;
     CheckHr(StreamTime(streamTime));
     streamTime = min(streamTime, m_tStart);
 
     REFERENCE_TIME inputStartTime, inStopTime;
-    hr = pIn->GetTime(&inputStartTime, &inStopTime);
-    const bool hasSampleTime = (hr != VFW_E_SAMPLE_TIME_NOT_SET);
-    if (!hasSampleTime) {
-        // fake sample time as stream time to avoid getting duplicate frame from AviSynth
+    if (pIn->GetTime(&inputStartTime, &inStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
+        // synthetic sample time as stream time to avoid getting duplicate frame from AviSynth
         inputStartTime = streamTime;
     }
 
-    _inSampleFrameNb = static_cast<int>(inputStartTime / _timePerFrame);
-
-    if (_deliveryFrameNb == DELIVER_FRAME_NB_RESET) {
-        _deliveryFrameNb = _inSampleFrameNb;
-    }
+    const int inSampleFrameNb = static_cast<int>(inputStartTime / _timePerFrame);
 
     DbgLog((LOG_TRACE, 2, "late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
-           m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, _inSampleFrameNb));
+           m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb));
 
-    {
-        // need mutex to protect the entire AviSynth environment in case a seeking happens in the meantime
-        std::unique_lock<std::mutex> lock(_avsMutex);
+    if (_reloadAvsFile) {
+        ReloadAviSynth();
+        _deliveryFrameNb = inSampleFrameNb;
+    }
 
-        const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
-        _bufferHandler.GarbageCollect(gcMinTime, inputStartTime);
+    const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
+    _bufferHandler.GarbageCollect(gcMinTime, inputStartTime);
 
-        BYTE *inputBuffer;
-        CheckHr(pIn->GetPointer(&inputBuffer));
-        _bufferHandler.CreateFrame(_inputFormat, inputStartTime, inputBuffer, _avsEnv);
+    BYTE *inputBuffer;
+    CheckHr(pIn->GetPointer(&inputBuffer));
+    _bufferHandler.CreateFrame(_inputFormat, inputStartTime, inputBuffer, _avsEnv);
 
-        while (_deliveryFrameNb + _bufferAhead <= _inSampleFrameNb) {
-            IMediaSample *outSample = nullptr;
-            CheckHr(InitializeOutputSample(nullptr, &outSample));
+    while (_deliveryFrameNb + _bufferAhead <= inSampleFrameNb) {
+        IMediaSample *outSample = nullptr;
+        CheckHr(InitializeOutputSample(nullptr, &outSample));
 
-            REFERENCE_TIME outStartTime = -1;
-            if (hasSampleTime) {
-                outStartTime = _deliveryFrameNb * _timePerFrame;
-                REFERENCE_TIME outStopTime = outStartTime + _timePerFrame;
-                CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
-            }
+        // despite missing sample times from upstream, we always set times for output samples in case downstream needs them
+        REFERENCE_TIME outStartTime = _deliveryFrameNb * _timePerFrame;
+        REFERENCE_TIME outStopTime = outStartTime + _timePerFrame;
+        CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
 
-            BYTE *outBuffer;
-            CheckHr(outSample->GetPointer(&outBuffer));
+        BYTE *outBuffer;
+        CheckHr(outSample->GetPointer(&outBuffer));
 
-            const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
-            BufferHandler::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
+        const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
+        BufferHandler::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
 
-            CheckHr(m_pOutput->Deliver(outSample));
+        CheckHr(m_pOutput->Deliver(outSample));
 
-            outSample->Release();
-            outSample = nullptr;
+        outSample->Release();
+        outSample = nullptr;
 
-            DbgLog((LOG_TRACE, 2, "Deliver frameNb: %4i at %10lli inSampleFrameNb: %4i", _deliveryFrameNb, outStartTime, _inSampleFrameNb));
+        DbgLog((LOG_TRACE, 2, "Deliver frameNb: %4i at %10lli inSampleFrameNb: %4i", _deliveryFrameNb, outStartTime, inSampleFrameNb));
 
-            _deliveryFrameNb += 1;
-        }
+        _deliveryFrameNb += 1;
     }
 
     /*
@@ -319,29 +306,14 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 }
 
 auto CAviSynthFilter::BeginFlush() -> HRESULT {
-    HRESULT hr;
-
-    CheckHr(CVideoTransformFilter::BeginFlush());
-
-    {
-        // BeginFlush() is called in the main thread, while Transform() is on a worker thread
-
-        DbgLog((LOG_TRACE, 1, "Start flushing"));
-
-        std::unique_lock<std::mutex> lock(_avsMutex);
-        ReloadAviSynth();
-
-        DbgLog((LOG_TRACE, 1, "End flushing"));
-    }
-
-    return hr;
+    _reloadAvsFile = true;
+    return CVideoTransformFilter::BeginFlush();
 }
 
-auto CAviSynthFilter::Pause() -> HRESULT {
+auto STDMETHODCALLTYPE CAviSynthFilter::Pause() -> HRESULT {
     _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
     _outputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
     _reloadAvsFile = true;
-
     return CVideoTransformFilter::Pause();   
 }
 
@@ -559,7 +531,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE *mediaType, bool allowD
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _timePerFrame = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
-    _deliveryFrameNb = DELIVER_FRAME_NB_RESET;
+    _reloadAvsFile = false;
 
     return true;
 }

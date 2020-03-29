@@ -50,9 +50,6 @@ constexpr int BUFFER_AHEAD_DEFAULT = 10;
  */
 constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
 
-// Special tag to reset delivery thread's current frame number to the input sample frame number.
-constexpr int DELIVER_FRAME_NB_RESET = -1;
-
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 
 constexpr int INVALID_DEFINITION = -1;

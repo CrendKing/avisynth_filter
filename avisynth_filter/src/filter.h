@@ -86,11 +86,8 @@ private:
     Format::VideoFormat _outputFormat;
 
     REFERENCE_TIME _timePerFrame;
-
-    int _inSampleFrameNb;
     int _deliveryFrameNb;
-
-    std::mutex _avsMutex;
+    bool _reloadAvsFile;
 
     // settings related variables
 
@@ -100,6 +97,4 @@ private:
     int _bufferBack;
     int _bufferAhead;
     DWORD _inputFormatBits;
-
-    bool _reloadAvsFile;
 };
