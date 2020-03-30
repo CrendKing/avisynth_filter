@@ -9,6 +9,11 @@ auto FrameHandler::WriteSample(const Format::VideoFormat &format, const PVideoFr
     Format::CopyToOutput(format.definition, srcSlices, srcStrides, dstBuffer, format.bmi.biWidth, srcFrame->GetRowSize(), format.bmi.biHeight, avsEnv);
 }
 
+FrameHandler::FrameHandler()
+    : _aheadOvertime(0)
+    , _backOvertime(0) {
+}
+
 auto FrameHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
     /*
     Instead of searching for a frame that's closest to the requested time, we look for the earliest frame after.
@@ -27,7 +32,7 @@ auto FrameHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
     These will be the requested times: 0, 1000, 2000, etc.
     */
 
-    const std::shared_lock<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
 
     const TimedFrame *ret = &_buffer.back();
 
@@ -41,6 +46,9 @@ auto FrameHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
             }
         }
     }
+
+    _aheadOvertime = max(frameTime - _buffer.front().time, 0);
+    _backOvertime = max(_buffer.back().time - frameTime, 0);
 
     DbgLog((LOG_TRACE, 2, "GetFrame at: %10lli Queue size: %2u Back: %10lli Front: %10lli Served(%u): %10lli",
            frameTime, _buffer.size(), _buffer.back().time, _buffer.front().time, dbgFromBack, ret->time));
@@ -56,7 +64,7 @@ auto FrameHandler::CreateFrame(const Format::VideoFormat &format, REFERENCE_TIME
 
     Format::CopyFromInput(format.definition, srcBuffer, format.bmi.biWidth, dstSlices, dstStrides, frame->GetRowSize(), format.bmi.biHeight, avsEnv);
 
-    const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
 
     if (_buffer.empty() || _buffer.front().time < frameTime) {
         _buffer.emplace_front(TimedFrame { frame, frameTime });
@@ -66,9 +74,11 @@ auto FrameHandler::CreateFrame(const Format::VideoFormat &format, REFERENCE_TIME
 }
 
 auto FrameHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> void {
-    const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
 
     const size_t dbgPreSize = _buffer.size();
+
+    // make sure there is always at least one frame in buffer for AviSynth prefetcher to get
 
     while (_buffer.size() > 1 && _buffer.back().time < min) {
         _buffer.pop_back();
@@ -82,7 +92,25 @@ auto FrameHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> voi
 }
 
 auto FrameHandler::Flush() -> void {
-    const std::unique_lock<std::shared_mutex> lock(_bufferMutex);
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
 
     _buffer.clear();
+}
+
+auto FrameHandler::GetBufferSize() -> int {
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
+
+    return static_cast<int>(_buffer.size());
+}
+
+auto FrameHandler::GetAheadOvertime() -> REFERENCE_TIME {
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
+
+    return _aheadOvertime;
+}
+
+auto FrameHandler::GetBackOvertime() -> REFERENCE_TIME {
+    const std::unique_lock<std::mutex> lock(_bufferMutex);
+
+    return _backOvertime;
 }

@@ -24,9 +24,6 @@
     <ClInclude Include="src\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\filter_prop.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -39,10 +36,16 @@
     <ClInclude Include="src\constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\settings.h">
+    <ClInclude Include="src\format.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\format.h">
+    <ClInclude Include="src\prop_settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\prop_status.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\interfaces.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -51,9 +54,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\registry.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\filter_prop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\filter.cpp">
@@ -69,6 +69,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\format.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\prop_settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\prop_status.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

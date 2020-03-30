@@ -12,11 +12,18 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetReloadAvsFile() const -> bool = 0;
     virtual auto STDMETHODCALLTYPE SetReloadAvsFile(bool reload) -> void = 0;
 
-    virtual auto STDMETHODCALLTYPE GetBufferBack() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE SetBufferBack(int bufferBack) -> void = 0;
-    virtual auto STDMETHODCALLTYPE GetBufferAhead() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE SetBufferAhead(int bufferBack) -> void = 0;
-
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
     virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;
+};
+
+DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
+    virtual auto STDMETHODCALLTYPE GetBufferSize() -> int = 0;
+
+    virtual auto STDMETHODCALLTYPE GetBufferAhead() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetBufferAheadOvertime() -> int = 0;
+
+    virtual auto STDMETHODCALLTYPE GetBufferBack() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetBufferBackOvertime() -> int = 0;
+
+    virtual auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int = 0;
 };

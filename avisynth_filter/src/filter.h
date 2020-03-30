@@ -3,14 +3,15 @@
 #include "pch.h"
 #include "frame_handler.h"
 #include "format.h"
-#include "settings.h"
+#include "interfaces.h"
 #include "registry.h"
 
 
 class CAviSynthFilter
     : public CVideoTransformFilter
     , public ISpecifyPropertyPages
-    , public IAvsFilterSettings {
+    , public IAvsFilterSettings
+    , public IAvsFilterStatus {
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
     ~CAviSynthFilter();
@@ -42,12 +43,16 @@ public:
     auto STDMETHODCALLTYPE SetAvsFile(const std::string &avsFile) -> void override;
     auto STDMETHODCALLTYPE GetReloadAvsFile() const -> bool override;
     auto STDMETHODCALLTYPE SetReloadAvsFile(bool reload) -> void override;
-    auto STDMETHODCALLTYPE GetBufferBack() const -> int override;
-    auto STDMETHODCALLTYPE SetBufferBack(int bufferBack) -> void override;
-    auto STDMETHODCALLTYPE GetBufferAhead() const -> int override;
-    auto STDMETHODCALLTYPE SetBufferAhead(int bufferAhead) -> void override;
-    auto STDMETHODCALLTYPE GetInputFormats() const ->DWORD override;
+    auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
+
+    // IAvsFilterStatus
+    auto STDMETHODCALLTYPE GetBufferSize() -> int override;
+    auto STDMETHODCALLTYPE GetBufferAhead() const -> int override;
+    auto STDMETHODCALLTYPE GetBufferAheadOvertime() -> int override;
+    auto STDMETHODCALLTYPE GetBufferBack() const -> int override;
+    auto STDMETHODCALLTYPE GetBufferBackOvertime() -> int override;
+    auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
 
 private:
     struct DefinitionPair {
@@ -89,12 +94,14 @@ private:
     int _deliveryFrameNb;
     bool _reloadAvsFile;
 
+    int _bufferBack;
+    int _bufferAhead;
+    int _sampleTimeOffset;
+
     // settings related variables
 
     Registry _registry;
 
     std::string _avsFile;
-    int _bufferBack;
-    int _bufferAhead;
     DWORD _inputFormatBits;
 };

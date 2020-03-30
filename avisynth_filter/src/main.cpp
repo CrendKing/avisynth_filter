@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "constants.h"
 #include "filter.h"
-#include "filter_prop.h"
 #include "format.h"
+#include "prop_settings.h"
+#include "prop_status.h"
 
 
 #ifdef _DEBUG
@@ -103,9 +104,15 @@ CFactoryTemplate g_Templates[] = {
     , InitRoutine
     , &FILTER_REG },
 
-    { PROPERTY_PAGE_NAME_WIDE
-    , &CLSID_AvsPropertyPage
-    , CreateInstance<CAviSynthFilterProp>
+    { SETTINGS_WIDE
+    , &CLSID_AvsPropSettings
+    , CreateInstance<CAvsFilterPropSettings>
+    , nullptr
+    , nullptr },
+
+    { STATUS_WIDE
+    , &CLSID_AvsPropStatus
+    , CreateInstance<CAvsFilterPropStatus>
     , nullptr
     , nullptr },
 };

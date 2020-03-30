@@ -1,12 +1,12 @@
 #pragma once
 
 #include "pch.h"
-#include "settings.h"
+#include "interfaces.h"
 
 
-class CAviSynthFilterProp : public CBasePropertyPage {
+class CAvsFilterPropStatus : public CBasePropertyPage {
 public:
-    CAviSynthFilterProp(LPUNKNOWN pUnk, HRESULT *phr);
+    CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr);
 
 private:
     auto OnConnect(IUnknown *pUnk) -> HRESULT override;
@@ -15,11 +15,5 @@ private:
     auto OnApplyChanges() -> HRESULT override;
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;
 
-    auto SetDirty() -> void;
-
-    IAvsFilterSettings *_settings;
-    std::string _avsFile;
-    int _bufferBack;
-    int _bufferAhead;
-    DWORD _formatBits;
+    IAvsFilterStatus *_status;
 };

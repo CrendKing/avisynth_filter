@@ -22,19 +22,20 @@
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\format.h" />
     <ClInclude Include="src\filter.h" />
-    <ClInclude Include="src\filter_prop.h" />
+    <ClInclude Include="src\prop_settings.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\prop_status.h" />
     <ClInclude Include="src\registry.h" />
     <ClInclude Include="src\resource.h" />
-    <ClInclude Include="src\settings.h" />
+    <ClInclude Include="src\interfaces.h" />
     <ClInclude Include="src\source_clip.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\frame_handler.cpp" />
     <ClCompile Include="src\format.cpp" />
     <ClCompile Include="src\filter.cpp" />
-    <ClCompile Include="src\filter_prop.cpp" />
+    <ClCompile Include="src\prop_settings.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -43,6 +44,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
+    <ClCompile Include="src\prop_status.cpp" />
     <ClCompile Include="src\registry.cpp" />
     <ClCompile Include="src\source_clip.cpp" />
   </ItemGroup>
@@ -54,7 +56,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C84DE615-CF6F-441C-99B8-E30F5046CF9F}</ProjectGuid>
-    <RootNamespace>EmperorsClothes</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>avisynth_filter</ProjectName>
