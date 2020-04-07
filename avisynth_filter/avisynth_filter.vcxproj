@@ -22,6 +22,7 @@
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\format.h" />
     <ClInclude Include="src\filter.h" />
+    <ClInclude Include="src\logging.h" />
     <ClInclude Include="src\prop_settings.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\pch.h" />

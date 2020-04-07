@@ -3,6 +3,7 @@
 #include "prop_settings.h"
 #include "constants.h"
 #include "source_clip.h"
+#include "logging.h"
 
 
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
@@ -64,22 +65,22 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 if (inputDefinition != INVALID_DEFINITION && !IsInputUniqueByAvsType(inputDefinition)) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
                     if (!ReloadAviSynth(nextType, true)) {
-                        DbgLog((LOG_TRACE, 1, "Disconnect due to avsfilter_disconnect()"));
+                        Log("Disconnect due to avsfilter_disconnect()");
                         return VFW_E_CANNOT_CONNECT;
                     }
 
                     _acceptableInputTypes.emplace(inputDefinition, nextType);
-                    DbgLog((LOG_TRACE, 1, "Add acceptable input definition: %2i", inputDefinition));
+                    Log("Add acceptable input definition: %2i", inputDefinition);
 
                     // all media types that share the same avs type are acceptable for output pin connection
                     for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
                         if (_acceptableOuputTypes.find(outputDefinition) == _acceptableOuputTypes.end()) {
                             AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
                             _acceptableOuputTypes.emplace(outputDefinition, outputType);
-                            DbgLog((LOG_TRACE, 1, "Add acceptable output definition: %2i", outputDefinition));
+                            Log("Add acceptable output definition: %2i", outputDefinition);
 
                             _compatibleDefinitions.emplace_back(DefinitionPair { inputDefinition, outputDefinition });
-                            DbgLog((LOG_TRACE, 1, "Add compatible definitions: input %2i output %2i", inputDefinition, outputDefinition));
+                            Log("Add compatible definitions: input %2i output %2i", inputDefinition, outputDefinition);
                         }
                     }
                 } else {
@@ -114,7 +115,7 @@ auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
 
-    DbgLog((LOG_TRACE, 1, "Accept input definition: %2i", definition));
+    Log("Accept input definition: %2i", definition);
 
     return S_OK;
 }
@@ -135,7 +136,7 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
     const int definition = _compatibleDefinitions[iPosition].output;
     *pMediaType = *_acceptableOuputTypes[definition];
 
-    DbgLog((LOG_TRACE, 1, "Offer output definition: %2i", definition));
+    Log("Offer output definition: %2i", definition);
 
     return S_OK;
 }
@@ -150,7 +151,7 @@ auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *m
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
 
-    DbgLog((LOG_TRACE, 1, "Accept transform: out %2i", outputDefinition));
+    Log("Accept transform: out %2i", outputDefinition);
 
     return S_OK;
 }
@@ -204,17 +205,17 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
     ASSERT(inputDefiniton != INVALID_DEFINITION);
 
     if (!m_pOutput->IsConnected()) {
-        DbgLog((LOG_TRACE, 1, "Connected input pin with definition: %2i", inputDefiniton));
+        Log("Connected input pin with definition: %2i", inputDefiniton);
     } else {
         const int outputDefinition = Format::LookupMediaSubtype(m_pOutput->CurrentMediaType().subtype);
         ASSERT(outputDefinition != INVALID_DEFINITION);
 
         const int compatibleInput = FindCompatibleInputByOutput(outputDefinition);
         if (inputDefiniton != compatibleInput) {
-            DbgLog((LOG_TRACE, 1, "Reconnect with types: old in %2i new in %2i out %2i", inputDefiniton, compatibleInput, outputDefinition));
+            Log("Reconnect with types: old in %2i new in %2i out %2i", inputDefiniton, compatibleInput, outputDefinition);
             CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[compatibleInput]));
         } else {
-            DbgLog((LOG_TRACE, 1, "Connected with types: in %2i out %2i", inputDefiniton, outputDefinition));
+            Log("Connected with types: in %2i out %2i", inputDefiniton, outputDefinition);
         }
     }
 
@@ -225,10 +226,10 @@ auto CAviSynthFilter::StartStreaming() -> HRESULT {
     const Format::VideoFormat newInputType = Format::GetVideoFormat(m_pInput->CurrentMediaType());
     const Format::VideoFormat newOutputType = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
 
-    DbgLog((LOG_TRACE, 1, "new input type:  definition %i, width %5i, height %5i, codec %#10x",
-           newInputType.definition, newInputType.bmi.biWidth, newInputType.bmi.biHeight, newInputType.bmi.biCompression));
-    DbgLog((LOG_TRACE, 1, "new output type: definition %i, width %5i, height %5i, codec %#10x",
-           newOutputType.definition, newOutputType.bmi.biWidth, newOutputType.bmi.biHeight, newOutputType.bmi.biCompression));
+    Log("new input type:  definition %i, width %5i, height %5i, codec %#10x",
+           newInputType.definition, newInputType.bmi.biWidth, newInputType.bmi.biHeight, newInputType.bmi.biCompression);
+    Log("new output type: definition %i, width %5i, height %5i, codec %#10x",
+           newOutputType.definition, newOutputType.bmi.biWidth, newOutputType.bmi.biHeight, newOutputType.bmi.biCompression);
 
     if (_inputFormat != newInputType) {
         _inputFormat = newInputType;
@@ -266,8 +267,8 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 
     const int inSampleFrameNb = static_cast<int>(inputStartTime / _timePerFrame);
 
-    DbgLog((LOG_TRACE, 2, "late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
-           m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb));
+    Log("late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
+        m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb);
 
     if (_reloadAvsFile) {
         ReloadAviSynth();
@@ -303,19 +304,16 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         outSample->Release();
         outSample = nullptr;
 
-        DbgLog((LOG_TRACE, 2, "Deliver frameNb: %4i at %10lli inSampleFrameNb: %4i", _deliveryFrameNb, outStartTime, inSampleFrameNb));
+        Log("Deliver frameNb: %4i at %10lli inSampleFrameNb: %4i", _deliveryFrameNb, outStartTime, inSampleFrameNb);
 
         _deliveryFrameNb += 1;
     }
 
     if (refreshedOvertime) {
-        const int aheadOvertimeFrames = GetBufferAheadOvertime();
-        const int backOvertimeFrames = GetBufferBackOvertime();
-
-        if (aheadOvertimeFrames > 0) {
+        if (_frameHandler.GetAheadOvertime() > 0) {
             _bufferAhead += 1;
         }
-        if (backOvertimeFrames > 0) {
+        if (_frameHandler.GetBackOvertime() > 0) {
             _bufferBack += 1;
         }
     }
@@ -331,22 +329,14 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
 }
 
 auto CAviSynthFilter::BeginFlush() -> HRESULT {
-    _bufferAhead = 0;
-    _bufferBack = 0;
-    _sampleTimeOffset = 0;
-    _reloadAvsFile = true;
-
+    Reset();
     return CVideoTransformFilter::BeginFlush();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::Pause() -> HRESULT {
     _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
     _outputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
-    _bufferAhead = 0;
-    _bufferBack = 0;
-    _sampleTimeOffset = 0;
-    _reloadAvsFile = true;
-
+    Reset();
     return CVideoTransformFilter::Pause();   
 }
 
@@ -436,6 +426,13 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> i
     }
 
     return Format::LookupMediaSubtype(mediaType->subtype);
+}
+
+auto CAviSynthFilter::Reset() -> void {
+    _bufferAhead = 0;
+    _bufferBack = 0;
+    _sampleTimeOffset = 0;
+    _reloadAvsFile = true;
 }
 
 auto CAviSynthFilter::LoadSettings() -> void {

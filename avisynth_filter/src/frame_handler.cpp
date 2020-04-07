@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "frame_handler.h"
+#include "logging.h"
 
 
 auto FrameHandler::WriteSample(const Format::VideoFormat &format, const PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void {
@@ -50,8 +51,8 @@ auto FrameHandler::GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame {
     _aheadOvertime = max(frameTime - _buffer.front().time, 0);
     _backOvertime = max(_buffer.back().time - frameTime, 0);
 
-    DbgLog((LOG_TRACE, 2, "GetFrame at: %10lli Queue size: %2u Back: %10lli Front: %10lli Served(%u): %10lli",
-           frameTime, _buffer.size(), _buffer.back().time, _buffer.front().time, dbgFromBack, ret->time));
+    Log("GetFrame at: %10lli Queue size: %2u Back: %10lli Front: %10lli Served(%u): %10lli Ahead: %10lli Back: %10lli",
+        frameTime, _buffer.size(), _buffer.back().time, _buffer.front().time, dbgFromBack, ret->time, _aheadOvertime, _backOvertime);
 
     return ret->frame;
 }
@@ -88,7 +89,7 @@ auto FrameHandler::GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> voi
         _buffer.pop_front();
     }
 
-    DbgLog((LOG_TRACE, 2, "Buffer GC: %10lli ~ %10lli Pre size: %2u Post size: %2u", min, max, dbgPreSize, _buffer.size()));
+    Log("Buffer GC: %10lli ~ %10lli Pre size: %2u Post size: %2u", min, max, dbgPreSize, _buffer.size());
 }
 
 auto FrameHandler::Flush() -> void {

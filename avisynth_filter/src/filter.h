@@ -62,6 +62,7 @@ private:
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
 
+    auto Reset() -> void;
     auto LoadSettings() -> void;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;

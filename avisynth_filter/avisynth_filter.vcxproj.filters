@@ -48,6 +48,9 @@
     <ClInclude Include="src\interfaces.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\logging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\pch.cpp">
