@@ -32,7 +32,8 @@ auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
     return definition != other.definition
         || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
         || bmi.biSize != other.bmi.biSize
-        || memcmp(&bmi, &other.bmi, bmi.biSize) != 0;
+        || memcmp(&bmi, &other.bmi, bmi.biSize) != 0
+        || memcmp(vih, other.vih, sizeof(VIDEOINFOHEADER)) != 0;
 }
 
 auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> int {
@@ -72,8 +73,8 @@ auto Format::GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER * {
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     VideoFormat info;
 
-    const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
-    const REFERENCE_TIME frameTime = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
+    info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
+    const REFERENCE_TIME frameTime = info.vih->AvgTimePerFrame > 0 ? info.vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
     info.definition = LookupMediaSubtype(mediaType.subtype);
     info.bmi = *GetBitmapInfo(const_cast<AM_MEDIA_TYPE &>(mediaType));

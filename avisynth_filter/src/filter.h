@@ -28,7 +28,6 @@ public:
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
-    auto StartStreaming() -> HRESULT override;
     auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
     auto BeginFlush() -> HRESULT override;
     

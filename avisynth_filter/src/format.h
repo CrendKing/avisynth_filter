@@ -19,6 +19,7 @@ public:
         int definition;
         VideoInfo videoInfo;
         BITMAPINFOHEADER bmi;
+        VIDEOINFOHEADER *vih;
 
         auto operator!=(const VideoFormat &other) const -> bool;
     };

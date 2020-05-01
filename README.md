@@ -2,7 +2,7 @@
 
 A DirectShow filter that loads an AviSynth script and feed the frames to the video player.
 
-This filter exports an "avsfilter_source()" function to the AviSynth script, which serves as a source plugin. This filter feeds the video samples from DirectShow upstream to the script. Then it sends the processed frame data to the downstream.
+This filter exports an "AvsFilterSource()" function to the AviSynth script, which serves as a source plugin. This filter feeds the video samples from DirectShow upstream to the script. Then it sends the processed frame data to the downstream.
 
 If you used ffdshow's AviSynth plugin, you may find this filter similar in many ways. On top of that, this filter is actively adding new features. Support most common input formats such as NV12, YUY2 and P010 etc.
 
@@ -23,13 +23,13 @@ Run uninstall.bat to unregister the filter and clean up user data.
 
 The filter exports the following functions to the AviSynth script.
 
-#### `avsfilter_source()`
+#### `AvsFilterSource()`
 
 The source function which returns a `clip` object. Similar to other source functions like `AviSource()`.
 
 This function takes no argument.
 
-#### `avsfilter_disconnect()`
+#### `AvsFilterDisconnect()`
 
 This function serves as a heuristic to disconnect the AviSynth Filter from DirectShow filter graph. Put at the end of the script file.
 
@@ -44,14 +44,14 @@ This function takes no argument.
 Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.
 
 ```
-avsfilter_source()
+AvsFilterSource()
 
 fps = Round(FrameRate())
 if (fps < 20) {
     Subtitle("This video has low FPS")
     Prefetch(4)
 } else {
-    avsfilter_disconnect()
+    AvsFilterDisconnect()
 }
 ```
 
