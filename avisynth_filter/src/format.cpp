@@ -9,23 +9,23 @@ static const __m128i DEINTERLEAVE_MASK_16_BIT_1 = _mm_set_epi8(29, 28, 25, 24, 2
 static const __m128i DEINTERLEAVE_MASK_16_BIT_2 = _mm_set_epi8(31, 30, 27, 26, 23, 22, 19, 18, 15, 14, 11, 10, 7, 6, 3, 2);
 
 const std::vector<Format::Definition> Format::DEFINITIONS = {
-    /* 0 */ { MEDIASUBTYPE_NV12, VideoInfo::CS_YV12, 12, 1, 1 },
-    /* 1 */ { MEDIASUBTYPE_YV12, VideoInfo::CS_YV12, 12, 1, 1 },
-    /* 2 */ { MEDIASUBTYPE_I420, VideoInfo::CS_YV12, 12, 1, 1 },
-    /* 3 */ { MEDIASUBTYPE_IYUV, VideoInfo::CS_YV12, 12, 1, 1 },
+    /* 0 */ { MEDIASUBTYPE_NV12, VideoInfo::CS_YV12, 12, 1 },
+    /* 1 */ { MEDIASUBTYPE_YV12, VideoInfo::CS_YV12, 12, 1 },
+    /* 2 */ { MEDIASUBTYPE_I420, VideoInfo::CS_YV12, 12, 1 },
+    /* 3 */ { MEDIASUBTYPE_IYUV, VideoInfo::CS_YV12, 12, 1 },
 
     // P010 has the most significant 6 bits zero-padded, while AviSynth expects the least significant bits padded
     // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
-    /* 4 */ { MEDIASUBTYPE_P010, VideoInfo::CS_YUV420P16, 24, 2, 1 },
+    /* 4 */ { MEDIASUBTYPE_P010, VideoInfo::CS_YUV420P16, 24, 1 },
 
-    /* 5 */ { MEDIASUBTYPE_P016, VideoInfo::CS_YUV420P16, 24, 2, 1 },
+    /* 5 */ { MEDIASUBTYPE_P016, VideoInfo::CS_YUV420P16, 24, 1 },
 
     // packed formats such as YUY2 are twice as wide as unpacked formats per pixel
-    /* 6 */ { MEDIASUBTYPE_YUY2, VideoInfo::CS_YUY2, 16, 1, 2 },
-    /* 7 */ { MEDIASUBTYPE_UYVY, VideoInfo::CS_YUY2, 16, 1, 2 },
+    /* 6 */ { MEDIASUBTYPE_YUY2, VideoInfo::CS_YUY2, 16, 2 },
+    /* 7 */ { MEDIASUBTYPE_UYVY, VideoInfo::CS_YUY2, 16, 2 },
 
-    /* 8 */ { MEDIASUBTYPE_RGB32, VideoInfo::CS_BGR32, 24, 1, 4 },
-    /* 9 */ { MEDIASUBTYPE_RGB24, VideoInfo::CS_BGR24, 24, 1, 3 },
+    /* 8 */ { MEDIASUBTYPE_RGB32, VideoInfo::CS_BGR32, 24, 4 },
+    /* 9 */ { MEDIASUBTYPE_RGB24, VideoInfo::CS_BGR24, 24, 3 },
 };
 
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
@@ -89,16 +89,17 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     return info;
 }
 
-auto Format::CopyFromInput(int definition, const BYTE *srcBuffer, int srcPixelStride, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void {
-    const Definition &def = DEFINITIONS[definition];
+auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int dstRowSize, int dstHeight, IScriptEnvironment *avsEnv) -> void {
+    const Definition &def = DEFINITIONS[format.definition];
 
-    const int absHeight = abs(height);
-    const int srcStride = srcPixelStride * def.bytesPerComponent * def.componentsPerPixel;
-    const int srcDefaultPlaneSize = srcStride * absHeight;
+    const int srcStride = format.bmi.biWidth * format.videoInfo.ComponentSize() * def.componentsPerPixel;
+    const int rowSize = min(srcStride, dstRowSize);
+    const int height = min(abs(format.bmi.biHeight), dstHeight);
+    const int srcDefaultPlaneSize = srcStride * height;
 
     const BYTE *srcDefaultPlane;
     int srcDefaultPlaneStride;
-    if ((def.avsType & VideoInfo::CS_BGR) != 0 && height < 0) {
+    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biHeight < 0) {
         // positive height for RGB definition is bottom-up DIB, negative is top-down
         // AviSynth is always bottom-up
         srcDefaultPlane = srcBuffer + srcDefaultPlaneSize - srcStride;
@@ -108,7 +109,7 @@ auto Format::CopyFromInput(int definition, const BYTE *srcBuffer, int srcPixelSt
         srcDefaultPlaneStride = srcStride;
     }
 
-    avsEnv->BitBlt(dstSlices[0], dstStrides[0], srcDefaultPlane, srcDefaultPlaneStride, rowSize, absHeight);
+    avsEnv->BitBlt(dstSlices[0], dstStrides[0], srcDefaultPlane, srcDefaultPlaneStride, rowSize, height);
 
     if ((def.avsType & VideoInfo::CS_INTERLEAVED) == 0) {
         // 4:2:0 unpacked formats
@@ -131,8 +132,8 @@ auto Format::CopyFromInput(int definition, const BYTE *srcBuffer, int srcPixelSt
                 srcV = srcPlane2;
             }
 
-            avsEnv->BitBlt(dstSlices[1], dstStrides[1], srcU, srcStride / 2, rowSize / 2, absHeight / 2);
-            avsEnv->BitBlt(dstSlices[2], dstStrides[2], srcV, srcStride / 2, rowSize / 2, absHeight / 2);
+            avsEnv->BitBlt(dstSlices[1], dstStrides[1], srcU, srcStride / 2, rowSize / 2, height / 2);
+            avsEnv->BitBlt(dstSlices[2], dstStrides[2], srcV, srcStride / 2, rowSize / 2, height / 2);
         } else {
             // interleaved U and V planes. copy byte by byte
             // consider using intrinsics for better performance
@@ -140,7 +141,7 @@ auto Format::CopyFromInput(int definition, const BYTE *srcBuffer, int srcPixelSt
             const BYTE *srcUVStart = srcBuffer + srcDefaultPlaneSize;
             __m128i mask1, mask2;
 
-            if (def.bytesPerComponent == 1) {
+            if (format.videoInfo.ComponentSize() == 1) {
                 mask1 = DEINTERLEAVE_MASK_8_BIT_1;
                 mask2 = DEINTERLEAVE_MASK_8_BIT_2;
             } else {
@@ -149,21 +150,22 @@ auto Format::CopyFromInput(int definition, const BYTE *srcBuffer, int srcPixelSt
             }
 
             Deinterleave(srcUVStart, srcStride, dstSlices[1], dstSlices[2], dstStrides[1],
-                         rowSize, absHeight / 2, mask1, mask2);
+                         rowSize, height / 2, mask1, mask2);
         }
     }
 }
 
-auto Format::CopyToOutput(int definition, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstPixelStride, int rowSize, int height, IScriptEnvironment *avsEnv) -> void {
-    const Definition &def = DEFINITIONS[definition];
+auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int srcRowSize, int srcHeight, IScriptEnvironment *avsEnv) -> void {
+    const Definition &def = DEFINITIONS[format.definition];
 
-    const int absHeight = abs(height);
-    const int dstStride = dstPixelStride * def.bytesPerComponent * def.componentsPerPixel;
-    const int dstDefaultPlaneSize = dstStride * absHeight;
+    const int dstStride = format.bmi.biWidth * format.videoInfo.ComponentSize() * def.componentsPerPixel;
+    const int rowSize = min(dstStride, srcRowSize);
+    const int height = min(abs(format.bmi.biHeight), srcHeight);
+    const int dstDefaultPlaneSize = dstStride * height;
 
     BYTE *dstDefaultPlane;
     int dstDefaultPlaneStride;
-    if ((def.avsType & VideoInfo::CS_BGR) != 0 && height < 0) {
+    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biHeight < 0) {
         dstDefaultPlane = dstBuffer + dstDefaultPlaneSize - dstStride;
         dstDefaultPlaneStride = -dstStride;
     } else {
@@ -171,7 +173,7 @@ auto Format::CopyToOutput(int definition, const BYTE *srcSlices[], const int src
         dstDefaultPlaneStride = dstStride;
     }
 
-    avsEnv->BitBlt(dstDefaultPlane, dstDefaultPlaneStride, srcSlices[0], srcStrides[0], rowSize, absHeight);
+    avsEnv->BitBlt(dstDefaultPlane, dstDefaultPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
 
     if ((def.avsType & VideoInfo::CS_INTERLEAVED) == 0) {
         if (def.mediaSubtype == MEDIASUBTYPE_IYUV || def.mediaSubtype == MEDIASUBTYPE_I420 || def.mediaSubtype == MEDIASUBTYPE_YV12) {
@@ -188,13 +190,13 @@ auto Format::CopyToOutput(int definition, const BYTE *srcSlices[], const int src
                 dstV = dstPlane2;
             }
 
-            avsEnv->BitBlt(dstU, dstStride / 2, srcSlices[1], srcStrides[1], rowSize / 2, absHeight / 2);
-            avsEnv->BitBlt(dstV, dstStride / 2, srcSlices[2], srcStrides[2], rowSize / 2, absHeight / 2);
+            avsEnv->BitBlt(dstU, dstStride / 2, srcSlices[1], srcStrides[1], rowSize / 2, height / 2);
+            avsEnv->BitBlt(dstV, dstStride / 2, srcSlices[2], srcStrides[2], rowSize / 2, height / 2);
         } else {
             BYTE *dstUVStart = dstBuffer + dstDefaultPlaneSize;
 
             Interleave(srcSlices[1], srcSlices[2], srcStrides[1],
-                       dstUVStart, dstStride, rowSize / 2, absHeight / 2, def.bytesPerComponent);
+                       dstUVStart, dstStride, rowSize / 2, height / 2, format.videoInfo.ComponentSize());
         }
     }
 }

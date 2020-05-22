@@ -7,7 +7,7 @@ auto FrameHandler::WriteSample(const Format::VideoFormat &format, const PVideoFr
     const BYTE *srcSlices[] = { srcFrame->GetReadPtr(), srcFrame->GetReadPtr(PLANAR_U), srcFrame->GetReadPtr(PLANAR_V) };
     const int srcStrides[] = { srcFrame->GetPitch(), srcFrame->GetPitch(PLANAR_U), srcFrame->GetPitch(PLANAR_V) };
 
-    Format::CopyToOutput(format.definition, srcSlices, srcStrides, dstBuffer, format.bmi.biWidth, srcFrame->GetRowSize(), format.bmi.biHeight, avsEnv);
+    Format::CopyToOutput(format, srcSlices, srcStrides, dstBuffer, srcFrame->GetRowSize(), srcFrame->GetHeight(), avsEnv);
 }
 
 FrameHandler::FrameHandler()
@@ -63,7 +63,7 @@ auto FrameHandler::CreateFrame(const Format::VideoFormat &format, REFERENCE_TIME
     BYTE *dstSlices[] = { frame->GetWritePtr(), frame->GetWritePtr(PLANAR_U), frame->GetWritePtr(PLANAR_V) };
     const int dstStrides[] = { frame->GetPitch(), frame->GetPitch(PLANAR_U), frame->GetPitch(PLANAR_V) };
 
-    Format::CopyFromInput(format.definition, srcBuffer, format.bmi.biWidth, dstSlices, dstStrides, frame->GetRowSize(), format.bmi.biHeight, avsEnv);
+    Format::CopyFromInput(format, srcBuffer, dstSlices, dstStrides, frame->GetRowSize(), frame->GetHeight(), avsEnv);
 
     const std::unique_lock<std::mutex> lock(_bufferMutex);
 

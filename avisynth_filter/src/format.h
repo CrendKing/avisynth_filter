@@ -11,7 +11,6 @@ public:
         uint8_t bitCount;
 
         // in case of planar formats, these numbers are for the default plane
-        uint8_t bytesPerComponent;
         uint8_t componentsPerPixel;
     };
 
@@ -28,8 +27,8 @@ public:
     static auto LookupAvsType(int avsType) -> std::vector<int>;
     static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat;
-    static auto CopyFromInput(int definition, const BYTE *srcBuffer, int srcPixelStride, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
-    static auto CopyToOutput(int definition, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int dstPixelStride, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int dstRowSize, int dstHeight, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int srcRowSize, int srcHeight, IScriptEnvironment *avsEnv) -> void;
 
     static const std::vector<Definition> DEFINITIONS;
 

@@ -8,6 +8,21 @@
 
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
+auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> void {
+    const size_t repLen = strlen(rep);
+    size_t index = 0;
+
+    while (true) {
+        index = str.find(target, index);
+        if (index == std::string::npos) {
+            break;
+        }
+
+        str.replace(index, repLen, rep);
+        index += repLen;
+    }
+}
+
 auto __cdecl CreateAvsFilterSource(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     return static_cast<SourceClip *>(user_data);
 }
@@ -570,13 +585,13 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE *mediaType, bool allowD
         }
     } catch (AvisynthError &err) {
         errorScript = err.msg;
-        std::replace(errorScript.begin(), errorScript.end(), '"', '\'');
-        std::replace(errorScript.begin(), errorScript.end(), '\n', ' ');
+        ReplaceSubstring(errorScript, "\"", "\'");
+        ReplaceSubstring(errorScript, "\n", "\\n");
     }
 
     if (!errorScript.empty()) {
         errorScript.insert(0, "return AvsFilterSource().Subtitle(\"");
-        errorScript.append("\")");
+        errorScript.append("\", lsp=0)");
         AVSValue evalArgs[] = { AVSValue(errorScript.c_str())
                               , AVSValue(EVAL_FILENAME) };
         invokeResult = _avsEnv->Invoke("Eval", AVSValue(evalArgs, 2), nullptr);
