@@ -61,6 +61,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid,
 }
 
 auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT {
+    HRESULT ret = S_OK;
     HRESULT hr;
 
     if (direction == PINDIR_INPUT) {
@@ -81,7 +82,10 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
                     if (!ReloadAviSynth(nextType, true)) {
                         Log("Disconnect due to AvsFilterDisconnect()");
-                        return VFW_E_CANNOT_CONNECT;
+
+                        DeleteMediaType(nextType);
+                        ret = VFW_E_NO_TYPES;
+                        break;
                     }
 
                     _acceptableInputTypes.emplace(inputDefinition, nextType);
@@ -112,7 +116,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
         enumTypes->Release();
     }
 
-    return CVideoTransformFilter::CheckConnect(direction, pPin);
+    return ret;
 }
 
 auto CAviSynthFilter::BreakConnect(PIN_DIRECTION direction) -> HRESULT {

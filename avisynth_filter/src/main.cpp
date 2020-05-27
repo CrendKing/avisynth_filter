@@ -79,6 +79,8 @@ void Log(const char *format, ...) {
     va_end(args);
 
     fputc('\n', g_logFile);
+
+    fflush(g_logFile);
 #endif
 }
 
