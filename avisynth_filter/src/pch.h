@@ -1,10 +1,18 @@
 #pragma once
 
 #include <codeanalysis/warnings.h>
-#pragma warning(push, 0)
-#pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS 26812))
+#pragma warning(push)
+#pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS 26812)
 
-#define STRICT
+#include <algorithm>
+#include <atomic>
+#include <deque>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -26,15 +34,6 @@
 #include <immintrin.h>
 
 #include <client/windows/handler/exception_handler.h>
-
-#include <algorithm>
-#include <atomic>
-#include <deque>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <unordered_map>
-#include <vector>
 
 #pragma warning(pop)
 

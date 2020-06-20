@@ -71,14 +71,14 @@ auto Format::GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER * {
 }
 
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
-    VideoFormat info;
+    VideoFormat info {};
 
     info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     const REFERENCE_TIME frameTime = info.vih->AvgTimePerFrame > 0 ? info.vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
     info.definition = LookupMediaSubtype(mediaType.subtype);
     info.bmi = *GetBitmapInfo(const_cast<AM_MEDIA_TYPE &>(mediaType));
-    info.videoInfo = {};
+
     info.videoInfo.width = info.bmi.biWidth;
     info.videoInfo.height = abs(info.bmi.biHeight);
     info.videoInfo.fps_numerator = UNITS;

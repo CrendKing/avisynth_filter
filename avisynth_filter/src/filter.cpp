@@ -378,7 +378,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::Pause() -> HRESULT {
     _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
     _outputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
     Reset();
-    return CVideoTransformFilter::Pause();   
+    return CVideoTransformFilter::Pause();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
