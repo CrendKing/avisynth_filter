@@ -22,7 +22,6 @@ public:
 
     // CVideoTransformFilter
     auto CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT override;
-    auto BreakConnect(PIN_DIRECTION direction) -> HRESULT override;
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
     auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
@@ -83,6 +82,7 @@ private:
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
 
+    IPin *_upstreamPin;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;

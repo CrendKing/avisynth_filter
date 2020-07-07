@@ -35,8 +35,10 @@ auto __cdecl CreateAvsFilterDisconnect(AVSValue args, void *user_data, IScriptEn
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _avsEnv(nullptr)
-    , _avsScriptClip(nullptr) {
+    , _avsScriptClip(nullptr)
+    , _upstreamPin(nullptr) {
     LoadSettings();
+    Log("CAviSynthFilter::CAviSynthFilter()");
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
@@ -65,7 +67,10 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     HRESULT hr;
 
     if (direction == PINDIR_INPUT) {
-        ASSERT(_compatibleDefinitions.empty());
+        if (_upstreamPin != pPin) {
+            _upstreamPin = pPin;
+            DeletePinTypes();
+        }
 
         IEnumMediaTypes *enumTypes;
         CheckHr(pPin->EnumMediaTypes(&enumTypes));
@@ -78,7 +83,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
 
                 // for each group of formats with the same avs type, only add the first one that upstream supports.
                 // this one will be the preferred media type for potential pin reconnection
-                if (inputDefinition != INVALID_DEFINITION && !IsInputUniqueByAvsType(inputDefinition)) {
+                if (inputDefinition != INVALID_DEFINITION && IsInputUniqueByAvsType(inputDefinition)) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
                     if (!ReloadAviSynth(nextType, true)) {
                         Log("Disconnect due to AvsFilterDisconnect()");
@@ -117,14 +122,6 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     }
 
     return ret;
-}
-
-auto CAviSynthFilter::BreakConnect(PIN_DIRECTION direction) -> HRESULT {
-    if (direction == PINDIR_INPUT) {
-        DeletePinTypes();
-    }
-
-    return CVideoTransformFilter::BreakConnect(direction);
 }
 
 auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
@@ -493,6 +490,7 @@ auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -
     }
 
     if ((_inputFormatBits & (1 << inputDefinition)) == 0) {
+        Log("Reject input definition due to settings: %2i", inputDefinition);
         return INVALID_DEFINITION;
     }
 
@@ -628,10 +626,10 @@ auto CAviSynthFilter::DeleteAviSynth() -> void {
 auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool {
     for (const auto &value : _acceptableInputTypes) {
         if (Format::DEFINITIONS[value.first].avsType == Format::DEFINITIONS[inputDefinition].avsType) {
-            return true;
+            return false;
         }
     }
-    return false;
+    return true;
 }
 
 auto CAviSynthFilter::FindCompatibleInputByOutput(int outputDefinition) const -> int {
