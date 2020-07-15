@@ -85,6 +85,8 @@ void Log(const char *format, ...) {
 }
 
 #ifdef MINIDUMP
+#include <client/windows/handler/exception_handler.h>
+
 static google_breakpad::ExceptionHandler *g_exHandler;
 #endif
 

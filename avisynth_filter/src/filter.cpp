@@ -36,7 +36,8 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
-    , _upstreamPin(nullptr) {
+    , _upstreamPin(nullptr)
+    , _calibrateBufferSizes(true) {
     LoadSettings();
     Log("CAviSynthFilter::CAviSynthFilter()");
 }
@@ -348,11 +349,35 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     }
 
     if (refreshedOvertime) {
-        if (_frameHandler.GetAheadOvertime() > 0) {
+        const bool hasAheadOvertime = _frameHandler.GetAheadOvertime() > 0;
+        const bool hasBackOvertime = _frameHandler.GetBackOvertime() > 0;
+        if (hasAheadOvertime) {
             _bufferAhead += 1;
         }
-        if (_frameHandler.GetBackOvertime() > 0) {
+        if (hasBackOvertime) {
             _bufferBack += 1;
+        }
+
+        if (_calibrateBufferSizes) {
+            if (!hasAheadOvertime && !hasBackOvertime) {
+                _consecutiveStableFrames += 1;
+            } else {
+                _consecutiveStableFrames = 0;
+            }
+
+            // consider 1 second of video stream without overtime "stable"
+            if (_consecutiveStableFrames >= _avsSourceVideoInfo.fps_numerator / _avsSourceVideoInfo.fps_denominator) {
+                if (_stableBufferAhead != _bufferAhead) {
+                    _stableBufferAhead = _bufferAhead;
+                    _registry.WriteNumber(REGISTRY_VALUE_NAME_BUFFER_AHEAD, _stableBufferAhead);
+                }
+                if (_stableBufferBack != _bufferBack) {
+                    _stableBufferBack = _bufferBack;
+                    _registry.WriteNumber(REGISTRY_VALUE_NAME_BUFFER_BACK, _stableBufferBack);
+                }
+
+                _calibrateBufferSizes = false;
+            }
         }
     }
 
@@ -411,12 +436,11 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsFile(const std::string &avsFile) -
     _avsFile = avsFile;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetReloadAvsFile() const -> bool {
-    return _reloadAvsFile;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::SetReloadAvsFile(bool reload) -> void {
-    _reloadAvsFile = reload;
+auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile() -> void {
+    _stableBufferAhead = 0;
+    _stableBufferBack = 0;
+    _calibrateBufferSizes = true;
+    Reset();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormats() const -> DWORD {
@@ -467,19 +491,18 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> i
 }
 
 auto CAviSynthFilter::Reset() -> void {
-    _bufferAhead = 0;
-    _bufferBack = 0;
+    _bufferAhead = _stableBufferAhead;
+    _bufferBack = _stableBufferBack;
     _sampleTimeOffset = 0;
+    _consecutiveStableFrames = 0;
     _reloadAvsFile = true;
 }
 
 auto CAviSynthFilter::LoadSettings() -> void {
     _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
-
-    _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS);
-    if (_inputFormatBits == INVALID_REGISTRY_NUMBER) {
-        _inputFormatBits = (1 << Format::DEFINITIONS.size()) - 1;
-    }
+    _stableBufferAhead = _registry.ReadNumber(REGISTRY_VALUE_NAME_BUFFER_AHEAD, 0);
+    _stableBufferBack = _registry.ReadNumber(REGISTRY_VALUE_NAME_BUFFER_BACK, 0);
+    _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
 }
 
 auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int {

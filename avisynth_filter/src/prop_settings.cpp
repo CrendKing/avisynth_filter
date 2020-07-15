@@ -5,8 +5,7 @@
 
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_PROPPAGE, IDS_SETTINGS)
-    , _settings(nullptr)
-    , _formatBits(0) {
+    , _settings(nullptr) {
 }
 
 auto CAvsFilterPropSettings::OnConnect(IUnknown *pUnk) -> HRESULT {
@@ -27,9 +26,11 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
     _avsFile = _settings->GetAvsFile();
     SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsFile.c_str());
 
-    _formatBits = _settings->GetInputFormats();
-    for (int i = 0; i < sizeof(_formatBits) * 8; ++i) {
-        if ((_formatBits & (1 << i)) != 0) {
+    // the reset buffer size check box is always unchecked initially
+
+    const DWORD formatBits = _settings->GetInputFormats();
+    for (int i = 0; i < sizeof(formatBits) * 8; ++i) {
+        if ((formatBits & (1 << i)) != 0) {
             CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_NV12 + i, 1);
         }
     }
@@ -39,7 +40,15 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     _settings->SetAvsFile(_avsFile);
-    _settings->SetInputFormats(_formatBits);
+
+    DWORD formatBits = 0;
+    for (int i = IDC_INPUT_FORMAT_NV12; i <= IDC_INPUT_FORMAT_RGB24; ++i) {
+        if (IsDlgButtonChecked(m_Dlg, i) == BST_CHECKED) {
+            formatBits |= 1 << (i - IDC_INPUT_FORMAT_NV12);
+        }
+    }
+    _settings->SetInputFormats(formatBits);
+
     _settings->SaveSettings();
 
     return S_OK;
@@ -63,7 +72,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
                     ShellExecute(hwnd, "edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
                 } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
-                    _settings->SetReloadAvsFile(true);
+                    _settings->ReloadAvsFile();
                 } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
                     char szFile[MAX_PATH] {};
 
@@ -77,18 +86,9 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                     if (GetOpenFileName(&ofn) == TRUE) {
                         SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
                     }
-                } else {
-                    const int definition = LOWORD(wParam) - IDC_INPUT_FORMAT_NV12;
-                    const bool buttonChecked = (IsDlgButtonChecked(hwnd, LOWORD(wParam)) == BST_CHECKED);
-
-                    if (buttonChecked) {
-                        _formatBits |= 1 << definition;
-                    } else {
-                        _formatBits &= ~(1 << definition);
-                    }
-
-                    SetDirty();
                 }
+
+                SetDirty();
             }
 
             break;

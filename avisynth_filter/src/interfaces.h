@@ -9,8 +9,7 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetAvsFile() const -> const std::string & = 0;
     virtual auto STDMETHODCALLTYPE SetAvsFile(const std::string & avsFile) -> void = 0;
 
-    virtual auto STDMETHODCALLTYPE GetReloadAvsFile() const -> bool = 0;
-    virtual auto STDMETHODCALLTYPE SetReloadAvsFile(bool reload) -> void = 0;
+    virtual auto STDMETHODCALLTYPE ReloadAvsFile() -> void = 0;
 
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
     virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;

@@ -30,8 +30,8 @@ auto Registry::ReadString(const char *valueName) const -> std::string {
     return ret;
 }
 
-auto Registry::ReadNumber(const char *valueName) const -> DWORD {
-    DWORD ret = INVALID_REGISTRY_NUMBER;
+auto Registry::ReadNumber(const char *valueName, int defaultValue) const -> DWORD {
+    DWORD ret = defaultValue;
 
     if (_registryKey) {
         DWORD valueSize = sizeof(ret);

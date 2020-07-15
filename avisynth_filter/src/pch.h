@@ -33,8 +33,6 @@
 // intrinsics for fast (de-)interleaving array
 #include <immintrin.h>
 
-#include <client/windows/handler/exception_handler.h>
-
 #pragma warning(pop)
 
 #include "resource.h"

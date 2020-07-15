@@ -19,5 +19,4 @@ private:
 
     IAvsFilterSettings *_settings;
     std::string _avsFile;
-    DWORD _formatBits;
 };

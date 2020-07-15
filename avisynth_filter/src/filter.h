@@ -29,7 +29,7 @@ public:
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
     auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
     auto BeginFlush() -> HRESULT override;
-    
+
     auto STDMETHODCALLTYPE Pause() -> HRESULT override;
 
     // ISpecifyPropertyPages
@@ -39,8 +39,7 @@ public:
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
     auto STDMETHODCALLTYPE GetAvsFile() const -> const std::string & override;
     auto STDMETHODCALLTYPE SetAvsFile(const std::string &avsFile) -> void override;
-    auto STDMETHODCALLTYPE GetReloadAvsFile() const -> bool override;
-    auto STDMETHODCALLTYPE SetReloadAvsFile(bool reload) -> void override;
+    auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
@@ -94,14 +93,20 @@ private:
     int _deliveryFrameNb;
     bool _reloadAvsFile;
 
-    int _bufferBack;
     int _bufferAhead;
+    int _bufferBack;
     int _sampleTimeOffset;
+
+    bool _calibrateBufferSizes;
+    // number of consecutive frames that the buffer overtimes are 0
+    unsigned int _consecutiveStableFrames;
 
     // settings related variables
 
     Registry _registry;
 
     std::string _avsFile;
+    int _stableBufferAhead;
+    int _stableBufferBack;
     DWORD _inputFormatBits;
 };

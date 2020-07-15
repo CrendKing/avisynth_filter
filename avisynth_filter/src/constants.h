@@ -56,7 +56,6 @@ constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
 
 constexpr int INVALID_DEFINITION = -1;
-constexpr DWORD INVALID_REGISTRY_NUMBER = DWORD_MAX;
 
 /*
  * Stream could last forever. Use a large power as the fake number of frames.
@@ -68,4 +67,6 @@ constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
 
 constexpr char *REGISTRY_KEY_NAME = "Software\\AviSynthFilter";
 constexpr char *REGISTRY_VALUE_NAME_AVS_FILE = "AvsFile";
+constexpr char *REGISTRY_VALUE_NAME_BUFFER_AHEAD = "BufferAhead";
+constexpr char *REGISTRY_VALUE_NAME_BUFFER_BACK = "BufferBack";
 constexpr char *REGISTRY_VALUE_NAME_FORMATS = "Formats";

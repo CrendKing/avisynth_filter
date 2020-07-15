@@ -19,7 +19,7 @@ Require CPU with SSSE3 instructions.
 
 Run uninstall.bat to unregister the filter and clean up user data.
 
-## Interface
+## API
 
 The filter exports the following functions to the AviSynth script.
 
@@ -38,6 +38,13 @@ It can be used to avoid unnecessary processing and improve performance if the sc
 A good example is if your script applies modifications based on video metadata (e.g. FPS < 30), without using this function, even if the condition does not hold the filter still needs to copy every frame. At best, it wastes both CPU and memory resource for nothing. At worst, it breaks hardware acceleration chain for certain filters. For instance, when [LAV Filters](https://github.com/Nevcairiel/LAVFilters) connects directly to [madVR](http://www.madvr.com/) in D3D11 mode, the GPU decoded frames are not copied to memory. If any filter goes between them, the frame needs to be copied.
 
 This function takes no argument.
+
+## Note
+
+* Similar to ffdshow, there are two frame buffers: ahead buffer and back buffer. The filter will wait until AviSynth to fill the buffer before starting to deliver frames.
+* Unlike ffdshow, this filter comes with automatic buffer size calibration. It also writes the sizes to registry once the playback is stable, so that next time the video player starts, there is no choppy frames at beginning.
+* The optimal buffer sizes depends on the performance of the computer hardware as well as the AviSynth script. If any change is made to to the script, user should use the "Reload" button in the settings page to trigger recalibration.
+* Use the input format selectors if user wants to only activate the filter on certain video formats.
 
 ## Example script
 
