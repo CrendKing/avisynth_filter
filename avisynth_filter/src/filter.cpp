@@ -37,7 +37,8 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
     , _upstreamPin(nullptr)
-    , _calibrateBufferSizes(true) {
+    , _stableBufferAhead(0)
+    , _stableBufferBack(0) {
     LoadSettings();
     Log("CAviSynthFilter::CAviSynthFilter()");
 }
@@ -358,7 +359,8 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
             _bufferBack += 1;
         }
 
-        if (_calibrateBufferSizes) {
+        // calibrate for optimal buffer sizes if we don't have one
+        if (_stableBufferAhead == 0 && _stableBufferBack == 0) {
             if (!hasAheadOvertime && !hasBackOvertime) {
                 _consecutiveStableFrames += 1;
             } else {
@@ -369,14 +371,10 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
             if (_consecutiveStableFrames >= _avsSourceVideoInfo.fps_numerator / _avsSourceVideoInfo.fps_denominator) {
                 if (_stableBufferAhead != _bufferAhead) {
                     _stableBufferAhead = _bufferAhead;
-                    _registry.WriteNumber(REGISTRY_VALUE_NAME_BUFFER_AHEAD, _stableBufferAhead);
                 }
                 if (_stableBufferBack != _bufferBack) {
                     _stableBufferBack = _bufferBack;
-                    _registry.WriteNumber(REGISTRY_VALUE_NAME_BUFFER_BACK, _stableBufferBack);
                 }
-
-                _calibrateBufferSizes = false;
             }
         }
     }
@@ -439,7 +437,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsFile(const std::string &avsFile) -
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile() -> void {
     _stableBufferAhead = 0;
     _stableBufferBack = 0;
-    _calibrateBufferSizes = true;
     Reset();
 }
 
@@ -500,8 +497,6 @@ auto CAviSynthFilter::Reset() -> void {
 
 auto CAviSynthFilter::LoadSettings() -> void {
     _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
-    _stableBufferAhead = _registry.ReadNumber(REGISTRY_VALUE_NAME_BUFFER_AHEAD, 0);
-    _stableBufferBack = _registry.ReadNumber(REGISTRY_VALUE_NAME_BUFFER_BACK, 0);
     _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
 }
 

@@ -97,7 +97,6 @@ private:
     int _bufferBack;
     int _sampleTimeOffset;
 
-    bool _calibrateBufferSizes;
     // number of consecutive frames that the buffer overtimes are 0
     unsigned int _consecutiveStableFrames;
 

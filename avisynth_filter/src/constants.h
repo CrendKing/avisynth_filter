@@ -67,6 +67,4 @@ constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
 
 constexpr char *REGISTRY_KEY_NAME = "Software\\AviSynthFilter";
 constexpr char *REGISTRY_VALUE_NAME_AVS_FILE = "AvsFile";
-constexpr char *REGISTRY_VALUE_NAME_BUFFER_AHEAD = "BufferAhead";
-constexpr char *REGISTRY_VALUE_NAME_BUFFER_BACK = "BufferBack";
 constexpr char *REGISTRY_VALUE_NAME_FORMATS = "Formats";

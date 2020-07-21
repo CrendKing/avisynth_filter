@@ -42,8 +42,8 @@ This function takes no argument.
 ## Note
 
 * Similar to ffdshow, there are two frame buffers: ahead buffer and back buffer. The filter will wait until AviSynth to fill the buffer before starting to deliver frames.
-* Unlike ffdshow, this filter comes with automatic buffer size calibration. It also writes the sizes to registry once the playback is stable, so that next time the video player starts, there is no choppy frames at beginning.
-* The optimal buffer sizes depends on the performance of the computer hardware as well as the AviSynth script. If any change is made to to the script, user should use the "Reload" button in the settings page to trigger recalibration.
+* Unlike ffdshow, this filter automatic calibrates for optimal buffer sizes at the beginning of playback.
+* The optimal buffer sizes depends on the performance of the computer hardware as well as the AviSynth script. If any change is made to to the script during playback, user could use the "Reload" button in the settings page to trigger recalibration.
 * Use the input format selectors if user wants to only activate the filter on certain video formats.
 
 ## Example script
