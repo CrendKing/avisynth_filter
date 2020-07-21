@@ -45,7 +45,17 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 
 CAviSynthFilter::~CAviSynthFilter() {
     DeletePinTypes();
-    DeleteAviSynth();
+
+    if (_avsScriptClip != nullptr) {
+        _avsScriptClip = nullptr;
+    }
+
+    _frameHandler.Flush();
+
+    if (_avsEnv != nullptr) {
+        _avsEnv->DeleteScriptEnvironment();
+        _avsEnv = nullptr;
+    }
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT {
@@ -68,6 +78,12 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     HRESULT ret = S_OK;
     HRESULT hr;
 
+    if (_avsEnv == nullptr) {
+        _avsEnv = CreateScriptEnvironment2();
+        _avsEnv->AddFunction("AvsFilterSource", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
+        _avsEnv->AddFunction("AvsFilterDisconnect", "", CreateAvsFilterDisconnect, nullptr);
+    }
+
     if (direction == PINDIR_INPUT) {
         if (_upstreamPin != pPin) {
             _upstreamPin = pPin;
@@ -87,7 +103,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 // this one will be the preferred media type for potential pin reconnection
                 if (inputDefinition != INVALID_DEFINITION && IsInputUniqueByAvsType(inputDefinition)) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
-                    if (!ReloadAviSynth(nextType, true)) {
+                    if (!ReloadAviSynth(*nextType, true)) {
                         Log("Disconnect due to AvsFilterDisconnect()");
 
                         DeleteMediaType(nextType);
@@ -306,7 +322,7 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb);
 
     if (_reloadAvsFile) {
-        ReloadAviSynth();
+        ReloadAviSynth(m_pInput->CurrentMediaType(), false);
         _deliveryFrameNb = inSampleFrameNb;
     }
 
@@ -563,22 +579,12 @@ auto CAviSynthFilter::DeletePinTypes() -> void {
     _compatibleDefinitions.clear();
 }
 
-auto CAviSynthFilter::ReloadAviSynth() -> void {
-    ReloadAviSynth(&m_pInput->CurrentMediaType(), false);
-}
-
 /**
  * Create new AviSynth script clip with specified media type.
  * If allowDisconnect == true, return false early if no avs script or AvsFilterDisconnect() is returned from script
  */
-auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE *mediaType, bool allowDisconnect) -> bool {
-    DeleteAviSynth();
-
-    _avsSourceVideoInfo = Format::GetVideoFormat(*mediaType).videoInfo;
-
-    _avsEnv = CreateScriptEnvironment2();
-    _avsEnv->AddFunction("AvsFilterSource", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
-    _avsEnv->AddFunction("AvsFilterDisconnect", "", CreateAvsFilterDisconnect, nullptr);
+auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowDisconnect) -> bool {
+    _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
 
     AVSValue invokeResult;
     std::string errorScript;
@@ -623,22 +629,6 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE *mediaType, bool allowD
     _reloadAvsFile = false;
 
     return true;
-}
-
-/**
- * Delete the AviSynth environment and all its cache
- */
-auto CAviSynthFilter::DeleteAviSynth() -> void {
-    if (_avsScriptClip != nullptr) {
-        _avsScriptClip = nullptr;
-    }
-
-    _frameHandler.Flush();
-
-    if (_avsEnv != nullptr) {
-        _avsEnv->DeleteScriptEnvironment();
-        _avsEnv = nullptr;
-    }
 }
 
 auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool {
