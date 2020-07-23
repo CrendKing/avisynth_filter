@@ -27,8 +27,10 @@
 #define IDC_INPUT_FORMAT_P016           1017
 #define IDC_INPUT_FORMAT_YUY2           1018
 #define IDC_INPUT_FORMAT_UYVY           1019
-#define IDC_INPUT_FORMAT_RGB32          1020
-#define IDC_INPUT_FORMAT_RGB24          1021
+#define IDC_INPUT_FORMAT_RGB24          1020
+#define IDC_INPUT_FORMAT_RGB32          1021
+#define IDC_INPUT_FORMAT_RGB48          1022
+#define IDC_INPUT_FORMAT_END            1023
 
 #define IDT_TIMER_STATUS                2000
 #define IDC_TEXT_BUFFER_SIZE            2001

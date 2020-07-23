@@ -9,23 +9,24 @@ static const __m128i DEINTERLEAVE_MASK_16_BIT_1 = _mm_set_epi8(29, 28, 25, 24, 2
 static const __m128i DEINTERLEAVE_MASK_16_BIT_2 = _mm_set_epi8(31, 30, 27, 26, 23, 22, 19, 18, 15, 14, 11, 10, 7, 6, 3, 2);
 
 const std::vector<Format::Definition> Format::DEFINITIONS = {
-    /* 0 */ { MEDIASUBTYPE_NV12, VideoInfo::CS_YV12, 12, 1 },
-    /* 1 */ { MEDIASUBTYPE_YV12, VideoInfo::CS_YV12, 12, 1 },
-    /* 2 */ { MEDIASUBTYPE_I420, VideoInfo::CS_YV12, 12, 1 },
-    /* 3 */ { MEDIASUBTYPE_IYUV, VideoInfo::CS_YV12, 12, 1 },
+    /* 0 */  { MEDIASUBTYPE_NV12, VideoInfo::CS_YV12, 12, 1 },
+    /* 1 */  { MEDIASUBTYPE_YV12, VideoInfo::CS_YV12, 12, 1 },
+    /* 2 */  { MEDIASUBTYPE_I420, VideoInfo::CS_YV12, 12, 1 },
+    /* 3 */  { MEDIASUBTYPE_IYUV, VideoInfo::CS_YV12, 12, 1 },
 
     // P010 has the most significant 6 bits zero-padded, while AviSynth expects the least significant bits padded
     // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
-    /* 4 */ { MEDIASUBTYPE_P010, VideoInfo::CS_YUV420P16, 24, 1 },
+    /* 4 */  { MEDIASUBTYPE_P010, VideoInfo::CS_YUV420P16, 24, 1 },
 
-    /* 5 */ { MEDIASUBTYPE_P016, VideoInfo::CS_YUV420P16, 24, 1 },
+    /* 5 */  { MEDIASUBTYPE_P016, VideoInfo::CS_YUV420P16, 24, 1 },
 
     // packed formats such as YUY2 are twice as wide as unpacked formats per pixel
-    /* 6 */ { MEDIASUBTYPE_YUY2, VideoInfo::CS_YUY2, 16, 2 },
-    /* 7 */ { MEDIASUBTYPE_UYVY, VideoInfo::CS_YUY2, 16, 2 },
+    /* 6 */  { MEDIASUBTYPE_YUY2, VideoInfo::CS_YUY2, 16, 2 },
+    /* 7 */  { MEDIASUBTYPE_UYVY, VideoInfo::CS_YUY2, 16, 2 },
 
-    /* 8 */ { MEDIASUBTYPE_RGB32, VideoInfo::CS_BGR32, 24, 4 },
-    /* 9 */ { MEDIASUBTYPE_RGB24, VideoInfo::CS_BGR24, 24, 3 },
+    /* 8 */  { MEDIASUBTYPE_RGB24, VideoInfo::CS_BGR24, 24, 3 },
+    /* 9 */  { MEDIASUBTYPE_RGB32, VideoInfo::CS_BGR32, 24, 4 },
+    /* 10 */ { MEDIASUBTYPE_RGB48, VideoInfo::CS_BGR48, 48, 3 },
 };
 
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
@@ -99,7 +100,7 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
 
     const BYTE *srcDefaultPlane;
     int srcDefaultPlaneStride;
-    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biHeight < 0) {
+    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
         // positive height for RGB definition is bottom-up DIB, negative is top-down
         // AviSynth is always bottom-up
         srcDefaultPlane = srcBuffer + srcDefaultPlaneSize - srcStride;
@@ -165,7 +166,7 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
     BYTE *dstDefaultPlane;
     int dstDefaultPlaneStride;
-    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biHeight < 0) {
+    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
         dstDefaultPlane = dstBuffer + dstDefaultPlaneSize - dstStride;
         dstDefaultPlaneStride = -dstStride;
     } else {

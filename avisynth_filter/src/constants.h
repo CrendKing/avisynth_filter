@@ -23,9 +23,6 @@ DEFINE_GUID(IID_IAvsFilterSettings,
 DEFINE_GUID(IID_IAvsFilterStatus,
             0x2a5b2cec, 0xd874, 0x4ed8, 0xb8, 0xd9, 0x40, 0x43, 0x33, 0x30, 0x37, 0xe4);
 
-DEFINE_GUID(MEDIASUBTYPE_I420,
-            '024I', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
-
 #define WidenHelper(str)  L##str
 #define Widen(str)        WidenHelper(str)
 
@@ -68,3 +65,6 @@ constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
 constexpr char *REGISTRY_KEY_NAME = "Software\\AviSynthFilter";
 constexpr char *REGISTRY_VALUE_NAME_AVS_FILE = "AvsFile";
 constexpr char *REGISTRY_VALUE_NAME_FORMATS = "Formats";
+
+const GUID MEDIASUBTYPE_I420 = FOURCCMap('024I');
+const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');

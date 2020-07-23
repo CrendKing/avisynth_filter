@@ -42,7 +42,7 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     _settings->SetAvsFile(_avsFile);
 
     DWORD formatBits = 0;
-    for (int i = IDC_INPUT_FORMAT_NV12; i <= IDC_INPUT_FORMAT_RGB24; ++i) {
+    for (int i = IDC_INPUT_FORMAT_NV12; i < IDC_INPUT_FORMAT_END; ++i) {
         if (IsDlgButtonChecked(m_Dlg, i) == BST_CHECKED) {
             formatBits |= 1 << (i - IDC_INPUT_FORMAT_NV12);
         }
