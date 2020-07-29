@@ -259,44 +259,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT {
     HRESULT hr;
 
-    AM_MEDIA_TYPE *pmtIn;
-    if (pIn->GetMediaType(&pmtIn) == S_OK) {
-        DeleteMediaType(pmtIn);
-
-        const Format::VideoFormat newInputType = Format::GetVideoFormat(m_pInput->CurrentMediaType());
-
-        Log("new input type:  definition %i, width %5i, height %5i, codec %#10x",
-            newInputType.definition, newInputType.bmi.biWidth, newInputType.bmi.biHeight, newInputType.bmi.biCompression);
-
-        if (_inputFormat != newInputType) {
-            _inputFormat = newInputType;
-            _reloadAvsFile = true;
-        }
-    }
-
-    bool sendOutputFormat = false;
-    AM_MEDIA_TYPE *pmtOut;
-    if (pOut->GetMediaType(&pmtOut) == S_OK) {
-        DeleteMediaType(pmtOut);
-        sendOutputFormat = true;
-
-        const Format::VideoFormat newOutputType = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
-
-        Log("new output type: definition %i, width %5i, height %5i, codec %#10x",
-            newOutputType.definition, newOutputType.bmi.biWidth, newOutputType.bmi.biHeight, newOutputType.bmi.biCompression);
-
-        if (_outputFormat != newOutputType) {
-            _outputFormat = newOutputType;
-            _reloadAvsFile = true;
-        }
-    }
-
-    if (memcmp(&_outputFormat.vih->rcSource, &_inputFormat.vih->rcSource, sizeof(RECT)) != 0 ||
-        memcmp(&_outputFormat.vih->rcTarget, &_inputFormat.vih->rcTarget, sizeof(RECT)) != 0) {
-        memcpy(&_outputFormat.vih->rcSource, &_inputFormat.vih->rcSource, sizeof(RECT));
-        memcpy(&_outputFormat.vih->rcTarget, &_inputFormat.vih->rcTarget, sizeof(RECT));
-        sendOutputFormat = true;
-    }
+    bool notifyOutputMediaType = HandleMediaTypeChange(pIn, pOut);
 
     CRefTime streamTime;
     CheckHr(StreamTime(streamTime));
@@ -338,9 +301,9 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         IMediaSample *outSample = nullptr;
         CheckHr(InitializeOutputSample(nullptr, &outSample));
 
-        if (sendOutputFormat) {
+        if (notifyOutputMediaType) {
             CheckHr(outSample->SetMediaType(&m_pOutput->CurrentMediaType()));
-            sendOutputFormat = false;
+            notifyOutputMediaType = false;
         }
 
         // even if missing sample times from upstream, we always set times for output samples in case downstream needs them
@@ -563,6 +526,66 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
     }
 
     return newMediaType;
+}
+
+/**
+ * Update internal states when media samples have new media types.
+ * Whenever input type is changed, generate corresponding output type based on it.
+ * Whenever output type is change, only take the new width for stride size.
+ * Whenever the output type is effectively changed, return true for notifying downstream the change.
+ */
+auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> bool {
+    bool notifyOutputMediaType = false;
+    bool newInputMediaType = false;
+    bool newOutputMediaType = false;
+
+    AM_MEDIA_TYPE *pmtIn;
+    if (pIn->GetMediaType(&pmtIn) == S_OK) {
+        DeleteMediaType(pmtIn);
+        const Format::VideoFormat newInputType = Format::GetVideoFormat(m_pInput->CurrentMediaType());
+
+        if (_inputFormat != newInputType) {
+            Log("new input type:  definition %i, width %5i, height %5i, codec %#10x",
+                newInputType.definition, newInputType.bmi.biWidth, newInputType.bmi.biHeight, newInputType.bmi.biCompression);
+
+            newInputMediaType = true;
+            _inputFormat = newInputType;
+            _reloadAvsFile = true;
+        }
+    }
+
+    AM_MEDIA_TYPE *pmtOut = nullptr;
+    if (pOut->GetMediaType(&pmtOut) == S_OK || newInputMediaType) {  // call GetMediaType() first to avoid being short-circuited
+        AM_MEDIA_TYPE *generatedOutputType = GenerateMediaType(_outputFormat.definition, &m_pInput->CurrentMediaType());
+
+        if (pmtOut != nullptr) {
+            const LONG newOutputWidth = Format::GetBitmapInfo(*pmtOut)->biWidth;
+            DeleteMediaType(pmtOut);
+
+            BITMAPINFOHEADER *outputBmi = Format::GetBitmapInfo(*generatedOutputType);
+            outputBmi->biWidth = newOutputWidth;
+            outputBmi->biSizeImage = GetBitmapSize(outputBmi);
+            generatedOutputType->lSampleSize = outputBmi->biSizeImage;
+        }
+
+        m_pOutput->CurrentMediaType() = *generatedOutputType;
+        DeleteMediaType(generatedOutputType);
+        newOutputMediaType = true;
+    }
+
+    if (newOutputMediaType) {
+        const Format::VideoFormat newOutputType = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
+        if (_outputFormat != newOutputType) {
+            Log("new output type: definition %i, width %5i, height %5i, codec %#10x",
+                newOutputType.definition, newOutputType.bmi.biWidth, newOutputType.bmi.biHeight, newOutputType.bmi.biCompression);
+
+            _outputFormat = newOutputType;
+            _reloadAvsFile = true;
+            notifyOutputMediaType = true;
+        }
+    }
+
+    return notifyOutputMediaType;
 }
 
 auto CAviSynthFilter::DeletePinTypes() -> void {
