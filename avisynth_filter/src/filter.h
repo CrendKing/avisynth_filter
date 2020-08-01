@@ -65,7 +65,9 @@ private:
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> bool;
     auto DeletePinTypes() -> void;
+    auto CreateAviSynth() -> void;
     auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowDisconnect) -> bool;
+    auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> int;

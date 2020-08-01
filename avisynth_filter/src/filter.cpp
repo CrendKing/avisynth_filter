@@ -6,6 +6,7 @@
 #include "logging.h"
 
 
+//#define RELOAD_AVS_ENV
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
 auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> void {
@@ -45,17 +46,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 
 CAviSynthFilter::~CAviSynthFilter() {
     DeletePinTypes();
-
-    if (_avsScriptClip != nullptr) {
-        _avsScriptClip = nullptr;
-    }
-
-    _frameHandler.Flush();
-
-    if (_avsEnv != nullptr) {
-        _avsEnv->DeleteScriptEnvironment();
-        _avsEnv = nullptr;
-    }
+    DeleteAviSynth();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT {
@@ -78,11 +69,9 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     HRESULT ret = S_OK;
     HRESULT hr;
 
-    if (_avsEnv == nullptr) {
-        _avsEnv = CreateScriptEnvironment2();
-        _avsEnv->AddFunction("AvsFilterSource", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
-        _avsEnv->AddFunction("AvsFilterDisconnect", "", CreateAvsFilterDisconnect, nullptr);
-    }
+#ifndef RELOAD_AVS_ENV
+    CreateAviSynth();
+#endif
 
     if (direction == PINDIR_INPUT) {
         if (_upstreamPin != pPin) {
@@ -602,12 +591,40 @@ auto CAviSynthFilter::DeletePinTypes() -> void {
     _compatibleDefinitions.clear();
 }
 
+auto CAviSynthFilter::CreateAviSynth() -> void {
+    if (_avsEnv == nullptr) {
+        _avsEnv = CreateScriptEnvironment2();
+        _avsEnv->AddFunction("AvsFilterSource", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
+        _avsEnv->AddFunction("AvsFilterDisconnect", "", CreateAvsFilterDisconnect, nullptr);
+    }
+}
+
 /**
  * Create new AviSynth script clip with specified media type.
  * If allowDisconnect == true, return false early if no avs script or AvsFilterDisconnect() is returned from script
  */
 auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowDisconnect) -> bool {
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
+
+    /*
+     * When reloading AviSynth, there are two alternative approaches:
+     *     Reload everything (the environment, the scripts).
+     *     Only reload the scripts.
+     * And for seeking, we could either reload or not reload.
+     *
+     * Because there is no way to disable internal caching in AviSynth, not reloading for seeking is not working,
+     * or after seeking the frames will not catch up for considerable amount of time.
+     *
+     * If only reload the scripts, the internal states of the environment is not reset. This creates problem for
+     * certain filters such as SVP's SVSmoothFps_NVOF().
+     *
+     * If the script is compatible, not reloading the environment is cleaner.
+     */
+
+#ifdef RELOAD_AVS_ENV
+    DeleteAviSynth();
+    CreateAviSynth();
+#endif
 
     AVSValue invokeResult;
     std::string errorScript;
@@ -652,6 +669,22 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowD
     _reloadAvsFile = false;
 
     return true;
+}
+
+/**
+ * Delete the AviSynth environment and all its cache
+ */
+auto CAviSynthFilter::DeleteAviSynth() -> void {
+    if (_avsScriptClip != nullptr) {
+        _avsScriptClip = nullptr;
+    }
+
+    _frameHandler.Flush();
+
+    if (_avsEnv != nullptr) {
+        _avsEnv->DeleteScriptEnvironment();
+        _avsEnv = nullptr;
+    }
 }
 
 auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool {
