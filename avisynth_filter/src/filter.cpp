@@ -28,11 +28,6 @@ auto __cdecl Create_AvsFilterSource(AVSValue args, void *user_data, IScriptEnvir
     return static_cast<SourceClip *>(user_data);
 }
 
-auto __cdecl Create_AvsFilterSizeChanged(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
-    *static_cast<bool *>(user_data) = true;
-    return args[0].AsClip();
-}
-
 auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     // the void type is internal in AviSynth and cannot be instantiated by user script, ideal for disconnect heuristic
     return AVSValue();
@@ -43,7 +38,6 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
     , _upstreamPin(nullptr)
-    , _sizeChangedFromAvs(false)
     , _stableBufferAhead(0)
     , _stableBufferBack(0) {
     LoadSettings();
@@ -112,6 +106,9 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     // all media types that share the same avs type are acceptable for output pin connection
                     for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
                         if (_acceptableOuputTypes.find(outputDefinition) == _acceptableOuputTypes.end()) {
+                            const BITMAPINFOHEADER *connectedBmi = Format::GetBitmapInfo(*nextType);
+                            _sizeChangedFromAvs = _avsScriptVideoInfo.width != connectedBmi->biWidth || _avsScriptVideoInfo.height != abs(connectedBmi->biHeight);
+
                             AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
                             _acceptableOuputTypes.emplace(outputDefinition, outputType);
                             Log("Add acceptable output definition: %2i", outputDefinition);
@@ -507,7 +504,7 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
 
     if (_sizeChangedFromAvs) {
         newVih->rcSource = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
-        newVih->rcTarget = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
+        newVih->rcTarget = newVih->rcSource;
 
         if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
             VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
@@ -613,7 +610,6 @@ auto CAviSynthFilter::CreateAviSynth() -> void {
         _avsEnv = CreateScriptEnvironment2();
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
         _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
-        _avsEnv->AddFunction("AvsFilterSizeChanged", "c", Create_AvsFilterSizeChanged, &_sizeChangedFromAvs);
     }
 }
 

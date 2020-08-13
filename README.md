@@ -39,14 +39,6 @@ A good example is if your script applies modifications based on video metadata (
 
 This function takes no argument.
 
-#### `AvsFilterSizeChanged(clip)`
-
-This function notifies the filter that the returned clip of the avs script has different size than the `clip` from AvsFilterSource(). Once notified, the filter will pass the size of the clip to the DirectShow downstream. By default, the filter trusts the size from upstream.
-
-This notification is needed because sometimes upstream filters might change video dimension dynamically during playback. If both the upstream and avs script change size, there is no easy way for the filter to know which to trust. Use this function to break the ambiguity.
-
-This function does not alter the input clip. It simply passes it through.
-
 ## Note
 
 * Similar to ffdshow, there are two frame buffers: ahead buffer and back buffer. The filter will wait until AviSynth to fill the buffer before starting to deliver frames.
@@ -68,13 +60,6 @@ if (fps < 20) {
 } else {
     AvsFilterDisconnect()
 }
-```
-
-Watch 320×240 color bars with the original audio.
-
-```
-ColorBars(320, 240)
-AvsFilterSizeChanged()
 ```
 
 ## Build

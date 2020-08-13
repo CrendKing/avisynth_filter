@@ -86,11 +86,11 @@ private:
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;
+    bool _sizeChangedFromAvs;
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
-    bool _sizeChangedFromAvs;
     REFERENCE_TIME _timePerFrame;
     int _deliveryFrameNb;
     bool _reloadAvsFile;
