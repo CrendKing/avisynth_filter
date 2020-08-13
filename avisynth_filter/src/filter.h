@@ -90,6 +90,7 @@ private:
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
+    bool _sizeChangedFromAvs;
     REFERENCE_TIME _timePerFrame;
     int _deliveryFrameNb;
     bool _reloadAvsFile;

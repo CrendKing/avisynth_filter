@@ -24,11 +24,16 @@ auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> 
     }
 }
 
-auto __cdecl CreateAvsFilterSource(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
+auto __cdecl Create_AvsFilterSource(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     return static_cast<SourceClip *>(user_data);
 }
 
-auto __cdecl CreateAvsFilterDisconnect(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
+auto __cdecl Create_AvsFilterSizeChanged(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
+    *static_cast<bool *>(user_data) = true;
+    return args[0].AsClip();
+}
+
+auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     // the void type is internal in AviSynth and cannot be instantiated by user script, ideal for disconnect heuristic
     return AVSValue();
 }
@@ -38,6 +43,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
     , _upstreamPin(nullptr)
+    , _sizeChangedFromAvs(false)
     , _stableBufferAhead(0)
     , _stableBufferBack(0) {
     LoadSettings();
@@ -491,27 +497,38 @@ auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -
  */
 auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE * {
     const Format::Definition &def = Format::DEFINITIONS[definition];
-    const Format::VideoFormat format = Format::GetVideoFormat(*templateMediaType);
     FOURCCMap fourCC(&def.mediaSubtype);
 
     AM_MEDIA_TYPE *newMediaType = CreateMediaType(templateMediaType);
     newMediaType->subtype = def.mediaSubtype;
 
-    VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(newMediaType->pbFormat);
-    vih->AvgTimePerFrame = _timePerFrame;
+    VIDEOINFOHEADER *newVih = reinterpret_cast<VIDEOINFOHEADER *>(newMediaType->pbFormat);
+    BITMAPINFOHEADER *newBmi = Format::GetBitmapInfo(*newMediaType);
 
-    BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(*newMediaType);
-    bmi->biWidth = format.videoInfo.width;
-    bmi->biHeight = format.videoInfo.height;
-    bmi->biBitCount = def.bitCount;
-    bmi->biSizeImage = GetBitmapSize(bmi);
-    newMediaType->lSampleSize = bmi->biSizeImage;
+    if (_sizeChangedFromAvs) {
+        newVih->rcSource = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
+        newVih->rcTarget = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
+
+        if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
+            VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
+            newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width;
+            newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height;
+        }
+
+        newBmi->biWidth = _avsScriptVideoInfo.width;
+        newBmi->biHeight = _avsScriptVideoInfo.height * (newBmi->biHeight / abs(newBmi->biHeight));
+    }
+
+    newVih->AvgTimePerFrame = _timePerFrame;
+    newBmi->biBitCount = def.bitCount;
+    newBmi->biSizeImage = GetBitmapSize(newBmi);
+    newMediaType->lSampleSize = newBmi->biSizeImage;
 
     if (IsEqualGUID(fourCC, def.mediaSubtype)) {
         // uncompressed formats (such as RGB32) have different GUIDs
-        bmi->biCompression = fourCC.GetFOURCC();
+        newBmi->biCompression = fourCC.GetFOURCC();
     } else {
-        bmi->biCompression = BI_RGB;
+        newBmi->biCompression = BI_RGB;
     }
 
     return newMediaType;
@@ -594,8 +611,9 @@ auto CAviSynthFilter::DeletePinTypes() -> void {
 auto CAviSynthFilter::CreateAviSynth() -> void {
     if (_avsEnv == nullptr) {
         _avsEnv = CreateScriptEnvironment2();
-        _avsEnv->AddFunction("AvsFilterSource", "", CreateAvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
-        _avsEnv->AddFunction("AvsFilterDisconnect", "", CreateAvsFilterDisconnect, nullptr);
+        _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
+        _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
+        _avsEnv->AddFunction("AvsFilterSizeChanged", "c", Create_AvsFilterSizeChanged, &_sizeChangedFromAvs);
     }
 }
 
