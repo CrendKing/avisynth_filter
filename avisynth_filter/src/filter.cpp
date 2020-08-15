@@ -6,7 +6,6 @@
 #include "logging.h"
 
 
-//#define RELOAD_AVS_ENV
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
 auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> void {
@@ -69,9 +68,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     HRESULT ret = S_OK;
     HRESULT hr;
 
-#ifndef RELOAD_AVS_ENV
     CreateAviSynth();
-#endif
 
     if (direction == PINDIR_INPUT) {
         if (_upstreamPin != pPin) {
@@ -92,7 +89,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 // this one will be the preferred media type for potential pin reconnection
                 if (inputDefinition != INVALID_DEFINITION && IsInputUniqueByAvsType(inputDefinition)) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
-                    if (!ReloadAviSynth(*nextType, true)) {
+                    if (!ReloadAviSynth(*nextType)) {
                         Log("Disconnect due to AvsFilterDisconnect()");
 
                         DeleteMediaType(nextType);
@@ -106,9 +103,6 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     // all media types that share the same avs type are acceptable for output pin connection
                     for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
                         if (_acceptableOuputTypes.find(outputDefinition) == _acceptableOuputTypes.end()) {
-                            const BITMAPINFOHEADER *connectedBmi = Format::GetBitmapInfo(*nextType);
-                            _sizeChangedFromAvs = _avsScriptVideoInfo.width != connectedBmi->biWidth || _avsScriptVideoInfo.height != abs(connectedBmi->biHeight);
-
                             AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
                             _acceptableOuputTypes.emplace(outputDefinition, outputType);
                             Log("Add acceptable output definition: %2i", outputDefinition);
@@ -187,7 +181,7 @@ auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTI
 
     // we need at least 2 buffers so that we can hold pOut while preparing another extra sample
     pProperties->cBuffers = max(2, pProperties->cBuffers);
-    pProperties->cbBuffer = max(m_pInput->CurrentMediaType().lSampleSize, static_cast<unsigned long>(pProperties->cbBuffer));
+    pProperties->cbBuffer = max(m_pOutput->CurrentMediaType().lSampleSize, static_cast<unsigned long>(pProperties->cbBuffer));
 
     ALLOCATOR_PROPERTIES actual;
     CheckHr(pAlloc->SetProperties(pProperties, &actual));
@@ -233,7 +227,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
     if (!m_pOutput->IsConnected()) {
         Log("Connected input pin with definition: %2i", inputDefiniton);
     } else {
-        const int outputDefinition = Format::LookupMediaSubtype(m_pOutput->CurrentMediaType().subtype);
+        const int outputDefinition = MediaTypeToDefinition(&m_pOutput->CurrentMediaType());
         ASSERT(outputDefinition != INVALID_DEFINITION);
 
         const int compatibleInput = FindCompatibleInputByOutput(outputDefinition);
@@ -251,7 +245,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT {
     HRESULT hr;
 
-    bool notifyOutputMediaType = HandleMediaTypeChange(pIn, pOut);
+    auto [reloadedAvsForTypeChange, notifyNewOutputType] = HandleMediaTypeChange(pIn, pOut);
 
     CRefTime streamTime;
     CheckHr(StreamTime(streamTime));
@@ -276,8 +270,11 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     Log("late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
         m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb);
 
-    if (_reloadAvsFile) {
-        ReloadAviSynth(m_pInput->CurrentMediaType(), false);
+    if (_reloadAvsFile && !reloadedAvsForTypeChange) {
+        ReloadAviSynth(m_pInput->CurrentMediaType());
+    }
+
+    if (_reloadAvsFile || reloadedAvsForTypeChange) {
         _deliveryFrameNb = inSampleFrameNb;
     }
 
@@ -293,9 +290,9 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         IMediaSample *outSample = nullptr;
         CheckHr(InitializeOutputSample(nullptr, &outSample));
 
-        if (notifyOutputMediaType) {
+        if (notifyNewOutputType) {
             CheckHr(outSample->SetMediaType(&m_pOutput->CurrentMediaType()));
-            notifyOutputMediaType = false;
+            notifyNewOutputType = false;
         }
 
         // even if missing sample times from upstream, we always set times for output samples in case downstream needs them
@@ -500,23 +497,23 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
     newMediaType->subtype = def.mediaSubtype;
 
     VIDEOINFOHEADER *newVih = reinterpret_cast<VIDEOINFOHEADER *>(newMediaType->pbFormat);
-    BITMAPINFOHEADER *newBmi = Format::GetBitmapInfo(*newMediaType);
+    BITMAPINFOHEADER *newBmi;
 
-    if (_sizeChangedFromAvs) {
-        newVih->rcSource = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
-        newVih->rcTarget = newVih->rcSource;
-
-        if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
-            VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
-            newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width;
-            newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height;
-        }
-
-        newBmi->biWidth = _avsScriptVideoInfo.width;
-        newBmi->biHeight = _avsScriptVideoInfo.height * (newBmi->biHeight / abs(newBmi->biHeight));
+    if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
+        VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
+        newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width;
+        newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height;
+        newBmi = &newVih2->bmiHeader;
+    } else {
+        newBmi = &newVih->bmiHeader;
     }
 
+    newVih->rcSource = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
+    newVih->rcTarget = newVih->rcSource;
     newVih->AvgTimePerFrame = _timePerFrame;
+
+    newBmi->biWidth = _avsScriptVideoInfo.width;
+    newBmi->biHeight = _avsScriptVideoInfo.height;
     newBmi->biBitCount = def.bitCount;
     newBmi->biSizeImage = GetBitmapSize(newBmi);
     newMediaType->lSampleSize = newBmi->biSizeImage;
@@ -536,59 +533,66 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
  * Whenever input type is changed, generate corresponding output type based on it.
  * Whenever output type is change, only take the new width for stride size.
  * Whenever the output type is effectively changed, return true for notifying downstream the change.
+ *
+ * returns pair of bools: <received_new_input_type, notify_new_output_type>
  */
-auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> bool {
-    bool notifyOutputMediaType = false;
-    bool newInputMediaType = false;
-    bool newOutputMediaType = false;
+auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> std::pair<bool, bool> {
+    bool reloadedAvsForTypeChange = false;
+    bool notifyNewOutputType = false;
+    AM_MEDIA_TYPE *replaceOutputType = nullptr;
 
     AM_MEDIA_TYPE *pmtIn;
-    if (pIn->GetMediaType(&pmtIn) == S_OK) {
+    AM_MEDIA_TYPE *pmtOut;
+    const bool hasNewInputType = pIn->GetMediaType(&pmtIn) == S_OK;
+    const bool hasNewOutputType = pOut->GetMediaType(&pmtOut) == S_OK;
+
+    if (hasNewInputType) {
         DeleteMediaType(pmtIn);
-        const Format::VideoFormat newInputType = Format::GetVideoFormat(m_pInput->CurrentMediaType());
+        const Format::VideoFormat receivedInputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
 
-        if (_inputFormat != newInputType) {
+        if (_inputFormat != receivedInputFormat) {
             Log("new input type:  definition %i, width %5i, height %5i, codec %#10x",
-                newInputType.definition, newInputType.bmi.biWidth, newInputType.bmi.biHeight, newInputType.bmi.biCompression);
-
-            newInputMediaType = true;
-            _inputFormat = newInputType;
-            _reloadAvsFile = true;
+                receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.bmi.biCompression);
+            _inputFormat = receivedInputFormat;
         }
     }
 
-    AM_MEDIA_TYPE *pmtOut = nullptr;
-    if (pOut->GetMediaType(&pmtOut) == S_OK || newInputMediaType) {  // call GetMediaType() first to avoid being short-circuited
-        AM_MEDIA_TYPE *generatedOutputType = GenerateMediaType(_outputFormat.definition, &m_pInput->CurrentMediaType());
-
-        if (pmtOut != nullptr) {
-            const LONG newOutputWidth = Format::GetBitmapInfo(*pmtOut)->biWidth;
-            DeleteMediaType(pmtOut);
-
-            BITMAPINFOHEADER *outputBmi = Format::GetBitmapInfo(*generatedOutputType);
-            outputBmi->biWidth = newOutputWidth;
-            outputBmi->biSizeImage = GetBitmapSize(outputBmi);
-            generatedOutputType->lSampleSize = outputBmi->biSizeImage;
-        }
-
-        m_pOutput->CurrentMediaType() = *generatedOutputType;
-        DeleteMediaType(generatedOutputType);
-        newOutputMediaType = true;
+    if (hasNewOutputType) {
+        DeleteMediaType(pmtOut);
     }
 
-    if (newOutputMediaType) {
-        const Format::VideoFormat newOutputType = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
-        if (_outputFormat != newOutputType) {
+    if (hasNewInputType || hasNewOutputType) {
+        ReloadAviSynth(m_pInput->CurrentMediaType());
+        replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
+        reloadedAvsForTypeChange = true;
+    }
+
+    if (hasNewOutputType) {
+        const BITMAPINFOHEADER *newOutputBmi = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
+        BITMAPINFOHEADER *replaceOutputBmi = Format::GetBitmapInfo(*replaceOutputType);
+
+        replaceOutputBmi->biWidth = newOutputBmi->biWidth;
+        if (replaceOutputBmi->biCompression == BI_RGB) {
+            replaceOutputBmi->biHeight *= newOutputBmi->biHeight / abs(newOutputBmi->biHeight);
+        }
+        replaceOutputBmi->biSizeImage = GetBitmapSize(replaceOutputBmi);
+        replaceOutputType->lSampleSize = replaceOutputBmi->biSizeImage;
+    }
+
+    if (replaceOutputType != nullptr) {
+        m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(replaceOutputType));
+        DeleteMediaType(replaceOutputType);
+
+        const Format::VideoFormat replaceOutputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
+        if (_outputFormat != replaceOutputFormat) {
             Log("new output type: definition %i, width %5i, height %5i, codec %#10x",
-                newOutputType.definition, newOutputType.bmi.biWidth, newOutputType.bmi.biHeight, newOutputType.bmi.biCompression);
-
-            _outputFormat = newOutputType;
-            _reloadAvsFile = true;
-            notifyOutputMediaType = true;
+                replaceOutputFormat.definition, replaceOutputFormat.bmi.biWidth, replaceOutputFormat.bmi.biHeight, replaceOutputFormat.bmi.biCompression);
+            _outputFormat = replaceOutputFormat;
+            notifyNewOutputType = true;
         }
     }
 
-    return notifyOutputMediaType;
+    return { reloadedAvsForTypeChange, notifyNewOutputType };
 }
 
 auto CAviSynthFilter::DeletePinTypes() -> void {
@@ -617,7 +621,7 @@ auto CAviSynthFilter::CreateAviSynth() -> void {
  * Create new AviSynth script clip with specified media type.
  * If allowDisconnect == true, return false early if no avs script or AvsFilterDisconnect() is returned from script
  */
-auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowDisconnect) -> bool {
+auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool {
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
 
     /*
@@ -631,14 +635,13 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowD
      *
      * If only reload the scripts, the internal states of the environment is not reset. This creates problem for
      * certain filters such as SVP's SVSmoothFps_NVOF().
-     *
-     * If the script is compatible, not reloading the environment is cleaner.
      */
-
-#ifdef RELOAD_AVS_ENV
-    DeleteAviSynth();
-    CreateAviSynth();
-#endif
+    /*
+    if (m_State != State_Stopped) {
+        DeleteAviSynth();
+        CreateAviSynth();
+    }
+    */
 
     AVSValue invokeResult;
     std::string errorScript;
@@ -651,7 +654,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowD
         }
 
         if (!isImportSuccess) {
-            if (allowDisconnect) {
+            if (m_State == State_Stopped) {
                 return false;
             }
 

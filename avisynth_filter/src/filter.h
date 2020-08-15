@@ -63,10 +63,10 @@ private:
     auto LoadSettings() -> void;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
-    auto HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> bool;
+    auto HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) ->std::pair<bool, bool>;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> void;
-    auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool allowDisconnect) -> bool;
+    auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool;
     auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
@@ -86,7 +86,6 @@ private:
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;
-    bool _sizeChangedFromAvs;
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
