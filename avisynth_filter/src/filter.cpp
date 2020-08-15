@@ -270,12 +270,12 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     Log("late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
         m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb);
 
-    if (_reloadAvsFile && !reloadedAvsForTypeChange) {
-        ReloadAviSynth(m_pInput->CurrentMediaType());
-    }
-
-    if (_reloadAvsFile || reloadedAvsForTypeChange) {
+    if (_reloadAvsFile) {
+        if (!reloadedAvsForTypeChange) {
+            ReloadAviSynth(m_pInput->CurrentMediaType());
+        }
         _deliveryFrameNb = inSampleFrameNb;
+        _reloadAvsFile = false;
     }
 
     const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
@@ -501,8 +501,9 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
 
     if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
         VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
-        newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width;
-        newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height;
+        const int gcd = std::gcd(_avsScriptVideoInfo.width, _avsScriptVideoInfo.height);
+        newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width / gcd;
+        newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height / gcd;
         newBmi = &newVih2->bmiHeader;
     } else {
         newBmi = &newVih->bmiHeader;
@@ -534,7 +535,7 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
  * Whenever output type is change, only take the new width for stride size.
  * Whenever the output type is effectively changed, return true for notifying downstream the change.
  *
- * returns pair of bools: <received_new_input_type, notify_new_output_type>
+ * returns pair of bools: <reloaded_avs_for_type_change, notify_new_output_type>
  */
 auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> std::pair<bool, bool> {
     bool reloadedAvsForTypeChange = false;
@@ -563,8 +564,8 @@ auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOu
 
     if (hasNewInputType || hasNewOutputType) {
         ReloadAviSynth(m_pInput->CurrentMediaType());
-        replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
         reloadedAvsForTypeChange = true;
+        replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
     }
 
     if (hasNewOutputType) {
@@ -580,16 +581,17 @@ auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOu
     }
 
     if (replaceOutputType != nullptr) {
-        m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(replaceOutputType));
-        DeleteMediaType(replaceOutputType);
-
         const Format::VideoFormat replaceOutputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
+
         if (_outputFormat != replaceOutputFormat) {
             Log("new output type: definition %i, width %5i, height %5i, codec %#10x",
                 replaceOutputFormat.definition, replaceOutputFormat.bmi.biWidth, replaceOutputFormat.bmi.biHeight, replaceOutputFormat.bmi.biCompression);
             _outputFormat = replaceOutputFormat;
+            m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(replaceOutputType));
             notifyNewOutputType = true;
         }
+
+        DeleteMediaType(replaceOutputType);
     }
 
     return { reloadedAvsForTypeChange, notifyNewOutputType };
@@ -683,7 +685,6 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool {
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _timePerFrame = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
-    _reloadAvsFile = false;
 
     return true;
 }
