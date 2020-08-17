@@ -7,11 +7,24 @@
 #include "registry.h"
 
 
+class CAviSynthFilterInputPin : public CTransformInputPin {
+    friend class CAviSynthFilter;
+
+public:
+    CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
+                            __inout CTransformFilter *pTransformFilter,
+                            __inout HRESULT *phr,
+                            __in_opt LPCWSTR pName);
+    auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
+};
+
 class CAviSynthFilter
     : public CVideoTransformFilter
     , public ISpecifyPropertyPages
     , public IAvsFilterSettings
     , public IAvsFilterStatus {
+    friend class CAviSynthFilterInputPin;
+
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
     ~CAviSynthFilter();
@@ -21,13 +34,14 @@ public:
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
 
     // CVideoTransformFilter
+    auto GetPin(int n) -> CBasePin * override;
     auto CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT override;
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
     auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
-    auto Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT override;
+    auto Receive(IMediaSample *pSample) -> HRESULT override;
     auto BeginFlush() -> HRESULT override;
 
     auto STDMETHODCALLTYPE Pause() -> HRESULT override;
@@ -59,11 +73,14 @@ private:
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
 
+    auto TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT;
+    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
+    auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
+
     auto Reset() -> void;
     auto LoadSettings() -> void;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
-    auto HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> std::pair<bool, bool>;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> void;
     auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool;
@@ -71,8 +88,6 @@ private:
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> int;
-
-    // filter related variables
 
     FrameHandler _frameHandler;
 

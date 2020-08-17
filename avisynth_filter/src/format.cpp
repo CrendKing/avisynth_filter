@@ -59,18 +59,6 @@ auto Format::LookupAvsType(int avsType) -> std::vector<int> {
     return indices;
 }
 
-auto Format::GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER * {
-    if (SUCCEEDED(CheckVideoInfoType(&mediaType))) {
-        return HEADER(mediaType.pbFormat);
-    }
-
-    if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        return &reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat)->bmiHeader;
-    }
-
-    return nullptr;
-}
-
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     VideoFormat info {};
 
@@ -78,7 +66,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     const REFERENCE_TIME frameTime = info.vih->AvgTimePerFrame > 0 ? info.vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
     info.definition = LookupMediaSubtype(mediaType.subtype);
-    info.bmi = *GetBitmapInfo(const_cast<AM_MEDIA_TYPE &>(mediaType));
+    info.bmi = *GetBitmapInfo(mediaType);
 
     info.videoInfo.width = info.bmi.biWidth;
     info.videoInfo.height = abs(info.bmi.biHeight);

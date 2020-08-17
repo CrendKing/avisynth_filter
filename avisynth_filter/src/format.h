@@ -25,7 +25,20 @@ public:
 
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> int;
     static auto LookupAvsType(int avsType) -> std::vector<int>;
-    static auto GetBitmapInfo(AM_MEDIA_TYPE &mediaType) -> BITMAPINFOHEADER *;
+
+    template<typename T, typename = std::enable_if_t<std::is_base_of_v<AM_MEDIA_TYPE, std::decay_t<T>>>>
+    static auto GetBitmapInfo(T &mediaType) {
+        if (SUCCEEDED(CheckVideoInfoType(&mediaType))) {
+            return HEADER(mediaType.pbFormat);
+        }
+
+        if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
+            return &reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat)->bmiHeader;
+        }
+
+        return static_cast<BITMAPINFOHEADER *>(nullptr);
+    }
+
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat;
     static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int dstRowSize, int dstHeight, IScriptEnvironment *avsEnv) -> void;
     static auto CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int srcRowSize, int srcHeight, IScriptEnvironment *avsEnv) -> void;
