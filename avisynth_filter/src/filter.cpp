@@ -24,9 +24,9 @@ auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> 
 }
 
 auto ConvertWideToUtf8(const std::wstring& wstr) -> std::string {
-    int count = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.length(), NULL, 0, NULL, NULL);
+    const int count = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.length()), nullptr, 0, nullptr, nullptr);
     std::string str(count, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, nullptr, nullptr);
     return str;
 }
 
@@ -658,10 +658,10 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool {
         bool isImportSuccess = false;
 
         if (!_avsFile.empty()) {
-            std::string utf8file = ConvertWideToUtf8(_avsFile);
-            AVSValue args[2] = { utf8file.c_str(), true };
-            const char* const arg_names[2] = { 0, "utf8" };
-            invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), arg_names);
+            const std::string utf8File = ConvertWideToUtf8(_avsFile);
+            AVSValue args[2] = { utf8File.c_str(), true };
+            const char* const argNames[2] = { nullptr, "utf8" };
+            invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
             isImportSuccess = invokeResult.Defined();
         }
 
@@ -686,7 +686,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool {
 
     if (!errorScript.empty()) {
         errorScript.insert(0, "return AvsFilterSource().Subtitle(\"");
-        errorScript.append("\", lsp=0)");
+        errorScript.append("\", lsp=0, utf8=true)");
         AVSValue evalArgs[] = { AVSValue(errorScript.c_str())
                               , AVSValue(EVAL_FILENAME) };
         invokeResult = _avsEnv->Invoke("Eval", AVSValue(evalArgs, 2), nullptr);
