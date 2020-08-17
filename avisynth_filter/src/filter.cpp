@@ -32,6 +32,50 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
     return AVSValue();
 }
 
+CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
+                                                 __inout CTransformFilter *pTransformFilter,
+                                                 __inout HRESULT *phr,
+                                                 __in_opt LPCWSTR pName)
+    : CTransformInputPin(pObjectName, pTransformFilter, phr, pName) {
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
+    HRESULT hr;
+    CAutoLock cObjectLock(m_pLock);
+
+    if (m_Connected) {
+        const CMediaType *cmt = static_cast<const CMediaType *>(pmt);
+
+        if (CheckMediaType(cmt) != S_OK) {
+            return VFW_E_TYPE_NOT_ACCEPTED;
+        }
+
+        ALLOCATOR_PROPERTIES props, actual;
+
+        IMemAllocator *allocator;
+        CheckHr(GetAllocator(&allocator));
+        CheckHr(allocator->Decommit());
+        CheckHr(allocator->GetProperties(&props));
+
+        const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*const_cast<AM_MEDIA_TYPE *>(pmt));
+        props.cbBuffer = bih->biSizeImage;
+
+        CheckHr(allocator->SetProperties(&props, &actual));
+        CheckHr(allocator->Commit());
+
+        if (props.cbBuffer != actual.cbBuffer) {
+            return E_FAIL;
+        }
+
+        CheckHr(SetMediaType(cmt));
+        CheckHr(reinterpret_cast<CAviSynthFilter *>(m_pFilter)->HandleInputFormatChange(pmt));
+
+        return S_OK;
+    }
+
+    return __super::ReceiveConnection(pConnector, pmt);
+}
+
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _avsEnv(nullptr)
@@ -61,7 +105,27 @@ auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid,
         return GetInterface(static_cast<IAvsFilterStatus *>(this), ppv);
     }
 
-    return CVideoTransformFilter::NonDelegatingQueryInterface(riid, ppv);
+    return __super::NonDelegatingQueryInterface(riid, ppv);
+}
+
+auto CAviSynthFilter::GetPin(int n) -> CBasePin * {
+    HRESULT hr = S_OK;
+
+    if (m_pInput == nullptr) {
+        m_pInput = new CAviSynthFilterInputPin(NAME("CAviSynthFilter input pin"), this, &hr, L"Avs In");
+    }
+
+    if (m_pOutput == nullptr) {
+        m_pOutput = new CTransformOutputPin(NAME("CAviSynthFilter output pin"), this, &hr, L"Avs Out");
+    }
+
+    if (n == 0) {
+        return m_pInput;
+    } else if (n == 1) {
+        return m_pOutput;
+    } else {
+        return nullptr;
+    }
 }
 
 auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT {
@@ -181,7 +245,9 @@ auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTI
 
     // we need at least 2 buffers so that we can hold pOut while preparing another extra sample
     pProperties->cBuffers = max(2, pProperties->cBuffers);
-    pProperties->cbBuffer = max(m_pOutput->CurrentMediaType().lSampleSize, static_cast<unsigned long>(pProperties->cbBuffer));
+
+    BITMAPINFOHEADER *bih = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
+    pProperties->cbBuffer = max(bih->biSizeImage, static_cast<unsigned long>(pProperties->cbBuffer));
 
     ALLOCATOR_PROPERTIES actual;
     CheckHr(pAlloc->SetProperties(pProperties, &actual));
@@ -239,20 +305,110 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
         }
     }
 
-    return CVideoTransformFilter::CompleteConnect(direction, pReceivePin);
+    return __super::CompleteConnect(direction, pReceivePin);
 }
 
-auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESULT {
+auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     HRESULT hr;
+    AM_MEDIA_TYPE *pmtOut, *pmt;
+    IMediaSample *pOutSample;
+    bool reloadedAvsForFormatChange = false;
+    bool confirmNewOutputFormat = false;
 
-    auto [reloadedAvsForTypeChange, notifyNewOutputType] = HandleMediaTypeChange(pIn, pOut);
+    pSample->GetMediaType(&pmt);
+    if (pmt != nullptr && pmt->pbFormat != nullptr) {
+        StopStreaming();
+        m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
+
+        hr = HandleInputFormatChange(pmt);
+        if (FAILED(hr)) {
+            return AbortPlayback(hr);
+        }
+        reloadedAvsForFormatChange = hr == S_OK;
+
+        DeleteMediaType(pmt);
+        hr = StartStreaming();
+        if (FAILED(hr)) {
+            return AbortPlayback(hr);
+        }
+    }
+
+    if (ShouldSkipFrame(pSample)) {
+        MSR_NOTE(m_idSkip);
+        m_bSampleSkipped = TRUE;
+        return NOERROR;
+    }
+
+    CheckHr(m_pOutput->GetDeliveryBuffer(&pOutSample, nullptr, nullptr, 0));
+    m_bSampleSkipped = FALSE;
+
+    pOutSample->GetMediaType(&pmtOut);
+    pOutSample->Release();
+    if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
+        StopStreaming();
+        m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(pmtOut));
+
+        hr = HandleOutputFormatChange(pmtOut);
+        if (FAILED(hr)) {
+            return AbortPlayback(hr);
+        }
+        confirmNewOutputFormat = hr == S_OK;
+
+        DeleteMediaType(pmtOut);
+        hr = StartStreaming();
+
+        if (SUCCEEDED(hr)) {
+            m_nWaitForKey = 30;
+        } else {
+            return AbortPlayback(hr);
+        }
+    }
+
+    if (pSample->IsDiscontinuity() == S_OK) {
+        m_nWaitForKey = 30;
+    }
+
+    if (SUCCEEDED(hr)) {
+        m_tDecodeStart = timeGetTime();
+        MSR_START(m_idTransform);
+
+        hr = TransformAndDeliver(pSample, reloadedAvsForFormatChange, confirmNewOutputFormat);
+
+        MSR_STOP(m_idTransform);
+        m_tDecodeStart = timeGetTime() - m_tDecodeStart;
+        m_itrAvgDecode = m_tDecodeStart * (10000 / 16) + 15 * (m_itrAvgDecode / 16);
+
+        if (m_nWaitForKey)
+            m_nWaitForKey--;
+        if (m_nWaitForKey && pSample->IsSyncPoint() == S_OK)
+            m_nWaitForKey = FALSE;
+
+        if (m_nWaitForKey) {
+            hr = S_FALSE;
+        }
+    }
+
+    if (S_FALSE == hr) {
+        m_bSampleSkipped = TRUE;
+        if (!m_bQualityChanged) {
+            m_bQualityChanged = TRUE;
+            NotifyEvent(EC_QUALITY_CHANGE, 0, 0);
+        }
+        return NOERROR;
+    }
+
+    return hr;
+}
+
+auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT {
+    HRESULT hr;
 
     CRefTime streamTime;
     CheckHr(StreamTime(streamTime));
     streamTime = min(streamTime, m_tStart);
 
-    REFERENCE_TIME inputStartTime, inStopTime;
-    if (pIn->GetTime(&inputStartTime, &inStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
+    REFERENCE_TIME inStartTime, inStopTime;
+    if (pIn->GetTime(&inStartTime, &inStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         /*
         Even when the upstream does not set sample time, we fill up the time in reference to the stream time.
         1) Some downstream (e.g. BlueskyFRC) needs sample time to function.
@@ -262,16 +418,16 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         if (m_itrLate > 0) {
             _sampleTimeOffset += 1;
         }
-        inputStartTime = streamTime + _sampleTimeOffset * _timePerFrame;
+        inStartTime = streamTime + _sampleTimeOffset * _timePerFrame;
     }
 
-    const int inSampleFrameNb = static_cast<int>(inputStartTime / _timePerFrame);
+    const int inSampleFrameNb = static_cast<int>(inStartTime / _timePerFrame);
 
     Log("late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
-        m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inputStartTime, inSampleFrameNb);
+        m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inStartTime, inSampleFrameNb);
 
     if (_reloadAvsFile) {
-        if (!reloadedAvsForTypeChange) {
+        if (!reloadedAvsForFormatChange) {
             ReloadAviSynth(m_pInput->CurrentMediaType());
         }
         _deliveryFrameNb = inSampleFrameNb;
@@ -279,20 +435,20 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
     }
 
     const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
-    _frameHandler.GarbageCollect(gcMinTime, inputStartTime);
+    _frameHandler.GarbageCollect(gcMinTime, inStartTime);
 
     BYTE *inputBuffer;
     CheckHr(pIn->GetPointer(&inputBuffer));
-    _frameHandler.CreateFrame(_inputFormat, inputStartTime, inputBuffer, _avsEnv);
+    _frameHandler.CreateFrame(_inputFormat, inStartTime, inputBuffer, _avsEnv);
 
     bool refreshedOvertime = false;
     while (_deliveryFrameNb + _bufferAhead <= inSampleFrameNb) {
         IMediaSample *outSample = nullptr;
         CheckHr(InitializeOutputSample(nullptr, &outSample));
 
-        if (notifyNewOutputType) {
+        if (confirmNewOutputFormat) {
             CheckHr(outSample->SetMediaType(&m_pOutput->CurrentMediaType()));
-            notifyNewOutputType = false;
+            confirmNewOutputFormat = false;
         }
 
         // even if missing sample times from upstream, we always set times for output samples in case downstream needs them
@@ -347,26 +503,19 @@ auto CAviSynthFilter::Transform(IMediaSample *pIn, IMediaSample *pOut) -> HRESUL
         }
     }
 
-    /*
-     * Returning S_FALSE because we deliver (or not deliver if condition not met) output samples ourselves.
-     * This will cause parent class to send quality change event (which is undesirable but OK), and returning NOERROR further up.
-     * We need that NOERROR in case upstream calls our input pin's ReceiveMultiple().
-     * Alternatively, we can reimplement Receive() all by ourselves, which seems overkill at this moment.
-     * Another option is to pOut->SetTime with some time that will never be shown, such as LONGLONG_MIN, but seems too hacky.
-     */
-    return S_FALSE;
+    return S_OK;
 }
 
 auto CAviSynthFilter::BeginFlush() -> HRESULT {
     Reset();
-    return CVideoTransformFilter::BeginFlush();
+    return __super::BeginFlush();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::Pause() -> HRESULT {
     _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
     _outputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
     Reset();
-    return CVideoTransformFilter::Pause();
+    return __super::Pause();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
@@ -455,6 +604,58 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> i
     return Format::LookupMediaSubtype(mediaType->subtype);
 }
 
+/**
+ * Update internal states when media samples have new media types.
+ * Whenever input type is changed, generate corresponding output type based on it.
+ * Whenever output type is change, only take the new width for stride size.
+ * Whenever the output type is effectively changed, return true for notifying downstream the change.
+ *
+ * returns pair of bools: <reloaded_avs_for_type_change, notify_new_output_type>
+ */
+auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT {
+    HRESULT hr;
+
+    const Format::VideoFormat receivedInputFormat = Format::GetVideoFormat(*pmt);
+    if (_inputFormat != receivedInputFormat) {
+        Log("new input format:  definition %i, width %5i, height %5i, codec %#10x",
+            receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.bmi.biCompression);
+        _inputFormat = receivedInputFormat;
+
+        ReloadAviSynth(*pmt);
+        AM_MEDIA_TYPE *replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], pmt);
+        if (m_pOutput->GetConnected()->QueryAccept(replaceOutputType) != S_OK) {
+            return VFW_E_TYPE_NOT_ACCEPTED;
+        }
+        CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, replaceOutputType));
+        DeleteMediaType(replaceOutputType);
+
+        return S_OK;
+    }
+
+    return S_FALSE;
+}
+
+/**
+ * Update internal states when media samples have new media types.
+ * Whenever input type is changed, generate corresponding output type based on it.
+ * Whenever output type is change, only take the new width for stride size.
+ * Whenever the output type is effectively changed, return true for notifying downstream the change.
+ *
+ * returns pair of bools: <reloaded_avs_for_type_change, notify_new_output_type>
+ */
+auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT {
+    const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(*pmtOut);
+    if (_outputFormat != newOutputFormat) {
+        Log("new output format: definition %i, width %5i, height %5i, codec %#10x",
+            newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.bmi.biCompression);
+        _outputFormat = newOutputFormat;
+
+        return S_OK;
+    }
+
+    return S_FALSE;
+}
+
 auto CAviSynthFilter::Reset() -> void {
     _bufferAhead = _stableBufferAhead;
     _bufferBack = _stableBufferBack;
@@ -527,74 +728,6 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
     }
 
     return newMediaType;
-}
-
-/**
- * Update internal states when media samples have new media types.
- * Whenever input type is changed, generate corresponding output type based on it.
- * Whenever output type is change, only take the new width for stride size.
- * Whenever the output type is effectively changed, return true for notifying downstream the change.
- *
- * returns pair of bools: <reloaded_avs_for_type_change, notify_new_output_type>
- */
-auto CAviSynthFilter::HandleMediaTypeChange(IMediaSample *pIn, IMediaSample *pOut) -> std::pair<bool, bool> {
-    bool reloadedAvsForTypeChange = false;
-    bool notifyNewOutputType = false;
-    AM_MEDIA_TYPE *replaceOutputType = nullptr;
-
-    AM_MEDIA_TYPE *pmtIn;
-    AM_MEDIA_TYPE *pmtOut;
-    const bool hasNewInputType = pIn->GetMediaType(&pmtIn) == S_OK;
-    const bool hasNewOutputType = pOut->GetMediaType(&pmtOut) == S_OK;
-
-    if (hasNewInputType) {
-        DeleteMediaType(pmtIn);
-        const Format::VideoFormat receivedInputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
-
-        if (_inputFormat != receivedInputFormat) {
-            Log("new input type:  definition %i, width %5i, height %5i, codec %#10x",
-                receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.bmi.biCompression);
-            _inputFormat = receivedInputFormat;
-        }
-    }
-
-    if (hasNewOutputType) {
-        DeleteMediaType(pmtOut);
-    }
-
-    if (hasNewInputType || hasNewOutputType) {
-        ReloadAviSynth(m_pInput->CurrentMediaType());
-        reloadedAvsForTypeChange = true;
-        replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
-    }
-
-    if (hasNewOutputType) {
-        const BITMAPINFOHEADER *newOutputBmi = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
-        BITMAPINFOHEADER *replaceOutputBmi = Format::GetBitmapInfo(*replaceOutputType);
-
-        replaceOutputBmi->biWidth = newOutputBmi->biWidth;
-        if (replaceOutputBmi->biCompression == BI_RGB) {
-            replaceOutputBmi->biHeight *= newOutputBmi->biHeight / abs(newOutputBmi->biHeight);
-        }
-        replaceOutputBmi->biSizeImage = GetBitmapSize(replaceOutputBmi);
-        replaceOutputType->lSampleSize = replaceOutputBmi->biSizeImage;
-    }
-
-    if (replaceOutputType != nullptr) {
-        const Format::VideoFormat replaceOutputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
-
-        if (_outputFormat != replaceOutputFormat) {
-            Log("new output type: definition %i, width %5i, height %5i, codec %#10x",
-                replaceOutputFormat.definition, replaceOutputFormat.bmi.biWidth, replaceOutputFormat.bmi.biHeight, replaceOutputFormat.bmi.biCompression);
-            _outputFormat = replaceOutputFormat;
-            m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(replaceOutputType));
-            notifyNewOutputType = true;
-        }
-
-        DeleteMediaType(replaceOutputType);
-    }
-
-    return { reloadedAvsForTypeChange, notifyNewOutputType };
 }
 
 auto CAviSynthFilter::DeletePinTypes() -> void {
