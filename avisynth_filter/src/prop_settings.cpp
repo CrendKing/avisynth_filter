@@ -59,9 +59,9 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         case WM_COMMAND: {
             if (HIWORD(wParam) == EN_CHANGE) {
                 if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
-                    char buf[STR_MAX_LENGTH];
+                    wchar_t buf[STR_MAX_LENGTH];
                     GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
-                    const std::string newValue = std::string(buf, STR_MAX_LENGTH).c_str();
+                    const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
 
                     if (newValue != _avsFile) {
                         _avsFile = newValue;
@@ -70,17 +70,17 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 }
             } else if (HIWORD(wParam) == BN_CLICKED) {
                 if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
-                    ShellExecute(hwnd, "edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+                    ShellExecute(hwnd, L"edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
                 } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
                     _settings->ReloadAvsFile();
                 } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
-                    char szFile[MAX_PATH] {};
+                    wchar_t szFile[MAX_PATH] {};
 
                     OPENFILENAME ofn {};
                     ofn.lStructSize = sizeof(OPENFILENAME);
                     ofn.lpstrFile = szFile;
                     ofn.nMaxFile = sizeof(szFile);
-                    ofn.lpstrFilter = "avs Files\0*.avs\0All Files\0*.*\0";
+                    ofn.lpstrFilter = L"avs Files\0*.avs\0All Files\0*.*\0";
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
                     if (GetOpenFileName(&ofn) == TRUE) {

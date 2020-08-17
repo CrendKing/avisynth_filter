@@ -14,23 +14,23 @@ Registry::~Registry() {
     }
 }
 
-auto Registry::ReadString(const char *valueName) const -> std::string {
-    std::string ret;
+auto Registry::ReadString(const wchar_t *valueName) const -> std::wstring {
+    std::wstring ret;
 
     if (_registryKey) {
-        char buffer[MAX_PATH];
-        DWORD bufferSize = MAX_PATH;
+        wchar_t buffer[MAX_PATH];
+        DWORD bufferSize = sizeof(buffer);
 
         const LSTATUS registryStatus = RegGetValue(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer, &bufferSize);
         if (registryStatus == ERROR_SUCCESS) {
-            ret = std::string(buffer, bufferSize).c_str();
+            ret = std::wstring(buffer, bufferSize/2).c_str();
         }
     }
 
     return ret;
 }
 
-auto Registry::ReadNumber(const char *valueName, int defaultValue) const -> DWORD {
+auto Registry::ReadNumber(const wchar_t *valueName, int defaultValue) const -> DWORD {
     DWORD ret = defaultValue;
 
     if (_registryKey) {
@@ -41,13 +41,13 @@ auto Registry::ReadNumber(const char *valueName, int defaultValue) const -> DWOR
     return ret;
 }
 
-auto Registry::WriteString(const char *valueName, const std::string &valueString) const -> void {
+auto Registry::WriteString(const wchar_t*valueName, const std::wstring &valueString) const -> void {
     if (_registryKey) {
-        RegSetValueEx(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), static_cast<DWORD>(valueString.size()));
+        RegSetValueEx(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), static_cast<DWORD>(valueString.size()*2+2));
     }
 }
 
-auto Registry::WriteNumber(const char *valueName, DWORD valueNumber) const -> void {
+auto Registry::WriteNumber(const wchar_t*valueName, DWORD valueNumber) const -> void {
     if (_registryKey) {
         RegSetValueEx(_registryKey, valueName, 0, REG_DWORD, reinterpret_cast<const BYTE *>(&valueNumber), sizeof(valueNumber));
     }

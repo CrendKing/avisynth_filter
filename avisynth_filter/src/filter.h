@@ -37,8 +37,8 @@ public:
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
-    auto STDMETHODCALLTYPE GetAvsFile() const -> const std::string & override;
-    auto STDMETHODCALLTYPE SetAvsFile(const std::string &avsFile) -> void override;
+    auto STDMETHODCALLTYPE GetAvsFile() const -> const std::wstring & override;
+    auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
@@ -105,7 +105,7 @@ private:
 
     Registry _registry;
 
-    std::string _avsFile;
+    std::wstring _avsFile;
     int _stableBufferAhead;
     int _stableBufferBack;
     DWORD _inputFormatBits;

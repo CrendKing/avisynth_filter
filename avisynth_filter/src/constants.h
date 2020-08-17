@@ -62,9 +62,9 @@ constexpr int INVALID_DEFINITION = -1;
  */
 constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
 
-constexpr char *REGISTRY_KEY_NAME = "Software\\AviSynthFilter";
-constexpr char *REGISTRY_VALUE_NAME_AVS_FILE = "AvsFile";
-constexpr char *REGISTRY_VALUE_NAME_FORMATS = "Formats";
+constexpr wchar_t *REGISTRY_KEY_NAME = L"Software\\AviSynthFilter";
+constexpr wchar_t *REGISTRY_VALUE_NAME_AVS_FILE = L"AvsFile";
+constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS = L"Formats";
 
 const GUID MEDIASUBTYPE_I420 = FOURCCMap('024I');
 const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
