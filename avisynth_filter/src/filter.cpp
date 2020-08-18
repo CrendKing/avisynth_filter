@@ -160,7 +160,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 // this one will be the preferred media type for potential pin reconnection
                 if (inputDefinition != INVALID_DEFINITION && IsInputUniqueByAvsType(inputDefinition)) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
-                    if (!ReloadAviSynth(*nextType)) {
+                    if (!ReloadAviSynth(*nextType, false)) {
                         Log("Disconnect due to AvsFilterDisconnect()");
 
                         DeleteMediaType(nextType);
@@ -435,7 +435,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
 
     if (_reloadAvsFile) {
         if (!reloadedAvsForFormatChange) {
-            ReloadAviSynth(m_pInput->CurrentMediaType());
+            ReloadAviSynth(m_pInput->CurrentMediaType(), false);
         }
         _deliveryFrameNb = inSampleFrameNb;
         _reloadAvsFile = false;
@@ -626,7 +626,7 @@ auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESU
             receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.bmi.biCompression);
         _inputFormat = receivedInputFormat;
 
-        ReloadAviSynth(*pmt);
+        ReloadAviSynth(*pmt, true);
         AM_MEDIA_TYPE *replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], pmt);
         if (m_pOutput->GetConnected()->QueryAccept(replaceOutputType) != S_OK) {
             return VFW_E_TYPE_NOT_ACCEPTED;
@@ -756,27 +756,31 @@ auto CAviSynthFilter::CreateAviSynth() -> void {
  * Create new AviSynth script clip with specified media type.
  * If allowDisconnect == true, return false early if no avs script or AvsFilterDisconnect() is returned from script
  */
-auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool {
+auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateEnv) -> bool {
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
 
     /*
      * When reloading AviSynth, there are two alternative approaches:
-     *     Reload everything (the environment, the scripts).
-     *     Only reload the scripts.
+     *     Reload everything (the environment, the scripts, which also flushes avs frame cache).
+     *     Only reload the scripts (which does not flush frame cache).
      * And for seeking, we could either reload or not reload.
      *
-     * Because there is no way to disable internal caching in AviSynth, not reloading for seeking is not working,
-     * or after seeking the frames will not catch up for considerable amount of time.
+     * Recreating the AviSynth environment guarantees a clean start, free of picture artifacts or bugs,
+     * at the cost of noticable lag.
      *
-     * If only reload the scripts, the internal states of the environment is not reset. This creates problem for
-     * certain filters such as SVP's SVSmoothFps_NVOF().
+     * Usually we do not recreate to favor performance. There are cases where recreating is necessary:
+     *
+     * 1) Dynamic format change. This happens after playback has started, thus there will be cached frames in
+     * the avs environment. After format change, reusing the cached frames may either cause artifacts or outright crash
+     * (due to buffer size change).
+     *
+     * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
      */
-    /*
-    if (m_State != State_Stopped) {
+    
+    if (recreateEnv) {
         DeleteAviSynth();
         CreateAviSynth();
     }
-    */
 
     AVSValue invokeResult;
     std::string errorScript;
