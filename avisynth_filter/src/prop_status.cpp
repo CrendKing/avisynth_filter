@@ -46,12 +46,12 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             }
             break;
         } case WM_TIMER: {
-            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_SIZE, std::to_string(_status->GetBufferSize()).c_str());
-            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_AHEAD, std::to_string(_status->GetBufferAhead()).c_str());
-            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_AHEAD_OVERTIME, std::to_string(_status->GetBufferAheadOvertime()).c_str());
-            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_BACK, std::to_string(_status->GetBufferBack()).c_str());
-            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_BACK_OVERTIME, std::to_string(_status->GetBufferBackOvertime()).c_str());
-            SetDlgItemText(hwnd, IDC_EDIT_SAMPLE_TIME_OFFSET, std::to_string(_status->GetSampleTimeOffset()).c_str());
+            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_SIZE, std::to_wstring(_status->GetBufferSize()).c_str());
+            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_AHEAD, std::to_wstring(_status->GetBufferAhead()).c_str());
+            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_AHEAD_OVERTIME, std::to_wstring(_status->GetBufferAheadOvertime()).c_str());
+            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_BACK, std::to_wstring(_status->GetBufferBack()).c_str());
+            SetDlgItemText(hwnd, IDC_EDIT_BUFFER_BACK_OVERTIME, std::to_wstring(_status->GetBufferBackOvertime()).c_str());
+            SetDlgItemText(hwnd, IDC_EDIT_SAMPLE_TIME_OFFSET, std::to_wstring(_status->GetSampleTimeOffset()).c_str());
             break;
         }
     }

@@ -6,8 +6,8 @@
 DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
     virtual auto STDMETHODCALLTYPE SaveSettings() const -> void = 0;
 
-    virtual auto STDMETHODCALLTYPE GetAvsFile() const -> const std::string & = 0;
-    virtual auto STDMETHODCALLTYPE SetAvsFile(const std::string & avsFile) -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsFile() const -> const std::wstring & = 0;
+    virtual auto STDMETHODCALLTYPE SetAvsFile(const std::wstring & avsFile) -> void = 0;
 
     virtual auto STDMETHODCALLTYPE ReloadAvsFile() -> void = 0;
 

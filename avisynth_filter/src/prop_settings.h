@@ -18,5 +18,5 @@ private:
     auto SetDirty() -> void;
 
     IAvsFilterSettings *_settings;
-    std::string _avsFile;
+    std::wstring _avsFile;
 };

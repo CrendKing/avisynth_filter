@@ -23,6 +23,13 @@ auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> 
     }
 }
 
+auto ConvertWideToUtf8(const std::wstring& wstr) -> std::string {
+    int count = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.length(), NULL, 0, NULL, NULL);
+    std::string str(count, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, NULL, NULL);
+    return str;
+}
+
 auto __cdecl Create_AvsFilterSource(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     return static_cast<SourceClip *>(user_data);
 }
@@ -394,11 +401,11 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SaveSettings() const -> void {
     _registry.WriteNumber(REGISTRY_VALUE_NAME_FORMATS, _inputFormatBits);
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsFile() const -> const std::string & {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsFile() const -> const std::wstring & {
     return _avsFile;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsFile(const std::string &avsFile) -> void {
+auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsFile(const std::wstring &avsFile) -> void {
     _avsFile = avsFile;
 }
 
@@ -651,7 +658,10 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType) -> bool {
         bool isImportSuccess = false;
 
         if (!_avsFile.empty()) {
-            invokeResult = _avsEnv->Invoke("Import", AVSValue(_avsFile.c_str()), nullptr);
+            std::string utf8file = ConvertWideToUtf8(_avsFile);
+            AVSValue args[2] = { utf8file.c_str(), true };
+            const char* const arg_names[2] = { 0, "utf8" };
+            invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), arg_names);
             isImportSuccess = invokeResult.Defined();
         }
 

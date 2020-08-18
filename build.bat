@@ -14,8 +14,8 @@ call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliar
 
 devenv.exe /Upgrade baseclasses\baseclasses.sln
 
-MSBuild.exe /p:Configuration=Release_MBCS;Platform=x64;WindowsTargetPlatformVersion=%sdk_version% /m /nologo baseclasses\baseclasses.sln
+MSBuild.exe /p:Configuration=Release;Platform=x64;WindowsTargetPlatformVersion=%sdk_version% /m /nologo baseclasses\baseclasses.sln
 MSBuild.exe /p:Configuration=Release;Platform=x64;WindowsTargetPlatformVersion=%sdk_version% /m /nologo %~dp0avisynth_filter\avisynth_filter.sln
 
-MSBuild.exe /p:Configuration=Release_MBCS;Platform=Win32;WindowsTargetPlatformVersion=%sdk_version% /m /nologo baseclasses\baseclasses.sln
+MSBuild.exe /p:Configuration=Release;Platform=Win32;WindowsTargetPlatformVersion=%sdk_version% /m /nologo baseclasses\baseclasses.sln
 MSBuild.exe /p:Configuration=Release;Platform=x86;WindowsTargetPlatformVersion=%sdk_version% /m /nologo %~dp0avisynth_filter\avisynth_filter.sln
