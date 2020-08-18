@@ -64,6 +64,11 @@ public:
     auto STDMETHODCALLTYPE GetBufferBack() const -> int override;
     auto STDMETHODCALLTYPE GetBufferBackOvertime() -> int override;
     auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
+    auto STDMETHODCALLTYPE GetFrameNumbers(int& in, int& out) const -> void override;
+    auto STDMETHODCALLTYPE GetFrameRate() const -> double override;
+    auto STDMETHODCALLTYPE GetMediaPath() const -> std::wstring override;
+    auto STDMETHODCALLTYPE GetMediaInfo(int& width, int& heigth, DWORD& fourcc) const -> void override;
+
 
 private:
     struct DefinitionPair {
@@ -72,6 +77,7 @@ private:
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
+    auto EnumFilterGraph() -> void;
 
     auto TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT;
     auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
@@ -106,12 +112,16 @@ private:
     Format::VideoFormat _outputFormat;
 
     REFERENCE_TIME _timePerFrame;
+    int _sourceFrameNb;
     int _deliveryFrameNb;
     bool _reloadAvsFile;
 
     int _bufferAhead;
     int _bufferBack;
     int _sampleTimeOffset;
+
+    double _sourceFrameRate;
+    std::wstring _mediaPath;
 
     // number of consecutive frames that the buffer overtimes are 0
     unsigned int _consecutiveStableFrames;

@@ -25,4 +25,9 @@ DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetBufferBackOvertime() -> int = 0;
 
     virtual auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int = 0;
+
+    virtual auto STDMETHODCALLTYPE GetFrameNumbers(int& in, int& out) const -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetFrameRate() const -> double = 0;
+    virtual auto STDMETHODCALLTYPE GetMediaPath() const -> std::wstring = 0;
+    virtual auto STDMETHODCALLTYPE GetMediaInfo(int& width, int& heigth, DWORD & fourcc) const -> void = 0;
 };
