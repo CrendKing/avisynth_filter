@@ -97,7 +97,6 @@ private:
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
 
-    IPin *_upstreamPin;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;

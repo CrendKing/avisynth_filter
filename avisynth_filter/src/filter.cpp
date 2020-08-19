@@ -87,7 +87,6 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
-    , _upstreamPin(nullptr)
     , _stableBufferAhead(0)
     , _stableBufferBack(0) {
     LoadSettings();
@@ -142,11 +141,6 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     CreateAviSynth();
 
     if (direction == PINDIR_INPUT) {
-        if (_upstreamPin != pPin) {
-            _upstreamPin = pPin;
-            DeletePinTypes();
-        }
-
         IEnumMediaTypes *enumTypes;
         CheckHr(pPin->EnumMediaTypes(&enumTypes));
 
@@ -519,9 +513,11 @@ auto CAviSynthFilter::BeginFlush() -> HRESULT {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::Pause() -> HRESULT {
-    _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
-    _outputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
-    Reset();
+    if (m_State == State_Stopped) {
+        _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
+        _outputFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType());
+        Reset();
+    }
     return __super::Pause();
 }
 
