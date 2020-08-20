@@ -6,7 +6,6 @@
 CAvsFilterPropStatus::CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUSPAGE, IDS_STATUS)
     , _status(nullptr) {
-    Log("+++ create status");
 }
 
 auto CAvsFilterPropStatus::OnConnect(IUnknown *pUnk) -> HRESULT {
@@ -62,7 +61,9 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             DWORD fcc;
             _status->GetMediaInfo(w, h, fcc);
             char fourcc[5];
-            *(reinterpret_cast<DWORD*>(fourcc)) = fcc;
+            if (fcc >> 24 != 0xe4)
+                *(reinterpret_cast<DWORD*>(fourcc)) = fcc;
+            else memcpy(fourcc,"RGB ",4);
             fourcc[4] = 0;
             std::string fmt = std::to_string(w) + " x " + std::to_string(h) + " " + std::string(fourcc);
             SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, fmt.c_str());

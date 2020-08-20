@@ -590,7 +590,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferAhead() const -> int {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferAheadOvertime() -> int {
-    Log("--- ahead: %d, ahead overtime: %llu, per frame: %llu", _bufferAhead, _frameHandler.GetAheadOvertime(), _timePerFrame);
     return static_cast<int>(_frameHandler.GetAheadOvertime() / _timePerFrame);
 }
 
@@ -622,7 +621,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaPath() const -> std::wstring {
 auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaInfo(int& width, int& heigth, DWORD& fourcc) const -> void {
     width = _inputFormat.bmi.biWidth;
     heigth = std::abs(_inputFormat.bmi.biHeight);
-    fourcc = m_pInput->CurrentMediaType().subtype.Data1;
+    fourcc = _inputFormat.bmi.biCompression;
 }
 
 /**
@@ -889,12 +888,8 @@ auto CAviSynthFilter::FindCompatibleInputByOutput(int outputDefinition) const ->
 }
 
 auto CAviSynthFilter::EnumFilterGraph() -> void {
-    IFilterGraph *graph = GetFilterGraph();
-    if (!graph) return;
-
     IEnumFilters* filters;
-
-    if (FAILED(graph->EnumFilters(&filters)))
+    if (FAILED(m_pGraph->EnumFilters(&filters)))
         return;
 
     _mediaPath = L"N/A";
@@ -911,7 +906,7 @@ auto CAviSynthFilter::EnumFilterGraph() -> void {
         Log("Filter: '%ls'", info.achName);
 
         IFileSourceFilter* source;
-        if (!FAILED(filter->QueryInterface(IID_IFileSourceFilter, reinterpret_cast<void**>(&source)))) {
+        if (!FAILED(filter->QueryInterface(&source))) {
             LPOLESTR buf;
             if (source->GetCurFile(&buf, nullptr) == S_OK) {
                 _mediaPath = std::wstring(buf);
