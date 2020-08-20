@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pch.h"
+#include "format.h"
 
 
 DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
@@ -26,8 +27,8 @@ DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
 
     virtual auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int = 0;
 
-    virtual auto STDMETHODCALLTYPE GetFrameNumbers(int& in, int& out) const -> void = 0;
-    virtual auto STDMETHODCALLTYPE GetFrameRate() const -> double = 0;
-    virtual auto STDMETHODCALLTYPE GetMediaPath() const -> std::wstring = 0;
-    virtual auto STDMETHODCALLTYPE GetMediaInfo(int& width, int& heigth, DWORD & fourcc) const -> void = 0;
+    virtual auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> = 0;
+    virtual auto STDMETHODCALLTYPE GetSourceFrameRate() const -> double = 0;
+    virtual auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring = 0;
+    virtual auto STDMETHODCALLTYPE GetMediaInfo() const -> const Format::VideoFormat * = 0;
 };

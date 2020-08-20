@@ -1,11 +1,13 @@
 #include "pch.h"
 #include "prop_status.h"
 #include "constants.h"
-#include "logging.h"
+#include "format.h"
+
 
 CAvsFilterPropStatus::CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUSPAGE, IDS_STATUS)
-    , _status(nullptr) {
+    , _status(nullptr)
+    , _isSourcePathSet(false) {
 }
 
 auto CAvsFilterPropStatus::OnConnect(IUnknown *pUnk) -> HRESULT {
@@ -46,27 +48,23 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             }
             break;
         } case WM_TIMER: {
-            SetDlgItemText(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_wstring(_status->GetBufferSize()).c_str());
-            SetDlgItemText(hwnd, IDC_TEXT_BUFFER_AHEAD_VALUE, (std::to_wstring(_status->GetBufferAhead()) + L" / " + std::to_wstring(_status->GetBufferAheadOvertime())).c_str());
-            SetDlgItemText(hwnd, IDC_TEXT_BUFFER_BACK_VALUE, (std::to_wstring(_status->GetBufferBack()) + L" / " + std::to_wstring(_status->GetBufferBackOvertime())).c_str());
-            SetDlgItemText(hwnd, IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE, std::to_wstring(_status->GetSampleTimeOffset()).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_string(_status->GetBufferSize()).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_AHEAD_VALUE, (std::to_string(_status->GetBufferAhead()) + " / " + std::to_string(_status->GetBufferAheadOvertime())).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_BACK_VALUE, (std::to_string(_status->GetBufferBack()) + " / " + std::to_string(_status->GetBufferBackOvertime())).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE, std::to_string(_status->GetSampleTimeOffset()).c_str());
 
-            int in, out;
-            _status->GetFrameNumbers(in, out);
-            SetDlgItemText(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_wstring(in) + L" / " + std::to_wstring(out)).c_str());
-            SetDlgItemText(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::to_wstring(_status->GetFrameRate()).c_str());
-            SetDlgItemText(hwnd, IDC_TEXT_PATH_VALUE, _status->GetMediaPath().c_str());
+            const auto [in, out] = _status->GetFrameNumbers();
+            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_string(in) + " / " + std::to_string(out)).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::to_string(_status->GetSourceFrameRate()).c_str());
 
-            int w, h;
-            DWORD fcc;
-            _status->GetMediaInfo(w, h, fcc);
-            char fourcc[5];
-            if (fcc >> 24 != 0xe4)
-                *(reinterpret_cast<DWORD*>(fourcc)) = fcc;
-            else memcpy(fourcc,"RGB ",4);
-            fourcc[4] = 0;
-            std::string fmt = std::to_string(w) + " x " + std::to_string(h) + " " + std::string(fourcc);
-            SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, fmt.c_str());
+            if (!_isSourcePathSet) {
+                SetDlgItemTextW(hwnd, IDC_EDIT_SOURCE_PATH_VALUE, _status->GetSourcePath().c_str());
+                _isSourcePathSet = true;
+            }
+
+            const Format::VideoFormat *format = _status->GetMediaInfo();
+            const std::string infoStr = std::to_string(format->bmi.biWidth) + " x " + std::to_string(abs(format->bmi.biHeight)) + " " + format->GetCodecName();
+            SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
             break;
         }

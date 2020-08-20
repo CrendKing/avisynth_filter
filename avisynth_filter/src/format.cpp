@@ -37,6 +37,25 @@ auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
         || memcmp(vih, other.vih, sizeof(VIDEOINFOHEADER)) != 0;
 }
 
+auto Format::VideoFormat::GetCodecName() const -> std::string {
+    const CLSID subtype = DEFINITIONS[definition].mediaSubtype;
+
+    if (bmi.biCompression == BI_RGB) {
+        if (subtype == MEDIASUBTYPE_RGB24) {
+            return "RGB24";
+        } else if (subtype == MEDIASUBTYPE_RGB32) {
+            return "RGB32";
+        } else if (subtype == MEDIASUBTYPE_RGB48) {
+            return "RGB48";
+        } else {
+            return "RGB0";
+        }
+    } else {
+        const DWORD fourCC = FOURCCMap(&subtype).GetFOURCC();
+        return std::string(reinterpret_cast<const char *>(&fourCC), 4);
+    }
+}
+
 auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> int {
     for (int i = 0; i < static_cast<int>(DEFINITIONS.size()); ++i) {
         if (mediaSubtype == DEFINITIONS[i].mediaSubtype) {

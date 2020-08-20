@@ -16,4 +16,5 @@ private:
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;
 
     IAvsFilterStatus *_status;
+    bool _isSourcePathSet;
 };

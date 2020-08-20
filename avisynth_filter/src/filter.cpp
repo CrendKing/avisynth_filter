@@ -304,6 +304,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
             CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[compatibleInput]));
         } else {
             Log("Connected with types: in %2i out %2i", inputDefiniton, outputDefinition);
+            _sourcePath = RetrieveSourcePath(m_pGraph);
         }
     }
 
@@ -510,9 +511,6 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
     // have to average this for the last 1 sec or so
     _sourceFrameRate = 10000000.0 / (inStopTime - inStartTime);
 
-    if(_mediaPath.empty())
-        EnumFilterGraph();
-
     return S_OK;
 }
 
@@ -601,23 +599,23 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetSampleTimeOffset() const -> int {
     return _sampleTimeOffset;
 }
 
-auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers(int& in, int& out) const -> void {
-    in = _sourceFrameNb;
-    out = _deliveryFrameNb;
+auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers() const -> std::pair<int, int> {
+    return { _sourceFrameNb, _deliveryFrameNb };
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetFrameRate() const -> double {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetSourceFrameRate() const -> double {
     return _sourceFrameRate;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaPath() const -> std::wstring {
-    return _mediaPath;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetSourcePath() const -> std::wstring {
+    if (_sourcePath.empty()) {
+        return L"N/A";
+    }
+    return _sourcePath;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaInfo(int& width, int& heigth, DWORD& fourcc) const -> void {
-    width = _inputFormat.bmi.biWidth;
-    heigth = std::abs(_inputFormat.bmi.biHeight);
-    fourcc = _inputFormat.bmi.biCompression;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaInfo() const -> const Format::VideoFormat * {
+    return &_inputFormat;
 }
 
 /**
@@ -633,6 +631,49 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> i
     }
 
     return Format::LookupMediaSubtype(mediaType->subtype);
+}
+
+auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
+    std::wstring ret;
+
+    IEnumFilters *filters;
+    if (FAILED(graph->EnumFilters(&filters))) {
+        return ret;
+    }
+
+    IBaseFilter *filter;
+    ULONG n;
+    while (true) {
+        const HRESULT hr = filters->Next(1, &filter, &n);
+        if (hr == S_OK) {
+            FILTER_INFO	info;
+            if (FAILED(filter->QueryFilterInfo(&info))) {
+                continue;
+            }
+
+            QueryFilterInfoReleaseGraph(info);
+
+            Log("Filter: '%ls'", info.achName);
+
+            IFileSourceFilter *source;
+            if (!FAILED(filter->QueryInterface(&source))) {
+                LPOLESTR filename;
+                if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
+                    Log("Source path: '%ls'", filename);
+                    ret = std::wstring(filename);
+                    break;
+                }
+                source->Release();
+            }
+
+            filter->Release();
+        } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
+            filters->Reset();
+        }
+    }
+    filters->Release();
+
+    return ret;
 }
 
 /**
@@ -885,36 +926,4 @@ auto CAviSynthFilter::FindCompatibleInputByOutput(int outputDefinition) const ->
         }
     }
     return INVALID_DEFINITION;
-}
-
-auto CAviSynthFilter::EnumFilterGraph() -> void {
-    IEnumFilters* filters;
-    if (FAILED(m_pGraph->EnumFilters(&filters)))
-        return;
-
-    _mediaPath = L"N/A";
-
-    IBaseFilter* filter;
-    ULONG	n;
-    while (filters->Next(1, &filter, &n) == S_OK) {
-        FILTER_INFO	info;
-        if (FAILED(filter->QueryFilterInfo(&info)))
-            continue;
-
-        QueryFilterInfoReleaseGraph(info);
-
-        Log("Filter: '%ls'", info.achName);
-
-        IFileSourceFilter* source;
-        if (!FAILED(filter->QueryInterface(&source))) {
-            LPOLESTR buf;
-            if (source->GetCurFile(&buf, nullptr) == S_OK) {
-                _mediaPath = std::wstring(buf);
-                Log("Media path: '%ls'", _mediaPath.c_str());
-            }
-            source->Release();
-        }
-        filter->Release();
-    }
-    filters->Release();
 }

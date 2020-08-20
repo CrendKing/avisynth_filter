@@ -21,6 +21,7 @@ public:
         VIDEOINFOHEADER *vih;
 
         auto operator!=(const VideoFormat &other) const -> bool;
+        auto GetCodecName() const -> std::string;
     };
 
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> int;
