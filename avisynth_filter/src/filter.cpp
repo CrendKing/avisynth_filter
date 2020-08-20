@@ -88,7 +88,8 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
     , _stableBufferAhead(0)
-    , _stableBufferBack(0) {
+    , _stableBufferBack(0)
+    , _sourceFrameRate(0.0) {
     LoadSettings();
     Log("CAviSynthFilter::CAviSynthFilter()");
 }
@@ -432,8 +433,10 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
             ReloadAviSynth(m_pInput->CurrentMediaType(), false);
         }
         _deliveryFrameNb = inSampleFrameNb;
+        _sourceFrameNb = -1;
         _reloadAvsFile = false;
     }
+    _sourceFrameNb++;
 
     const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
     _frameHandler.GarbageCollect(gcMinTime, inStartTime);
@@ -503,6 +506,12 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
             }
         }
     }
+
+    // have to average this for the last 1 sec or so
+    _sourceFrameRate = 10000000.0 / (inStopTime - inStartTime);
+
+    if(_mediaPath.empty())
+        EnumFilterGraph();
 
     return S_OK;
 }
@@ -590,6 +599,25 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferBackOvertime() -> int {
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetSampleTimeOffset() const -> int {
     return _sampleTimeOffset;
+}
+
+auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers(int& in, int& out) const -> void {
+    in = _sourceFrameNb;
+    out = _deliveryFrameNb;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetFrameRate() const -> double {
+    return _sourceFrameRate;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaPath() const -> std::wstring {
+    return _mediaPath;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaInfo(int& width, int& heigth, DWORD& fourcc) const -> void {
+    width = _inputFormat.bmi.biWidth;
+    heigth = std::abs(_inputFormat.bmi.biHeight);
+    fourcc = _inputFormat.bmi.biCompression;
 }
 
 /**
@@ -857,4 +885,36 @@ auto CAviSynthFilter::FindCompatibleInputByOutput(int outputDefinition) const ->
         }
     }
     return INVALID_DEFINITION;
+}
+
+auto CAviSynthFilter::EnumFilterGraph() -> void {
+    IEnumFilters* filters;
+    if (FAILED(m_pGraph->EnumFilters(&filters)))
+        return;
+
+    _mediaPath = L"N/A";
+
+    IBaseFilter* filter;
+    ULONG	n;
+    while (filters->Next(1, &filter, &n) == S_OK) {
+        FILTER_INFO	info;
+        if (FAILED(filter->QueryFilterInfo(&info)))
+            continue;
+
+        QueryFilterInfoReleaseGraph(info);
+
+        Log("Filter: '%ls'", info.achName);
+
+        IFileSourceFilter* source;
+        if (!FAILED(filter->QueryInterface(&source))) {
+            LPOLESTR buf;
+            if (source->GetCurFile(&buf, nullptr) == S_OK) {
+                _mediaPath = std::wstring(buf);
+                Log("Media path: '%ls'", _mediaPath.c_str());
+            }
+            source->Release();
+        }
+        filter->Release();
+    }
+    filters->Release();
 }
