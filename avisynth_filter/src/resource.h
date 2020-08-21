@@ -19,9 +19,9 @@
 #define IDC_INPUT_FORMAT_422              1010
 #define IDC_INPUT_FORMAT_RGB              1011
 #define IDC_INPUT_FORMAT_NV12             1012
-#define IDC_INPUT_FORMAT_I420             1013
-#define IDC_INPUT_FORMAT_IYUV             1014
-#define IDC_INPUT_FORMAT_YV12             1015
+#define IDC_INPUT_FORMAT_YV12             1013
+#define IDC_INPUT_FORMAT_I420             1014
+#define IDC_INPUT_FORMAT_IYUV             1015
 #define IDC_INPUT_FORMAT_P010             1016
 #define IDC_INPUT_FORMAT_P016             1017
 #define IDC_INPUT_FORMAT_YUY2             1018
