@@ -6,6 +6,7 @@
 #include "interfaces.h"
 #include "registry.h"
 
+class RemoteControl;
 
 class CAviSynthFilterInputPin : public CTransformInputPin {
     friend class CAviSynthFilter;
@@ -54,6 +55,7 @@ public:
     auto STDMETHODCALLTYPE GetAvsFile() const -> const std::wstring & override;
     auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
+    auto STDMETHODCALLTYPE IsRemoteControlled() -> bool override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
@@ -133,4 +135,6 @@ private:
     int _stableBufferAhead;
     int _stableBufferBack;
     DWORD _inputFormatBits;
+
+    RemoteControl* _remoteControl;
 };

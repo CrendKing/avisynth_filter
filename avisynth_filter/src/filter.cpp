@@ -3,6 +3,7 @@
 #include "prop_settings.h"
 #include "constants.h"
 #include "source_clip.h"
+#include "remote_control.h"
 #include "logging.h"
 
 
@@ -28,6 +29,13 @@ auto ConvertWideToUtf8(const std::wstring& wstr) -> std::string {
     std::string str(count, 0);
     WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, nullptr, nullptr);
     return str;
+}
+
+auto ConvertUtf8ToWide(const std::string& str) -> std::wstring {
+    const int count = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0);
+    std::wstring wstr(count, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), &wstr[0], count);
+    return wstr;
 }
 
 auto __cdecl Create_AvsFilterSource(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
@@ -87,6 +95,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
+    , _remoteControl(nullptr)
     , _reloadAvsFileFlag(false)
     , _stableBufferAhead(0)
     , _stableBufferBack(0)
@@ -96,6 +105,11 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
+    if (_remoteControl) {
+        delete _remoteControl;
+        _remoteControl = nullptr;
+    }
+
     DeletePinTypes();
     DeleteAviSynth();
 }
@@ -575,6 +589,10 @@ auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile() -> void {
     _reloadAvsFileFlag = true;
 }
 
+auto STDMETHODCALLTYPE CAviSynthFilter::IsRemoteControlled() -> bool {
+    return _remoteControl != nullptr;
+}
+
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormats() const -> DWORD {
     return _inputFormatBits;
 }
@@ -738,7 +756,11 @@ auto CAviSynthFilter::Reset() -> void {
 }
 
 auto CAviSynthFilter::LoadSettings() -> void {
-    _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
+    if (_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE, 0))
+        _remoteControl = new RemoteControl(this, this);
+    else
+        SetAvsFile(_registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE));
+
     _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
 }
 
@@ -822,6 +844,8 @@ auto CAviSynthFilter::CreateAviSynth() -> void {
         _avsEnv = CreateScriptEnvironment2();
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
         _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
+        //TODO: remove me!
+        _avsEnv->AddFunction("potplayer_source", "", Create_AvsFilterSource, new SourceClip(_avsSourceVideoInfo, _frameHandler));
     }
 }
 
@@ -864,12 +888,15 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
             const std::string utf8File = ConvertWideToUtf8(_avsFile);
             AVSValue args[2] = { utf8File.c_str(), true };
             const char* const argNames[2] = { nullptr, "utf8" };
-            invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
+            if(PathFileExists(_avsFile.c_str()))                
+                invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
+            else
+                invokeResult = _avsEnv->Invoke("Eval", AVSValue(args, 1), nullptr);
             isImportSuccess = invokeResult.Defined();
         }
 
         if (!isImportSuccess) {
-            if (m_State == State_Stopped) {
+            if (m_State == State_Stopped && !IsRemoteControlled()) {
                 return false;
             }
 

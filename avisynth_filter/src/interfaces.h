@@ -12,6 +12,8 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 
     virtual auto STDMETHODCALLTYPE ReloadAvsFile() -> void = 0;
 
+    virtual auto STDMETHODCALLTYPE IsRemoteControlled() -> bool = 0;
+
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
     virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;
 };
