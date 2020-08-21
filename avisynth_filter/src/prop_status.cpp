@@ -7,7 +7,9 @@
 CAvsFilterPropStatus::CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUSPAGE, IDS_STATUS)
     , _status(nullptr)
-    , _isSourcePathSet(false) {
+    , _isSourcePathSet(false)
+    , _prevInputSampleNb(-1)
+    , _prevDeliveryFrameNb(-1) {
 }
 
 auto CAvsFilterPropStatus::OnConnect(IUnknown *pUnk) -> HRESULT {
@@ -25,7 +27,7 @@ auto CAvsFilterPropStatus::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropStatus::OnActivate() -> HRESULT {
-    if (SetTimer(m_hwnd, IDT_TIMER_STATUS, 500, nullptr) == 0) {
+    if (SetTimer(m_hwnd, IDT_TIMER_STATUS, STATUS_PAGE_TIMER_INTERVAL_MS, nullptr) == 0) {
         return E_FAIL;
     }
 
@@ -49,21 +51,32 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             break;
         } case WM_TIMER: {
             SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_string(_status->GetBufferSize()).c_str());
-            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_AHEAD_VALUE, (std::to_string(_status->GetBufferAhead()) + " / " + std::to_string(_status->GetBufferAheadOvertime())).c_str());
-            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_BACK_VALUE, (std::to_string(_status->GetBufferBack()) + " / " + std::to_string(_status->GetBufferBackOvertime())).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_AHEAD_VALUE, std::to_string(_status->GetBufferUnderflowAhead()).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_BACK_VALUE, std::to_string(_status->GetBufferUnderflowBack()).c_str());
             SetDlgItemTextA(hwnd, IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE, std::to_string(_status->GetSampleTimeOffset()).c_str());
 
-            const auto [in, out] = _status->GetFrameNumbers();
-            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_string(in) + " / " + std::to_string(out)).c_str());
-            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::to_string(_status->GetSourceFrameRate()).c_str());
+            const auto [inputSampleNb, deliverFrameNb] = _status->GetFrameNumbers();
+            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_string(inputSampleNb).append(" / ").append(std::to_string(deliverFrameNb))).c_str());
+
+            if (_prevInputSampleNb != -1 && _prevDeliveryFrameNb != -1) {
+                const int inputSampleNbDiff = inputSampleNb - _prevInputSampleNb;
+                const int deliveryFrameNbDiff = deliverFrameNb - _prevDeliveryFrameNb;
+                if (inputSampleNbDiff > 0) {
+                    const int inputFrameRate = MulDiv(inputSampleNbDiff, 1000, STATUS_PAGE_TIMER_INTERVAL_MS);
+                    const int deliveryFrameRate = MulDiv(deliveryFrameNbDiff, 1000, STATUS_PAGE_TIMER_INTERVAL_MS);
+                    SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::to_string(inputFrameRate).append(" / ").append(std::to_string(deliveryFrameRate)).c_str());
+                }
+            }
+            _prevInputSampleNb = inputSampleNb;
+            _prevDeliveryFrameNb = deliverFrameNb;
 
             if (!_isSourcePathSet) {
-                SetDlgItemTextW(hwnd, IDC_EDIT_SOURCE_PATH_VALUE, _status->GetSourcePath().c_str());
+                SetDlgItemTextW(hwnd, IDC_EDIT_PATH_VALUE, _status->GetSourcePath().c_str());
                 _isSourcePathSet = true;
             }
 
             const Format::VideoFormat *format = _status->GetMediaInfo();
-            const std::string infoStr = std::to_string(format->bmi.biWidth) + " x " + std::to_string(abs(format->bmi.biHeight)) + " " + format->GetCodecName();
+            const std::string infoStr = std::to_string(format->bmi.biWidth).append(" x ").append(std::to_string(abs(format->bmi.biHeight))).append(" ").append(format->GetCodecName());
             SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
             break;

@@ -17,4 +17,6 @@ private:
 
     IAvsFilterStatus *_status;
     bool _isSourcePathSet;
+    int _prevInputSampleNb;
+    int _prevDeliveryFrameNb;
 };

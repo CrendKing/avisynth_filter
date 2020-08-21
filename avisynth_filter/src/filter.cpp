@@ -48,7 +48,8 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
     HRESULT hr;
-    CAutoLock cObjectLock(m_pLock);
+
+    const CAutoLock lock(m_pLock);
 
     if (m_Connected) {
         const CMediaType *cmt = static_cast<const CMediaType *>(pmt);
@@ -87,9 +88,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _avsEnv(nullptr)
     , _avsScriptClip(nullptr)
-    , _stableBufferAhead(0)
-    , _stableBufferBack(0)
-    , _sourceFrameRate(0.0) {
+    , _maxBufferUnderflowAhead(0) {
     LoadSettings();
     Log("CAviSynthFilter::CAviSynthFilter()");
 }
@@ -336,14 +335,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         }
     }
 
-    if (ShouldSkipFrame(pSample)) {
-        MSR_NOTE(m_idSkip);
-        m_bSampleSkipped = TRUE;
-        return NOERROR;
-    }
-
     CheckHr(m_pOutput->GetDeliveryBuffer(&pOutSample, nullptr, nullptr, 0));
-    m_bSampleSkipped = FALSE;
 
     pOutSample->GetMediaType(&pmtOut);
     pOutSample->Release();
@@ -372,19 +364,12 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     }
 
     if (SUCCEEDED(hr)) {
-        m_tDecodeStart = timeGetTime();
-        MSR_START(m_idTransform);
-
         hr = TransformAndDeliver(pSample, reloadedAvsForFormatChange, confirmNewOutputFormat);
-
-        MSR_STOP(m_idTransform);
-        m_tDecodeStart = timeGetTime() - m_tDecodeStart;
-        m_itrAvgDecode = m_tDecodeStart * (10000 / 16) + 15 * (m_itrAvgDecode / 16);
 
         if (m_nWaitForKey)
             m_nWaitForKey--;
         if (m_nWaitForKey && pSample->IsSyncPoint() == S_OK)
-            m_nWaitForKey = FALSE;
+            m_nWaitForKey = 0;
 
         if (m_nWaitForKey) {
             hr = S_FALSE;
@@ -392,7 +377,6 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     }
 
     if (S_FALSE == hr) {
-        m_bSampleSkipped = TRUE;
         if (!m_bQualityChanged) {
             m_bQualityChanged = TRUE;
             NotifyEvent(EC_QUALITY_CHANGE, 0, 0);
@@ -404,14 +388,42 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 }
 
 auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT {
+    /*
+     * Unlike normal Transform() where one input sample is transformed to one output sample, our filter may not have that 1:1 relationship.
+     * This function supports the following situations:
+     * 1) Flexible input:output mapping, by using a input frame ordered map.
+     * 2) Aggressive caching from AviSynth (e.g. prefetcher), by using buffering.
+     * 3) Variable frame rate, by frame counting and respecting individual frame time.
+     * 4) Samples without time, by referring to the stream time and average frame time.
+     *
+     * TODO: further decouple and input processing and delivery by moving the delivery logic into a worker thread.
+     * That way we can put the thread into waiting until enough input samples have been gathered.
+     */
+
     HRESULT hr;
+
+    if (_reloadAvsFile) {
+        // small optimization where avs may already be loaded during format change handling thus skipping here
+        if (!reloadedAvsForFormatChange) {
+            ReloadAviSynth(m_pInput->CurrentMediaType(), false);
+        }
+        _inputSampleNb = 0;
+        _deliveryFrameNb = 0;
+        _reloadAvsFile = false;
+    }
+
+    /*
+     * We process each input sample by creating an avs source frame from it and put its times in an ordered map.
+     * If we detect cache miss in frame handler, we will accumulate enough frames before delivering new output.
+     */
 
     CRefTime streamTime;
     CheckHr(StreamTime(streamTime));
     streamTime = min(streamTime, m_tStart);
 
     REFERENCE_TIME inStartTime, inStopTime;
-    if (pIn->GetTime(&inStartTime, &inStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
+    hr = pIn->GetTime(&inStartTime, &inStopTime);
+    if (hr == VFW_E_SAMPLE_TIME_NOT_SET) {
         /*
         Even when the upstream does not set sample time, we fill up the time in reference to the stream time.
         1) Some downstream (e.g. BlueskyFRC) needs sample time to function.
@@ -422,101 +434,81 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
             _sampleTimeOffset += 1;
         }
         inStartTime = streamTime + _sampleTimeOffset * _timePerFrame;
+        inStopTime = inStartTime + _timePerFrame;
+    } else if (hr == VFW_S_NO_STOP_TIME) {
+        inStopTime = inStartTime + _timePerFrame;
     }
 
-    const int inSampleFrameNb = static_cast<int>(inStartTime / _timePerFrame);
-
-    Log("late: %10i timePerFrame: %lli streamTime: %10lli streamFrameNb: %4lli sampleTime: %10lli sampleFrameNb: %4i",
-        m_itrLate, _timePerFrame, static_cast<REFERENCE_TIME>(streamTime), static_cast<REFERENCE_TIME>(streamTime) / _timePerFrame, inStartTime, inSampleFrameNb);
-
-    if (_reloadAvsFile) {
-        if (!reloadedAvsForFormatChange) {
-            ReloadAviSynth(m_pInput->CurrentMediaType(), false);
-        }
-        _deliveryFrameNb = inSampleFrameNb;
-        _sourceFrameNb = -1;
-        _reloadAvsFile = false;
-    }
-    _sourceFrameNb++;
-
-    const REFERENCE_TIME gcMinTime = (static_cast<REFERENCE_TIME>(_deliveryFrameNb) - _bufferBack) * _timePerFrame;
-    _frameHandler.GarbageCollect(gcMinTime, inStartTime);
+    Log("late: %10i streamTime: %10lli sampleTime: %10lli ~ %10lli frameTime: %lli sourceFrameNb: %4i, maxBufferAhead: %2i",
+        m_itrLate, static_cast<REFERENCE_TIME>(streamTime), inStartTime, inStopTime, inStopTime - inStartTime, _inputSampleNb, _maxBufferUnderflowAhead);
 
     BYTE *inputBuffer;
     CheckHr(pIn->GetPointer(&inputBuffer));
-    _frameHandler.CreateFrame(_inputFormat, inStartTime, inputBuffer, _avsEnv);
+    _frameHandler.CreateFrame(_inputFormat, _inputSampleNb, inputBuffer, _avsEnv);
+    _sampleTimes[_inputSampleNb] = { inStartTime, inStopTime };
 
-    bool refreshedOvertime = false;
-    while (_deliveryFrameNb + _bufferAhead <= inSampleFrameNb) {
-        IMediaSample *outSample = nullptr;
-        CheckHr(InitializeOutputSample(nullptr, &outSample));
+    if (_bufferUnderflowAhead > 0) {
+        _bufferUnderflowAhead -= 1;
+    } else {
+        while (!_sampleTimes.empty()) {
+            const SampleTimeInfo &info = _sampleTimes.begin()->second;
 
-        if (confirmNewOutputFormat) {
-            CheckHr(outSample->SetMediaType(&m_pOutput->CurrentMediaType()));
-            confirmNewOutputFormat = false;
-        }
-
-        // even if missing sample times from upstream, we always set times for output samples in case downstream needs them
-        REFERENCE_TIME outStartTime = _deliveryFrameNb * _timePerFrame;
-        REFERENCE_TIME outStopTime = outStartTime + _timePerFrame;
-        CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
-
-        BYTE *outBuffer;
-        CheckHr(outSample->GetPointer(&outBuffer));
-
-        const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
-        FrameHandler::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
-        refreshedOvertime = true;
-
-        CheckHr(m_pOutput->Deliver(outSample));
-
-        outSample->Release();
-        outSample = nullptr;
-
-        Log("Deliver frameNb: %4i at %10lli inSampleFrameNb: %4i", _deliveryFrameNb, outStartTime, inSampleFrameNb);
-
-        _deliveryFrameNb += 1;
-    }
-
-    if (refreshedOvertime) {
-        const bool hasAheadOvertime = _frameHandler.GetAheadOvertime() > 0;
-        const bool hasBackOvertime = _frameHandler.GetBackOvertime() > 0;
-        if (hasAheadOvertime) {
-            _bufferAhead += 1;
-        }
-        if (hasBackOvertime) {
-            _bufferBack += 1;
-        }
-
-        // calibrate for optimal buffer sizes if we don't have one
-        if (_stableBufferAhead == 0 && _stableBufferBack == 0) {
-            if (!hasAheadOvertime && !hasBackOvertime) {
-                _consecutiveStableFrames += 1;
-            } else {
-                _consecutiveStableFrames = 0;
+            if (_deliveryFrameStartTime == 0) {
+                _deliveryFrameStartTime = info.startTime;
             }
 
-            // consider 1 second of video stream without overtime "stable"
-            if (_consecutiveStableFrames >= _avsSourceVideoInfo.fps_numerator / _avsSourceVideoInfo.fps_denominator) {
-                if (_stableBufferAhead != _bufferAhead) {
-                    _stableBufferAhead = _bufferAhead;
+            while (_deliveryFrameStartTime < info.stopTime) {
+                const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
+                _bufferUnderflowAhead = _frameHandler.GetMaxAccessedFrameNb() - _inputSampleNb;
+                _bufferUnderflowBack = _inputSampleNb - _frameHandler.GetMinAccessedFrameNb();
+                _maxBufferUnderflowAhead = max(_bufferUnderflowAhead, _maxBufferUnderflowAhead);
+                if (_bufferUnderflowAhead >= 0) {
+                    goto endOfDelivery;
                 }
-                if (_stableBufferBack != _bufferBack) {
-                    _stableBufferBack = _bufferBack;
+
+                IMediaSample *outSample = nullptr;
+                CheckHr(InitializeOutputSample(nullptr, &outSample));
+
+                if (confirmNewOutputFormat) {
+                    CheckHr(outSample->SetMediaType(&m_pOutput->CurrentMediaType()));
+                    confirmNewOutputFormat = false;
                 }
+
+                // even if missing sample times from upstream, we always set times for output samples in case downstream needs them
+                REFERENCE_TIME outStartTime = _deliveryFrameStartTime;
+                REFERENCE_TIME outStopTime = outStartTime + static_cast<REFERENCE_TIME>((info.stopTime - info.startTime) * _frameTimeScaling);
+                _deliveryFrameStartTime = outStopTime;
+                CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
+
+                BYTE *outBuffer;
+                CheckHr(outSample->GetPointer(&outBuffer));
+
+                FrameHandler::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
+                CheckHr(m_pOutput->Deliver(outSample));
+
+                outSample->Release();
+                outSample = nullptr;
+
+                Log("Deliver frameNb: %6i at %10lli ~ %10lli", _deliveryFrameNb, outStartTime, outStopTime);
+
+                _deliveryFrameNb += 1;
             }
+
+            _sampleTimes.erase(_sampleTimes.begin());
         }
+
+endOfDelivery:
+        _frameHandler.GarbageCollect(_inputSampleNb - _bufferUnderflowBack, _inputSampleNb + _bufferUnderflowAhead);
     }
 
-    // have to average this for the last 1 sec or so
-    _sourceFrameRate = 10000000.0 / (inStopTime - inStartTime);
+    _inputSampleNb += 1;
 
     return S_OK;
 }
 
-auto CAviSynthFilter::BeginFlush() -> HRESULT {
+auto CAviSynthFilter::EndFlush() -> HRESULT {
     Reset();
-    return __super::BeginFlush();
+    return __super::EndFlush();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::Pause() -> HRESULT {
@@ -562,9 +554,8 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsFile(const std::wstring &avsFile) 
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile() -> void {
-    _stableBufferAhead = 0;
-    _stableBufferBack = 0;
     Reset();
+    _maxBufferUnderflowAhead = 0;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormats() const -> DWORD {
@@ -579,20 +570,12 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferSize() -> int {
     return _frameHandler.GetBufferSize();
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferAhead() const -> int {
-    return _bufferAhead;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferUnderflowAhead() const -> int {
+    return _bufferUnderflowAhead;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferAheadOvertime() -> int {
-    return static_cast<int>(_frameHandler.GetAheadOvertime() / _timePerFrame);
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferBack() const -> int {
-    return _bufferBack;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferBackOvertime() -> int {
-    return static_cast<int>(_frameHandler.GetBackOvertime() / _timePerFrame);
+auto STDMETHODCALLTYPE CAviSynthFilter::GetBufferUnderflowBack() const -> int {
+    return _bufferUnderflowBack;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetSampleTimeOffset() const -> int {
@@ -600,11 +583,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetSampleTimeOffset() const -> int {
 }
 
 auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers() const -> std::pair<int, int> {
-    return { _sourceFrameNb, _deliveryFrameNb };
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetSourceFrameRate() const -> double {
-    return _sourceFrameRate;
+    return { _inputSampleNb, _deliveryFrameNb };
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetSourcePath() const -> std::wstring {
@@ -669,6 +648,8 @@ auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
             filter->Release();
         } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
             filters->Reset();
+        } else {
+            break;
         }
     }
     filters->Release();
@@ -687,8 +668,8 @@ auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESU
 
     const Format::VideoFormat receivedInputFormat = Format::GetVideoFormat(*pmt);
     if (_inputFormat != receivedInputFormat) {
-        Log("new input format:  definition %i, width %5i, height %5i, codec %#10x",
-            receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.bmi.biCompression);
+        Log("new input format:  definition %i, width %5i, height %5i, codec %s",
+            receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.GetCodecName().c_str());
         _inputFormat = receivedInputFormat;
 
         ReloadAviSynth(*pmt, true);
@@ -711,8 +692,8 @@ auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESU
 auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT {
     const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(*pmtOut);
     if (_outputFormat != newOutputFormat) {
-        Log("new output format: definition %i, width %5i, height %5i, codec %#10x",
-            newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.bmi.biCompression);
+        Log("new output format: definition %i, width %5i, height %5i, codec %s",
+            newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str());
         _outputFormat = newOutputFormat;
 
         return S_OK;
@@ -722,10 +703,12 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
 }
 
 auto CAviSynthFilter::Reset() -> void {
-    _bufferAhead = _stableBufferAhead;
-    _bufferBack = _stableBufferBack;
+    _frameHandler.FlushOnNextFrame();
+    _sampleTimes.clear();
+    _bufferUnderflowAhead = _maxBufferUnderflowAhead;
+    _bufferUnderflowBack = 0;
     _sampleTimeOffset = 0;
-    _consecutiveStableFrames = 0;
+    _deliveryFrameStartTime = 0;
     _reloadAvsFile = true;
 }
 
@@ -777,7 +760,7 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
 
     newVih->rcSource = { 0, 0, _avsScriptVideoInfo.width, _avsScriptVideoInfo.height };
     newVih->rcTarget = newVih->rcSource;
-    newVih->AvgTimePerFrame = _timePerFrame;
+    newVih->AvgTimePerFrame = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
 
     newBmi->biWidth = _avsScriptVideoInfo.width;
     newBmi->biHeight = _avsScriptVideoInfo.height;
@@ -889,6 +872,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
 
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
+    _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
     _timePerFrame = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
 
     return true;

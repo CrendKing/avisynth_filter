@@ -42,7 +42,7 @@ public:
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
     auto Receive(IMediaSample *pSample) -> HRESULT override;
-    auto BeginFlush() -> HRESULT override;
+    auto EndFlush() -> HRESULT override;
 
     auto STDMETHODCALLTYPE Pause() -> HRESULT override;
 
@@ -59,13 +59,10 @@ public:
 
     // IAvsFilterStatus
     auto STDMETHODCALLTYPE GetBufferSize() -> int override;
-    auto STDMETHODCALLTYPE GetBufferAhead() const -> int override;
-    auto STDMETHODCALLTYPE GetBufferAheadOvertime() -> int override;
-    auto STDMETHODCALLTYPE GetBufferBack() const -> int override;
-    auto STDMETHODCALLTYPE GetBufferBackOvertime() -> int override;
+    auto STDMETHODCALLTYPE GetBufferUnderflowAhead() const -> int override;
+    auto STDMETHODCALLTYPE GetBufferUnderflowBack() const -> int override;
     auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
-    auto STDMETHODCALLTYPE GetSourceFrameRate() const -> double override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
     auto STDMETHODCALLTYPE GetMediaInfo() const -> const Format::VideoFormat * override;
 
@@ -73,6 +70,11 @@ private:
     struct DefinitionPair {
         int input;
         int output;
+    };
+
+    struct SampleTimeInfo {
+        REFERENCE_TIME startTime;
+        REFERENCE_TIME stopTime;
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
@@ -95,12 +97,15 @@ private:
     auto FindCompatibleInputByOutput(int outputDefinition) const -> int;
 
     FrameHandler _frameHandler;
+    std::map<int, SampleTimeInfo> _sampleTimes;
 
     IScriptEnvironment2 *_avsEnv;
     PClip _avsScriptClip;
 
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
+    double _frameTimeScaling;
+    REFERENCE_TIME _timePerFrame;
 
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
@@ -109,27 +114,22 @@ private:
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
-    REFERENCE_TIME _timePerFrame;
-    int _sourceFrameNb;
-    int _deliveryFrameNb;
     bool _reloadAvsFile;
-
-    int _bufferAhead;
-    int _bufferBack;
-    int _sampleTimeOffset;
-
-    double _sourceFrameRate;
     std::wstring _sourcePath;
 
-    // number of consecutive frames that the buffer overtimes are 0
-    unsigned int _consecutiveStableFrames;
+    int _inputSampleNb;
+    int _deliveryFrameNb;
+    REFERENCE_TIME _deliveryFrameStartTime;
+    int _sampleTimeOffset;
+
+    int _bufferUnderflowAhead;
+    int _bufferUnderflowBack;
+    int _maxBufferUnderflowAhead;
 
     // settings related variables
 
     Registry _registry;
 
     std::wstring _avsFile;
-    int _stableBufferAhead;
-    int _stableBufferBack;
     DWORD _inputFormatBits;
 };

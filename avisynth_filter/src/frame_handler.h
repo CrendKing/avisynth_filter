@@ -10,24 +10,21 @@ public:
 
     FrameHandler();
 
-    auto GetNearestFrame(REFERENCE_TIME frameTime) -> PVideoFrame;
-    auto CreateFrame(const Format::VideoFormat &format, REFERENCE_TIME frameTime, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void;
-    auto GarbageCollect(REFERENCE_TIME min, REFERENCE_TIME max) -> void;
+    auto GetNearestFrame(int frameNb) -> PVideoFrame;
+    auto CreateFrame(const Format::VideoFormat &format, int frameNb, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> void;
+    auto GarbageCollect(int minFrameNb, int maxFrameNb) -> void;
     auto Flush() -> void;
+    auto FlushOnNextFrame() -> void;
 
-    auto GetBufferSize() -> int;
-    auto GetAheadOvertime()->REFERENCE_TIME;
-    auto GetBackOvertime() -> REFERENCE_TIME;
+    auto GetBufferSize() const -> int;
+    auto GetMaxAccessedFrameNb() const -> int;
+    auto GetMinAccessedFrameNb() const -> int;
 
 private:
-    struct TimedFrame {
-        PVideoFrame frame;
-        REFERENCE_TIME time;
-    };
+    std::map<int, PVideoFrame> _buffer;
+    mutable std::mutex _bufferMutex;
+    bool _flushOnNextFrame;
 
-    std::deque<TimedFrame> _buffer;
-    std::mutex _bufferMutex;
-
-    REFERENCE_TIME _aheadOvertime;
-    REFERENCE_TIME _backOvertime;
+    int _maxAccessedFrameNb;
+    int _minAccessedFrameNb;
 };

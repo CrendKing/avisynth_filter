@@ -6,6 +6,7 @@
 #define IDS_SETTINGS                      101
 #define IDD_STATUSPAGE                    201
 #define IDS_STATUS                        202
+
 #define IDC_TEXT_AVS_SCRIPT               1000
 #define IDC_BUTTON_EDIT                   1001
 #define IDC_BUTTON_RELOAD                 1002
@@ -30,25 +31,24 @@
 #define IDC_INPUT_FORMAT_RGB32            1021
 #define IDC_INPUT_FORMAT_RGB48            1022
 #define IDC_INPUT_FORMAT_END              1023
+
 #define IDT_TIMER_STATUS                  2000
-#define IDC_TEXT_BUFFER_SIZE              2001
-#define IDC_TEXT_FRAME_NUMBER             2002
-#define IDC_TEXT_BUFFER_AHEAD             2003
-#define IDC_TEXT_BUFFER_AHEAD_OVERTIME    2005
+#define IDC_TEXT_FRAME_NUMBER             2001
+#define IDC_TEXT_FRAME_NUMBER_VALUE       2002
+#define IDC_TEXT_BUFFER_SIZE              2003
+#define IDC_TEXT_BUFFER_SIZE_VALUE        2004
+#define IDC_TEXT_BUFFER_AHEAD             2005
+#define IDC_TEXT_BUFFER_AHEAD_VALUE       2006
 #define IDC_TEXT_BUFFER_BACK              2007
-#define IDC_TEXT_BUFFER_BACK_OVERTIME     2009
-#define IDC_TEXT_SAMPLE_TIME_OFFSET       2011
-#define IDC_TEXT_PATH                     2012
-#define IDC_TEXT_FORMAT                   2013
-#define IDC_TEXT_FRAME_RATE               2014
-#define IDC_TEXT_BUFFER_SIZE_VALUE        2015
-#define IDC_TEXT_BUFFER_AHEAD_VALUE       2016
-#define IDC_TEXT_BUFFER_BACK_VALUE        2017
-#define IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE 2018
-#define IDC_EDIT_SOURCE_PATH_VALUE        2019
-#define IDC_TEXT_FORMAT_VALUE             2020
-#define IDC_TEXT_FRAME_RATE_VALUE         2021
-#define IDC_TEXT_FRAME_NUMBER_VALUE       2022
+#define IDC_TEXT_BUFFER_BACK_VALUE        2008
+#define IDC_TEXT_SAMPLE_TIME_OFFSET       2009
+#define IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE 2010
+#define IDC_TEXT_FRAME_RATE               2011
+#define IDC_TEXT_FRAME_RATE_VALUE         2012
+#define IDC_TEXT_PATH                     2013
+#define IDC_EDIT_PATH_VALUE               2014
+#define IDC_TEXT_FORMAT                   2015
+#define IDC_TEXT_FORMAT_VALUE             2016
 
 // Next default values for new objects
 // 

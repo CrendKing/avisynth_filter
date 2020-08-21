@@ -23,6 +23,9 @@ DEFINE_GUID(IID_IAvsFilterSettings,
 DEFINE_GUID(IID_IAvsFilterStatus,
             0x2a5b2cec, 0xd874, 0x4ed8, 0xb8, 0xd9, 0x40, 0x43, 0x33, 0x30, 0x37, 0xe4);
 
+const GUID MEDIASUBTYPE_I420 = FOURCCMap('024I');
+const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
+
 #define WidenHelper(str)  L##str
 #define Widen(str)        WidenHelper(str)
 
@@ -49,10 +52,9 @@ DEFINE_GUID(IID_IAvsFilterStatus,
  * Default to 25 FPS in such cases.
  */
 constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
-
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
-
 constexpr int INVALID_DEFINITION = -1;
+constexpr int STATUS_PAGE_TIMER_INTERVAL_MS = 1000;
 
 /*
  * Stream could last forever. Use a large power as the fake number of frames.
@@ -65,6 +67,3 @@ constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
 constexpr wchar_t *REGISTRY_KEY_NAME = L"Software\\AviSynthFilter";
 constexpr wchar_t *REGISTRY_VALUE_NAME_AVS_FILE = L"AvsFile";
 constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS = L"Formats";
-
-const GUID MEDIASUBTYPE_I420 = FOURCCMap('024I');
-const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
