@@ -79,7 +79,7 @@ private:
     static auto RetrieveSourcePath(IFilterGraph *graph) -> std::wstring;
 
     auto TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT;
-    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
+    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force = false) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto Reset() -> void;
@@ -112,7 +112,8 @@ private:
     REFERENCE_TIME _timePerFrame;
     int _sourceFrameNb;
     int _deliveryFrameNb;
-    bool _reloadAvsFile;
+    bool _reloadAvsEnvFlag;
+    bool _reloadAvsFileFlag;
 
     int _bufferAhead;
     int _bufferBack;
