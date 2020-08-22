@@ -703,6 +703,8 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
 }
 
 auto CAviSynthFilter::Reset() -> void {
+    const CAutoLock lock(&m_csReceive);
+
     _frameHandler.FlushOnNextFrame();
     _sampleTimes.clear();
     _bufferUnderflowAhead = _maxBufferUnderflowAhead;
