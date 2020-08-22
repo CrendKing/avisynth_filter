@@ -6,6 +6,7 @@
 #include "interfaces.h"
 #include "registry.h"
 
+class RemoteControl;
 
 class CAviSynthFilterInputPin : public CTransformInputPin {
     friend class CAviSynthFilter;
@@ -54,6 +55,7 @@ public:
     auto STDMETHODCALLTYPE GetAvsFile() const -> const std::wstring & override;
     auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
+    auto STDMETHODCALLTYPE IsRemoteControlled() -> bool override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
@@ -64,6 +66,8 @@ public:
     auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
+    auto STDMETHODCALLTYPE GetInputFrameRate() const -> double override;
+    auto STDMETHODCALLTYPE GetOutputFrameRate() const -> double override;
     auto STDMETHODCALLTYPE GetMediaInfo() const -> const Format::VideoFormat * override;
 
 private:
@@ -81,7 +85,7 @@ private:
     static auto RetrieveSourcePath(IFilterGraph *graph) -> std::wstring;
 
     auto TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT;
-    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
+    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force = false) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto Reset() -> void;
@@ -114,7 +118,8 @@ private:
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
-    bool _reloadAvsFile;
+    bool _reloadAvsEnvFlag;
+    bool _reloadAvsFileFlag;
     std::wstring _sourcePath;
 
     int _inputSampleNb;
@@ -126,10 +131,18 @@ private:
     int _bufferUnderflowBack;
     int _maxBufferUnderflowAhead;
 
+    REFERENCE_TIME _statsStreamTime;
+    double _inputFrameRate;
+    double _outputFrameRate;
+    int _prevInputSampleNb;
+    int _prevDeliveryFrameNb;
+
     // settings related variables
 
     Registry _registry;
 
     std::wstring _avsFile;
     DWORD _inputFormatBits;
+
+    RemoteControl* _remoteControl;
 };

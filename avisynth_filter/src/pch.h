@@ -22,6 +22,7 @@
 #include <cguid.h>
 #include <initguid.h>
 #include <shellapi.h>
+#include <shlwapi.h>
 
 // DirectShow BaseClasses
 #include <streams.h>

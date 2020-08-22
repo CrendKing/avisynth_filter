@@ -26,6 +26,14 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
     _avsFile = _settings->GetAvsFile();
     SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsFile.c_str());
 
+    if (_settings->IsRemoteControlled())
+    {
+        EnableWindow(GetDlgItem(m_Dlg, IDC_EDIT_AVS_FILE), false);
+        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_EDIT), false);
+        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), false);
+        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_BROWSE), false);
+    }
+
     // the reset buffer size check box is always unchecked initially
 
     const DWORD formatBits = _settings->GetInputFormats();
@@ -50,6 +58,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     _settings->SetInputFormats(formatBits);
 
     _settings->SaveSettings();
+
+    _settings->ReloadAvsFile();
 
     return S_OK;
 }

@@ -12,6 +12,8 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 
     virtual auto STDMETHODCALLTYPE ReloadAvsFile() -> void = 0;
 
+    virtual auto STDMETHODCALLTYPE IsRemoteControlled() -> bool = 0;
+
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
     virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;
 };
@@ -22,6 +24,8 @@ DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetBufferUnderflowBack() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> = 0;
+    virtual auto STDMETHODCALLTYPE GetInputFrameRate() const -> double = 0;
+    virtual auto STDMETHODCALLTYPE GetOutputFrameRate() const -> double = 0;
 
     virtual auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring = 0;
     virtual auto STDMETHODCALLTYPE GetMediaInfo() const -> const Format::VideoFormat * = 0;

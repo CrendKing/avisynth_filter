@@ -7,9 +7,7 @@
 CAvsFilterPropStatus::CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUSPAGE, IDS_STATUS)
     , _status(nullptr)
-    , _isSourcePathSet(false)
-    , _prevInputSampleNb(-1)
-    , _prevDeliveryFrameNb(-1) {
+    , _isSourcePathSet(false) {
 }
 
 auto CAvsFilterPropStatus::OnConnect(IUnknown *pUnk) -> HRESULT {
@@ -56,19 +54,8 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             SetDlgItemTextA(hwnd, IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE, std::to_string(_status->GetSampleTimeOffset()).c_str());
 
             const auto [inputSampleNb, deliverFrameNb] = _status->GetFrameNumbers();
-            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_string(inputSampleNb).append(" / ").append(std::to_string(deliverFrameNb))).c_str());
-
-            if (_prevInputSampleNb != -1 && _prevDeliveryFrameNb != -1) {
-                const int inputSampleNbDiff = inputSampleNb - _prevInputSampleNb;
-                const int deliveryFrameNbDiff = deliverFrameNb - _prevDeliveryFrameNb;
-                if (inputSampleNbDiff > 0) {
-                    const int inputFrameRate = MulDiv(inputSampleNbDiff, 1000, STATUS_PAGE_TIMER_INTERVAL_MS);
-                    const int deliveryFrameRate = MulDiv(deliveryFrameNbDiff, 1000, STATUS_PAGE_TIMER_INTERVAL_MS);
-                    SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::to_string(inputFrameRate).append(" / ").append(std::to_string(deliveryFrameRate)).c_str());
-                }
-            }
-            _prevInputSampleNb = inputSampleNb;
-            _prevDeliveryFrameNb = deliverFrameNb;
+            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_string(inputSampleNb).append(" -> ").append(std::to_string(deliverFrameNb))).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::to_string(_status->GetInputFrameRate()).append(" -> ").append(std::to_string(_status->GetOutputFrameRate())).c_str());
 
             if (!_isSourcePathSet) {
                 SetDlgItemTextW(hwnd, IDC_EDIT_PATH_VALUE, _status->GetSourcePath().c_str());
