@@ -411,6 +411,20 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     return hr;
 }
 
+static auto GetAverageFps(std::list<REFERENCE_TIME>& samples, REFERENCE_TIME sample) -> double {
+    if (samples.size() > 0 && samples.front() > sample)
+        samples.clear();
+    else {
+        samples.push_back(sample);
+        if (samples.size() > 10)
+            samples.pop_front();
+
+        if (samples.size() >= 2)
+            return std::round(static_cast<double>((samples.size() - 1) * UNITS) / (samples.back() - samples.front()) * 1000.0) / 1000.0;
+    }
+    return 0.0;
+}
+
 auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT {
     /*
      * Unlike normal Transform() where one input sample is transformed to one output sample, our filter may not have that 1:1 relationship.
@@ -447,6 +461,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
 
     REFERENCE_TIME inStartTime, inStopTime;
     hr = pIn->GetTime(&inStartTime, &inStopTime);
+   
     if (hr == VFW_E_SAMPLE_TIME_NOT_SET) {
         /*
         Even when the upstream does not set sample time, we fill up the time in reference to the stream time.
@@ -504,6 +519,8 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
                 _deliveryFrameStartTime = outStopTime;
                 CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
 
+                _outputFrameRate = GetAverageFps(_samplesOut, outStartTime);
+
                 BYTE *outBuffer;
                 CheckHr(outSample->GetPointer(&outBuffer));
 
@@ -526,22 +543,7 @@ endOfDelivery:
     }
 
     _inputSampleNb += 1;
-
-    bool resetStats = true;
-    if (_statsStreamTime > 0) {
-        REFERENCE_TIME diff = streamTime - _statsStreamTime;
-        if (diff > 10000000) {
-            _inputFrameRate = (_inputSampleNb - _prevInputSampleNb) * 10000000.0 / diff;
-            _outputFrameRate = (_deliveryFrameNb - _prevDeliveryFrameNb) * 10000000.0 / diff;
-        }
-        else if(diff > 0) 
-            resetStats = false;
-    } 
-    if (resetStats) {
-        _statsStreamTime = streamTime;
-        _prevInputSampleNb = _inputSampleNb;
-        _prevDeliveryFrameNb = _deliveryFrameNb;
-    }
+    _inputFrameRate = GetAverageFps(_samplesIn, inStartTime);
 
     return S_OK;
 }
@@ -763,9 +765,10 @@ auto CAviSynthFilter::Reset() -> void {
     _bufferUnderflowBack = 0;
     _sampleTimeOffset = 0;
     _deliveryFrameStartTime = 0;
-    _statsStreamTime = 0;
     _inputFrameRate = 0.0;
     _outputFrameRate = 0.0;
+    _samplesIn.clear();
+    _samplesOut.clear();
     _reloadAvsEnvFlag = true;
 }
 

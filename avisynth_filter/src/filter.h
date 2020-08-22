@@ -131,11 +131,10 @@ private:
     int _bufferUnderflowBack;
     int _maxBufferUnderflowAhead;
 
-    REFERENCE_TIME _statsStreamTime;
     double _inputFrameRate;
     double _outputFrameRate;
-    int _prevInputSampleNb;
-    int _prevDeliveryFrameNb;
+    std::list<REFERENCE_TIME> _samplesIn;
+    std::list<REFERENCE_TIME> _samplesOut;
 
     // settings related variables
 
