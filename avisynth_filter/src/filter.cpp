@@ -415,14 +415,19 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
     /*
      * We process each input sample by creating an avs source frame from it and put its times in an ordered map.
      * If we detect cache miss in frame handler, we will accumulate enough frames before delivering new output.
+     *
+     * Same video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
+     * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
      */
 
     CRefTime streamTime;
     CheckHr(StreamTime(streamTime));
     streamTime = min(streamTime, m_tStart);
 
-    REFERENCE_TIME inStartTime, inStopTime;
-    hr = pIn->GetTime(&inStartTime, &inStopTime);
+    REFERENCE_TIME inStartTime;
+    REFERENCE_TIME inStopTime = 0;
+    REFERENCE_TIME dbgInStopTime;
+    hr = pIn->GetTime(&inStartTime, &dbgInStopTime);
     if (hr == VFW_E_SAMPLE_TIME_NOT_SET) {
         /*
         Even when the upstream does not set sample time, we fill up the time in reference to the stream time.
@@ -435,12 +440,13 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
         }
         inStartTime = streamTime + _sampleTimeOffset * _timePerFrame;
         inStopTime = inStartTime + _timePerFrame;
-    } else if (hr == VFW_S_NO_STOP_TIME) {
-        inStopTime = inStartTime + _timePerFrame;
+        dbgInStopTime = inStopTime;
+    } else if (!_sampleTimes.empty()) {
+        _sampleTimes.rbegin()->second.stopTime = inStartTime;
     }
 
-    Log("late: %10i streamTime: %10lli sampleTime: %10lli ~ %10lli frameTime: %lli sourceFrameNb: %4i, maxBufferAhead: %2i",
-        m_itrLate, static_cast<REFERENCE_TIME>(streamTime), inStartTime, inStopTime, inStopTime - inStartTime, _inputSampleNb, _maxBufferUnderflowAhead);
+    Log("late: %10i streamTime: %10lli sampleTime: %10lli ~ %10lli sourceFrameNb: %4i, maxBufferAhead: %2i",
+        m_itrLate, static_cast<REFERENCE_TIME>(streamTime), inStartTime, dbgInStopTime, _inputSampleNb, _maxBufferUnderflowAhead);
 
     BYTE *inputBuffer;
     CheckHr(pIn->GetPointer(&inputBuffer));
@@ -452,6 +458,10 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
     } else {
         while (!_sampleTimes.empty()) {
             const SampleTimeInfo &info = _sampleTimes.begin()->second;
+
+            if (info.stopTime == 0) {
+                break;
+            }
 
             if (_deliveryFrameStartTime == 0) {
                 _deliveryFrameStartTime = info.startTime;
@@ -489,7 +499,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
                 outSample->Release();
                 outSample = nullptr;
 
-                Log("Deliver frameNb: %6i at %10lli ~ %10lli", _deliveryFrameNb, outStartTime, outStopTime);
+                Log("Deliver frameNb: %6i at %10lli ~ %10lli frameTime: %10lli", _deliveryFrameNb, outStartTime, outStopTime, outStopTime - outStartTime);
 
                 _deliveryFrameNb += 1;
             }
@@ -498,7 +508,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsFor
         }
 
 endOfDelivery:
-        _frameHandler.GarbageCollect(_inputSampleNb - _bufferUnderflowBack, _inputSampleNb + _bufferUnderflowAhead);
+        _frameHandler.GarbageCollect(_inputSampleNb - _bufferUnderflowBack, _inputSampleNb);
     }
 
     _inputSampleNb += 1;
