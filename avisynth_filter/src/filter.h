@@ -1,10 +1,10 @@
 #pragma once
 
 #include "pch.h"
-#include "frame_handler.h"
 #include "format.h"
 #include "interfaces.h"
 #include "registry.h"
+#include "source_clip.h"
 
 
 class CAviSynthFilterInputPin : public CTransformInputPin {
@@ -16,6 +16,10 @@ public:
                             __inout HRESULT *phr,
                             __in_opt LPCWSTR pName);
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
+    auto Active() -> HRESULT override;
+
+private:
+    CAviSynthFilter *_filter;
 };
 
 class CAviSynthFilter
@@ -44,8 +48,6 @@ public:
     auto Receive(IMediaSample *pSample) -> HRESULT override;
     auto EndFlush() -> HRESULT override;
 
-    auto STDMETHODCALLTYPE Pause() -> HRESULT override;
-
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
 
@@ -59,8 +61,8 @@ public:
 
     // IAvsFilterStatus
     auto STDMETHODCALLTYPE GetBufferSize() -> int override;
-    auto STDMETHODCALLTYPE GetBufferUnderflowAhead() const -> int override;
-    auto STDMETHODCALLTYPE GetBufferUnderflowBack() const -> int override;
+    auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int override;
+    auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
     auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
@@ -72,15 +74,10 @@ private:
         int output;
     };
 
-    struct SampleTimeInfo {
-        REFERENCE_TIME startTime;
-        REFERENCE_TIME stopTime;
-    };
-
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
     static auto RetrieveSourcePath(IFilterGraph *graph) -> std::wstring;
 
-    auto TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT;
+    auto TransformAndDeliver(IMediaSample *sample) -> HRESULT;
     auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
@@ -96,10 +93,8 @@ private:
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> int;
 
-    FrameHandler _frameHandler;
-    std::map<int, SampleTimeInfo> _sampleTimes;
-
     IScriptEnvironment2 *_avsEnv;
+    SourceClip *_sourceClip;
     PClip _avsScriptClip;
 
     VideoInfo _avsSourceVideoInfo;
@@ -114,17 +109,16 @@ private:
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
-    bool _reloadAvsFile;
     std::wstring _sourcePath;
 
-    int _inputSampleNb;
-    int _deliveryFrameNb;
-    REFERENCE_TIME _deliveryFrameStartTime;
     int _sampleTimeOffset;
+    int _deliveryFrameNb;
+    int _deliverySourceSampleNb;
+    REFERENCE_TIME _deliveryFrameStartTime;
+    bool _confirmNewOutputFormat;
 
-    int _bufferUnderflowAhead;
-    int _bufferUnderflowBack;
-    int _maxBufferUnderflowAhead;
+    int _currentPrefetch;
+    int _initialPrefetch;
 
     // settings related variables
 

@@ -18,8 +18,8 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 
 DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetBufferSize() -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetBufferUnderflowAhead() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetBufferUnderflowBack() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> = 0;
 

@@ -88,10 +88,10 @@ BEGIN
     LTEXT           "- / -",IDC_TEXT_FRAME_NUMBER_VALUE,90,16,196,8
     LTEXT           "Buffer size",IDC_TEXT_BUFFER_SIZE,16,28,70,8
     LTEXT           "-", IDC_TEXT_BUFFER_SIZE_VALUE,90,28,196,8
-    LTEXT           "  underflow ahead",IDC_TEXT_BUFFER_AHEAD,16,40,70,8
-    LTEXT           "- / -", IDC_TEXT_BUFFER_AHEAD_VALUE,90,40,196,8
-    LTEXT           "  underflow back",IDC_TEXT_BUFFER_BACK,16,52,70,8
-    LTEXT           "- / -", IDC_TEXT_BUFFER_BACK_VALUE,90,52,196,8
+    LTEXT           "Current prefetch",IDC_TEXT_CURRENT_PREFETCH,16,40,70,8
+    LTEXT           "-", IDC_TEXT_CURRENT_PREFETCH_VALUE,90,40,196,8
+    LTEXT           "Initial prefetch", IDC_TEXT_INITIAL_PREFETCH,16,52,70,8
+    LTEXT           "-", IDC_TEXT_INITIAL_PREFETCH_VALUE,90,52,196,8
     LTEXT           "Sample time offset",IDC_TEXT_SAMPLE_TIME_OFFSET,16,64,70,8
     LTEXT           "-", IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE,90,64,196,8
     LTEXT           "Frame rate", IDC_TEXT_FRAME_RATE,16,76,70,8

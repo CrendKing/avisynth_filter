@@ -51,8 +51,8 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             break;
         } case WM_TIMER: {
             SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_string(_status->GetBufferSize()).c_str());
-            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_AHEAD_VALUE, std::to_string(_status->GetBufferUnderflowAhead()).c_str());
-            SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_BACK_VALUE, std::to_string(_status->GetBufferUnderflowBack()).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_CURRENT_PREFETCH_VALUE, std::to_string(_status->GetCurrentPrefetch()).c_str());
+            SetDlgItemTextA(hwnd, IDC_TEXT_INITIAL_PREFETCH_VALUE, std::to_string(_status->GetInitialPrefetch()).c_str());
             SetDlgItemTextA(hwnd, IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE, std::to_string(_status->GetSampleTimeOffset()).c_str());
 
             const auto [inputSampleNb, deliverFrameNb] = _status->GetFrameNumbers();
@@ -71,7 +71,11 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             _prevDeliveryFrameNb = deliverFrameNb;
 
             if (!_isSourcePathSet) {
-                SetDlgItemTextW(hwnd, IDC_EDIT_PATH_VALUE, _status->GetSourcePath().c_str());
+                std::wstring sourcePath = _status->GetSourcePath();
+                if (sourcePath.empty()) {
+                    sourcePath = UNAVAILABLE_SOURCE_PATH;
+                }
+                SetDlgItemTextW(hwnd, IDC_EDIT_PATH_VALUE, sourcePath.c_str());
                 _isSourcePathSet = true;
             }
 
