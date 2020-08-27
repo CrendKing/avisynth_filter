@@ -1,21 +1,18 @@
 #pragma once
 
 #include "pch.h"
-#include "format.h"
 
 
 class SourceClip : public IClip {
 public:
     struct FrameInfo {
+        int frameNb;
         PVideoFrame frame;
         REFERENCE_TIME startTime;
         REFERENCE_TIME stopTime;
     };
 
     explicit SourceClip(const VideoInfo &videoInfo);
-    ~SourceClip() {
-        int a = 0;
-    }
 
     auto __stdcall GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame override;
     auto __stdcall GetParity(int frameNb) -> bool override;
@@ -34,7 +31,7 @@ public:
 private:
     const VideoInfo &_videoInfo;
     mutable std::mutex _bufferMutex;
-    std::map<int, FrameInfo> _frameBuffer;
+    std::deque<FrameInfo> _frameBuffer;
     bool _flushOnNextInput;
     int _maxRequestedFrameNb;
 };

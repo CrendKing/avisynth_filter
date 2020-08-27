@@ -53,7 +53,7 @@ public:
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
-    auto STDMETHODCALLTYPE GetAvsFile() const -> const std::wstring & override;
+    auto STDMETHODCALLTYPE GetAvsFile() const -> std::wstring override;
     auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
@@ -66,7 +66,7 @@ public:
     auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
-    auto STDMETHODCALLTYPE GetMediaInfo() const -> const Format::VideoFormat * override;
+    auto STDMETHODCALLTYPE GetMediaInfo() const -> Format::VideoFormat override;
 
 private:
     struct DefinitionPair {
@@ -74,7 +74,7 @@ private:
         int output;
     };
 
-    static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
+    static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
     static auto RetrieveSourcePath(IFilterGraph *graph) -> std::wstring;
 
     auto TransformAndDeliver(IMediaSample *sample) -> HRESULT;
@@ -83,7 +83,7 @@ private:
 
     auto Reset() -> void;
     auto LoadSettings() -> void;
-    auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int;
+    auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> void;
@@ -91,7 +91,7 @@ private:
     auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
-    auto FindCompatibleInputByOutput(int outputDefinition) const -> int;
+    auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
     IScriptEnvironment2 *_avsEnv;
     SourceClip *_sourceClip;
@@ -102,8 +102,8 @@ private:
     double _frameTimeScaling;
     REFERENCE_TIME _timePerFrame;
 
-    std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
-    std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
+    std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
+    std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;
 
     Format::VideoFormat _inputFormat;

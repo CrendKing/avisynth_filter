@@ -24,7 +24,7 @@ public:
         auto GetCodecName() const -> std::string;
     };
 
-    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> int;
+    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<int>;
     static auto LookupAvsType(int avsType) -> std::vector<int>;
 
     template<typename T, typename = std::enable_if_t<std::is_base_of_v<AM_MEDIA_TYPE, std::decay_t<T>>>>

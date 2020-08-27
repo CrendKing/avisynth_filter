@@ -53,7 +53,6 @@ const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
  */
 constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
 constexpr char *EVAL_FILENAME = "avisynth_filter_script";
-constexpr int INVALID_DEFINITION = -1;
 constexpr int STATUS_PAGE_TIMER_INTERVAL_MS = 1000;
 
 /*

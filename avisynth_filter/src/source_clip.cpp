@@ -14,17 +14,17 @@ auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
 
     auto iter = _frameBuffer.cbegin();
     uint8_t frameCacheType = 1;
-    if (frameNb >= iter->first) {
+    if (frameNb >= iter->frameNb) {
         while (true) {
             if (iter == _frameBuffer.cend()) {
                 --iter;
                 frameCacheType = 4;
                 break;
-            } else if (frameNb < iter->first) {
+            } else if (frameNb < iter->frameNb) {
                 --iter;
                 frameCacheType = 3;
                 break;
-            } else if (frameNb == iter->first) {
+            } else if (frameNb == iter->frameNb) {
                 frameCacheType = 2;
                 break;
             }
@@ -35,9 +35,9 @@ auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb);
 
     Log("GetFrame at: %6i Queue size: %2u Back: %6i Front: %6i Served(%u): %6i maxRequestFrame: %6i",
-        frameNb, _frameBuffer.size(), _frameBuffer.cbegin()->first, _frameBuffer.crbegin()->first, frameCacheType, iter->first, _maxRequestedFrameNb);
+        frameNb, _frameBuffer.size(), _frameBuffer.cbegin()->frameNb, _frameBuffer.crbegin()->frameNb, frameCacheType, iter->frameNb, _maxRequestedFrameNb);
 
-    return iter->second.frame;
+    return iter->frame;
 }
 
 auto SourceClip::GetParity(int frameNb) -> bool {
@@ -65,11 +65,11 @@ auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime, REFE
     }
 
     if (stopTime == 0 && !_frameBuffer.empty()) {
-        _frameBuffer.rbegin()->second.stopTime = startTime;
+        _frameBuffer.rbegin()->stopTime = startTime;
     }
 
-    const int frameNb = _frameBuffer.empty() ? 0 : _frameBuffer.crbegin()->first + 1;
-    _frameBuffer.emplace(frameNb, FrameInfo { frame, startTime, stopTime });
+    const int frameNb = _frameBuffer.empty() ? 0 : _frameBuffer.crbegin()->frameNb + 1;
+    _frameBuffer.emplace_back(FrameInfo { frameNb, frame, startTime, stopTime });
     return frameNb;
 }
 
@@ -80,11 +80,11 @@ auto SourceClip::GetFrontFrame() const -> std::optional<FrameInfo> {
         return std::nullopt;
     }
 
-    if (_frameBuffer.cbegin()->second.stopTime == 0) {
+    if (_frameBuffer.cbegin()->stopTime == 0) {
         return std::nullopt;
     }
 
-    return _frameBuffer.cbegin()->second;
+    return *_frameBuffer.cbegin();
 }
 
 auto SourceClip::PopFrontFrame() -> void {

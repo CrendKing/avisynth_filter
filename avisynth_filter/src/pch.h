@@ -5,13 +5,13 @@
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS 26812)
 
 #include <algorithm>
-#include <map>
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
 #include <numeric>
-#include <unordered_map>
+#include <vector>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

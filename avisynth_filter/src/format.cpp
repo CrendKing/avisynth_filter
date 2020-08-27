@@ -56,14 +56,14 @@ auto Format::VideoFormat::GetCodecName() const -> std::string {
     }
 }
 
-auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> int {
+auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<int> {
     for (int i = 0; i < static_cast<int>(DEFINITIONS.size()); ++i) {
         if (mediaSubtype == DEFINITIONS[i].mediaSubtype) {
             return i;
         }
     }
 
-    return INVALID_DEFINITION;
+    return std::nullopt;
 }
 
 auto Format::LookupAvsType(int avsType) -> std::vector<int> {
@@ -84,7 +84,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     const REFERENCE_TIME frameTime = info.vih->AvgTimePerFrame > 0 ? info.vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
-    info.definition = LookupMediaSubtype(mediaType.subtype);
+    info.definition = *LookupMediaSubtype(mediaType.subtype);
     info.bmi = *GetBitmapInfo(mediaType);
 
     info.videoInfo.width = info.bmi.biWidth;
