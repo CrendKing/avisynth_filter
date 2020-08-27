@@ -63,7 +63,6 @@ public:
     auto STDMETHODCALLTYPE GetBufferSize() -> int override;
     auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int override;
     auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
-    auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
     auto STDMETHODCALLTYPE GetMediaInfo() const -> Format::VideoFormat override;
@@ -100,7 +99,6 @@ private:
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
     double _frameTimeScaling;
-    REFERENCE_TIME _timePerFrame;
 
     std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
@@ -111,7 +109,6 @@ private:
 
     std::wstring _sourcePath;
 
-    int _sampleTimeOffset;
     int _deliveryFrameNb;
     int _deliverySourceSampleNb;
     REFERENCE_TIME _deliveryFrameStartTime;

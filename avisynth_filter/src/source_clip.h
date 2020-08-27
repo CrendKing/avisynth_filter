@@ -20,7 +20,7 @@ public:
     auto __stdcall SetCacheHints(int cachehints, int frame_range) -> int override;
     auto __stdcall GetVideoInfo() -> const VideoInfo & override;
 
-    auto PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> int;
+    auto PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime) -> int;
     auto GetFrontFrame() const -> std::optional<FrameInfo>;
     auto PopFrontFrame() -> void;
     auto FlushOnNextInput() -> void;

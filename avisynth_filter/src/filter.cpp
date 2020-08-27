@@ -419,34 +419,27 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
     streamTime = min(streamTime, m_tStart);
 
     REFERENCE_TIME sampleStartTime;
-    REFERENCE_TIME sampleStopTime = 0;
-    REFERENCE_TIME dbgSampleStopTime;
+    REFERENCE_TIME dbgSampleStopTime = 0;
     hr = sample->GetTime(&sampleStartTime, &dbgSampleStopTime);
     if (hr == VFW_E_SAMPLE_TIME_NOT_SET) {
-        /*
-        Even when the upstream does not set sample time, we fill up the time in reference to the stream time.
-        1) Some downstream (e.g. BlueskyFRC) needs sample time to function.
-        2) If the start time is too close to the stream time, the renderer may drop the frame as being late.
-           We add offset by time-per-frame until the lateness is gone
-        */
-        if (m_itrLate > 0) {
-            _sampleTimeOffset += 1;
-        }
-        sampleStartTime = streamTime + _sampleTimeOffset * _timePerFrame;
-        sampleStopTime = sampleStartTime + _timePerFrame;
-        dbgSampleStopTime = sampleStopTime;
+        // use stream time as sample start time if source does not set one, as some downstream (e.g. BlueskyFRC) needs it
+        sampleStartTime = streamTime;
     }
 
     BYTE *inputBuffer;
     CheckHr(sample->GetPointer(&inputBuffer));
     const PVideoFrame frame = Format::CreateFrame(_inputFormat, inputBuffer, _avsEnv);
-    const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime, sampleStopTime);
+    const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime);
 
     Log("Late: %10i streamTime: %10lli sampleNb: %4i sampleTime: %10lli ~ %10lli bufferPrefetch: %6i",
         m_itrLate, static_cast<REFERENCE_TIME>(streamTime), sampleNb, sampleStartTime, dbgSampleStopTime, _currentPrefetch);
 
-    if (sampleNb > _deliverySourceSampleNb + _currentPrefetch) {
-        while (const auto currentFrame = _sourceClip->GetFrontFrame()) {
+    while (true) {
+        if (sampleNb <= _deliverySourceSampleNb + _currentPrefetch) {
+            break;
+        }
+
+        if (const auto currentFrame = _sourceClip->GetFrontFrame()) {
             const REFERENCE_TIME frameTime = static_cast<REFERENCE_TIME>((currentFrame->stopTime - currentFrame->startTime) * _frameTimeScaling);
 
             if (_deliveryFrameStartTime < currentFrame->startTime) {
@@ -488,8 +481,8 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
                 }
             }
 
-            _deliverySourceSampleNb += 1;
             _sourceClip->PopFrontFrame();
+            _deliverySourceSampleNb += 1;
         }
     }
 
@@ -558,10 +551,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentPrefetch() const -> int {
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInitialPrefetch() const -> int {
     return _initialPrefetch;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetSampleTimeOffset() const -> int {
-    return _sampleTimeOffset;
 }
 
 auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers() const -> std::pair<int, int> {
@@ -686,7 +675,6 @@ auto CAviSynthFilter::Reset() -> void {
 
     ReloadAviSynth(m_pInput->CurrentMediaType(), false);
 
-    _sampleTimeOffset = 0;
     _deliveryFrameNb = 0;
     _deliverySourceSampleNb = 0;
     _deliveryFrameStartTime = 0;
@@ -705,7 +693,7 @@ auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -
             return inputDefinition;
         }
 
-        Log("Reject input definition due to settings: %2i", inputDefinition);
+        Log("Reject input definition due to settings: %2i", *inputDefinition);
     }
 
     return std::nullopt;
@@ -858,7 +846,6 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
-    _timePerFrame = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
 
     return true;
 }

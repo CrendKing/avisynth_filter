@@ -53,7 +53,6 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_string(_status->GetBufferSize()).c_str());
             SetDlgItemTextA(hwnd, IDC_TEXT_CURRENT_PREFETCH_VALUE, std::to_string(_status->GetCurrentPrefetch()).c_str());
             SetDlgItemTextA(hwnd, IDC_TEXT_INITIAL_PREFETCH_VALUE, std::to_string(_status->GetInitialPrefetch()).c_str());
-            SetDlgItemTextA(hwnd, IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE, std::to_string(_status->GetSampleTimeOffset()).c_str());
 
             const auto [inputSampleNb, deliverFrameNb] = _status->GetFrameNumbers();
             SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, (std::to_string(inputSampleNb).append(" / ").append(std::to_string(deliverFrameNb))).c_str());

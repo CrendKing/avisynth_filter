@@ -41,14 +41,12 @@
 #define IDC_TEXT_CURRENT_PREFETCH_VALUE   2006
 #define IDC_TEXT_INITIAL_PREFETCH         2007
 #define IDC_TEXT_INITIAL_PREFETCH_VALUE   2008
-#define IDC_TEXT_SAMPLE_TIME_OFFSET       2009
-#define IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE 2010
-#define IDC_TEXT_FRAME_RATE               2011
-#define IDC_TEXT_FRAME_RATE_VALUE         2012
-#define IDC_TEXT_PATH                     2013
-#define IDC_EDIT_PATH_VALUE               2014
-#define IDC_TEXT_FORMAT                   2015
-#define IDC_TEXT_FORMAT_VALUE             2016
+#define IDC_TEXT_FRAME_RATE               2009
+#define IDC_TEXT_FRAME_RATE_VALUE         2010
+#define IDC_TEXT_PATH                     2011
+#define IDC_EDIT_PATH_VALUE               2012
+#define IDC_TEXT_FORMAT                   2013
+#define IDC_TEXT_FORMAT_VALUE             2014
 
 // Next default values for new objects
 //

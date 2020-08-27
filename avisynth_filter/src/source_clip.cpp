@@ -55,7 +55,7 @@ auto SourceClip::GetVideoInfo() -> const VideoInfo & {
     return _videoInfo;
 }
 
-auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> int {
+auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime) -> int {
     const std::unique_lock<std::mutex> lock(_bufferMutex);
 
     if (_flushOnNextInput) {
@@ -64,12 +64,12 @@ auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime, REFE
         _flushOnNextInput = false;
     }
 
-    if (stopTime == 0 && !_frameBuffer.empty()) {
+    if (!_frameBuffer.empty()) {
         _frameBuffer.rbegin()->stopTime = startTime;
     }
 
     const int frameNb = _frameBuffer.empty() ? 0 : _frameBuffer.crbegin()->frameNb + 1;
-    _frameBuffer.emplace_back(FrameInfo { frameNb, frame, startTime, stopTime });
+    _frameBuffer.emplace_back(FrameInfo { frameNb, frame, startTime, 0 });
     return frameNb;
 }
 
