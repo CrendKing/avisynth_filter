@@ -337,6 +337,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     if (mediaTypeChanged || _reloadAvsFileFlag) {
         StopStreaming();
 
+        if(_reloadAvsFileFlag)
+            Reset(false);
+
         if(mediaTypeChanged)
             m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
         else
@@ -756,8 +759,9 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
     return S_FALSE;
 }
 
-auto CAviSynthFilter::Reset() -> void {
-    const CAutoLock lock(&m_csReceive);
+auto CAviSynthFilter::Reset(bool lock) -> void {
+    if (lock)
+        m_csReceive.Lock();
 
     _frameHandler.FlushOnNextFrame();
     _sampleTimes.clear();
@@ -770,6 +774,9 @@ auto CAviSynthFilter::Reset() -> void {
     _samplesIn.clear();
     _samplesOut.clear();
     _reloadAvsEnvFlag = true;
+
+    if (lock)
+        m_csReceive.Unlock();
 }
 
 auto CAviSynthFilter::LoadSettings() -> void {
