@@ -371,7 +371,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     if (mediaTypeChanged || _reloadAvsFileFlag) {
         StopStreaming();
 
-        if(_reloadAvsFileFlag)
+        if (_reloadAvsFileFlag)
             Reset(false);
 
         if(mediaTypeChanged)
@@ -512,7 +512,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
                 _deliveryFrameStartTime = currentFrame->startTime;
             }
 
-            while (currentFrame->stopTime - _deliveryFrameStartTime >= frameTime) {
+            while (currentFrame->stopTime - _deliveryFrameStartTime >= 0) {
                 const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
 
                 IMediaSample *outSample = nullptr;
