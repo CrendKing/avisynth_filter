@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\IMediaSideData.h" />
     <ClInclude Include="src\media_sample.h" />
     <ClCompile Include="src\remote_control.h" />
     <ClInclude Include="src\frame_handler.h" />
