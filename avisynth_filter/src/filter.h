@@ -90,7 +90,7 @@ private:
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
-    auto CreateAviSynth() -> void;
+    auto CreateAviSynth() -> bool;
     auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateEnv) -> bool;
     auto DeleteAviSynth() -> void;
 

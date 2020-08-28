@@ -187,7 +187,8 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     HRESULT ret = S_OK;
     HRESULT hr;
 
-    CreateAviSynth();
+    if (!CreateAviSynth())
+        return E_FAIL;
 
     if (direction == PINDIR_INPUT) {
         IEnumMediaTypes *enumTypes;
@@ -495,7 +496,17 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
     BYTE *inputBuffer;
     CheckHr(sample->GetPointer(&inputBuffer));
     const PVideoFrame frame = Format::CreateFrame(_inputFormat, inputBuffer, _avsEnv);
-    const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime);
+
+    SourceClip::SideData *sideData = nullptr;
+    IMediaSideData *sideDataRW;
+    if (SUCCEEDED(sample->QueryInterface(&sideDataRW)))
+    {
+        sideData = new SourceClip::SideData;
+        sideData->Read(sideDataRW);
+        sideDataRW->Release();
+    }
+
+    const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime, sideData);
 
     Log("Late: %10i streamTime: %10lli sampleNb: %4i sampleTime: %10lli ~ %10lli bufferPrefetch: %6i",
         m_itrLate, static_cast<REFERENCE_TIME>(streamTime), sampleNb, sampleStartTime, dbgSampleStopTime, _currentPrefetch);
@@ -532,8 +543,14 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
 
                 BYTE *outBuffer;
                 CheckHr(outSample->GetPointer(&outBuffer));
-
                 Format::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
+
+                if (SUCCEEDED(outSample->QueryInterface(&sideDataRW))) {
+                    if (currentFrame->sideData)
+                        currentFrame->sideData->Write(sideDataRW);
+                    sideDataRW->Release();
+                }
+
                 CheckHr(m_pOutput->Deliver(outSample));
                 outSample->Release();
 
@@ -859,9 +876,13 @@ auto CAviSynthFilter::DeletePinTypes() -> void {
     _compatibleDefinitions.clear();
 }
 
-auto CAviSynthFilter::CreateAviSynth() -> void {
+auto CAviSynthFilter::CreateAviSynth() -> bool {
     if (_avsEnv == nullptr) {
         _avsEnv = CreateScriptEnvironment2();
+        if (_avsEnv == nullptr) {
+            Log("CreateAviSynth: FAILED!");
+            return false;
+        }
         _sourceClip = new SourceClip(_avsSourceVideoInfo);
 
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
@@ -869,6 +890,7 @@ auto CAviSynthFilter::CreateAviSynth() -> void {
         //TODO: remove me!
         _avsEnv->AddFunction("potplayer_source", "", Create_AvsFilterSource, _sourceClip);
     }
+    return true;
 }
 
 /**

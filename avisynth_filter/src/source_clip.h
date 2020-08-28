@@ -1,15 +1,28 @@
 #pragma once
 
 #include "pch.h"
-
+#include "IMediaSideData.h"
 
 class SourceClip : public IClip {
 public:
+    struct SideData {
+        bool hasHDR;
+        bool hasHDR_CLL;
+        bool hasOffset3d;
+        MediaSideDataHDR hdr;
+        MediaSideDataHDRContentLightLevel hdr_cll;
+        MediaSideData3DOffset offset3d;
+
+        auto Read(IMediaSideData* rw) -> void;
+        auto Write(IMediaSideData* rw) -> void;
+    };
+
     struct FrameInfo {
         int frameNb;
         PVideoFrame frame;
         REFERENCE_TIME startTime;
         REFERENCE_TIME stopTime;
+        std::shared_ptr<SideData> sideData;
     };
 
     explicit SourceClip(const VideoInfo &videoInfo);
@@ -20,7 +33,7 @@ public:
     auto __stdcall SetCacheHints(int cachehints, int frame_range) -> int override;
     auto __stdcall GetVideoInfo() -> const VideoInfo & override;
 
-    auto PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime) -> int;
+    auto PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime, SideData *sideData = nullptr) -> int;
     auto GetFrontFrame() const -> std::optional<FrameInfo>;
     auto PopFrontFrame() -> void;
     auto FlushOnNextInput() -> void;

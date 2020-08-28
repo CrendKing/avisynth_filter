@@ -2,6 +2,25 @@
 #include "source_clip.h"
 #include "logging.h"
 
+auto SourceClip::SideData::Read(IMediaSideData* rw) -> void {
+    const BYTE *data;
+    size_t sz;
+    if ((hasHDR = rw->GetSideData(IID_MediaSideDataHDR, &data, &sz) == S_OK))
+        memcpy(&hdr, data, sizeof(hdr));
+    if ((hasHDR_CLL = rw->GetSideData(IID_MediaSideDataHDRContentLightLevel, &data, &sz) == S_OK))
+        memcpy(&hdr_cll, data, sizeof(hdr_cll));
+    if ((hasOffset3d = rw->GetSideData(IID_MediaSideData3DOffset, &data, &sz) == S_OK))
+        memcpy(&offset3d, data, sizeof(offset3d));
+}
+
+auto SourceClip::SideData::Write(IMediaSideData* rw) -> void {
+    if (hasHDR)
+        rw->SetSideData(IID_MediaSideDataHDR, reinterpret_cast<BYTE*>(&hdr), sizeof(hdr));
+    if (hasHDR_CLL)
+        rw->SetSideData(IID_MediaSideDataHDRContentLightLevel, reinterpret_cast<BYTE*>(&hdr_cll), sizeof(hdr_cll));
+    if (hasOffset3d)
+        rw->SetSideData(IID_MediaSideData3DOffset, reinterpret_cast<BYTE*>(&offset3d), sizeof(offset3d));
+}
 
 SourceClip::SourceClip(const VideoInfo &videoInfo)
     : _videoInfo(videoInfo)
@@ -55,7 +74,7 @@ auto SourceClip::GetVideoInfo() -> const VideoInfo & {
     return _videoInfo;
 }
 
-auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime) -> int {
+auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime, SourceClip::SideData* sideData) -> int {
     const std::unique_lock<std::mutex> lock(_bufferMutex);
 
     if (_flushOnNextInput) {
@@ -68,8 +87,10 @@ auto SourceClip::PushBackFrame(PVideoFrame frame, REFERENCE_TIME startTime) -> i
         _frameBuffer.rbegin()->stopTime = startTime;
     }
 
+    //TODO: we may want to pass some HDR data to the frame properties
+
     const int frameNb = _frameBuffer.empty() ? 0 : _frameBuffer.crbegin()->frameNb + 1;
-    _frameBuffer.emplace_back(FrameInfo { frameNb, frame, startTime, 0 });
+    _frameBuffer.emplace_back(FrameInfo { frameNb, frame, startTime, 0, std::shared_ptr<SideData>(sideData) });
     return frameNb;
 }
 

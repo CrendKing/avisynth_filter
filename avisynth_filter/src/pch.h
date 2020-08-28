@@ -12,6 +12,9 @@
 #include <thread>
 #include <numeric>
 #include <vector>
+#include <map>
+#include <list>
+#include <cmath>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
