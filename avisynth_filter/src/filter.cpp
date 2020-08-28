@@ -1,11 +1,11 @@
 #include "pch.h"
 #include "filter.h"
+#include "media_sample.h"
 #include "prop_settings.h"
 #include "constants.h"
 #include "source_clip.h"
 #include "remote_control.h"
 #include "logging.h"
-
 
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
@@ -52,6 +52,31 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
                                                  __inout HRESULT *phr,
                                                  __in_opt LPCWSTR pName)
     : CTransformInputPin(pObjectName, pTransformFilter, phr, pName) {
+}
+
+// overridden to return out custom CAviSynthFilterAllocator instead of CMemAllocator,
+// which allocates media sample with IMedaSideData attached
+auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(IMemAllocator** ppAllocator)->HRESULT {
+    CheckPointer(ppAllocator, E_POINTER);
+    ValidateReadWritePtr(ppAllocator, sizeof(IMemAllocator*));
+    CAutoLock cObjectLock(m_pLock);
+
+    Log("CAviSynthFilterInputPin::GetAllocator");
+
+    if (m_pAllocator)
+    {
+        *ppAllocator = m_pAllocator;
+        m_pAllocator->AddRef();
+        return S_OK;
+    }
+
+    HRESULT hr = S_OK;
+    CAviSynthFilterAllocator*pAlloc = new CAviSynthFilterAllocator(&hr);
+    if (FAILED(hr)) {
+        delete pAlloc;
+        return hr;
+    }
+    return pAlloc->QueryInterface(IID_IMemAllocator, (void**)ppAllocator);
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {

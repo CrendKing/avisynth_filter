@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\media_sample.h" />
     <ClCompile Include="src\remote_control.h" />
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\format.h" />
@@ -34,6 +35,7 @@
     <ClInclude Include="src\source_clip.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\media_sample.cpp" />
     <ClCompile Include="src\remote_control.cpp" />
     <ClCompile Include="src\frame_handler.cpp" />
     <ClCompile Include="src\format.cpp" />

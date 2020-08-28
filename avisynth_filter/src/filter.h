@@ -17,6 +17,7 @@ public:
                             __inout HRESULT *phr,
                             __in_opt LPCWSTR pName);
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
+    auto STDMETHODCALLTYPE GetAllocator(IMemAllocator** ppAllocator) -> HRESULT override;
 };
 
 class CAviSynthFilter
