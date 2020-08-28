@@ -5,7 +5,7 @@
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
-// Generated from the TEXTINCLUDE 2 resource.
+// Generated from the TEXTINCLUDE resource.
 //
 #include "winres.h"
 
@@ -25,18 +25,18 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE 
+1 TEXTINCLUDE
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE 
+2 TEXTINCLUDE
 BEGIN
     "#include ""winres.h""\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE 
+3 TEXTINCLUDE
 BEGIN
     "\r\n"
     "\0"
@@ -87,20 +87,18 @@ BEGIN
     LTEXT           "Frame number",IDC_TEXT_FRAME_NUMBER,16,16,70,8
     LTEXT           "- / -",IDC_TEXT_FRAME_NUMBER_VALUE,90,16,196,8
     LTEXT           "Buffer size",IDC_TEXT_BUFFER_SIZE,16,28,70,8
-    LTEXT           "-", IDC_TEXT_BUFFER_SIZE_VALUE,90,28,196,8
-    LTEXT           "  underflow ahead",IDC_TEXT_BUFFER_AHEAD,16,40,70,8
-    LTEXT           "- / -", IDC_TEXT_BUFFER_AHEAD_VALUE,90,40,196,8
-    LTEXT           "  underflow back",IDC_TEXT_BUFFER_BACK,16,52,70,8
-    LTEXT           "- / -", IDC_TEXT_BUFFER_BACK_VALUE,90,52,196,8
-    LTEXT           "Sample time offset",IDC_TEXT_SAMPLE_TIME_OFFSET,16,64,70,8
-    LTEXT           "-", IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE,90,64,196,8
-    LTEXT           "Frame rate", IDC_TEXT_FRAME_RATE,16,76,70,8
-    LTEXT           "-", IDC_TEXT_FRAME_RATE_VALUE,90,76,196,8
+    LTEXT           "-",IDC_TEXT_BUFFER_SIZE_VALUE,90,28,196,8
+    LTEXT           "Current prefetch",IDC_TEXT_CURRENT_PREFETCH,16,40,70,8
+    LTEXT           "-",IDC_TEXT_CURRENT_PREFETCH_VALUE,90,40,196,8
+    LTEXT           "Initial prefetch",IDC_TEXT_INITIAL_PREFETCH,16,52,70,8
+    LTEXT           "-",IDC_TEXT_INITIAL_PREFETCH_VALUE,90,52,196,8
+    LTEXT           "Frame rate",IDC_TEXT_FRAME_RATE,16,64,70,8
+    LTEXT           "-",IDC_TEXT_FRAME_RATE_VALUE,90,64,196,8
     GROUPBOX        "Source",IDC_STATIC,6,100,290,44
     LTEXT           "Path / URL",IDC_TEXT_PATH,16,112,70,8
     EDITTEXT        IDC_EDIT_PATH_VALUE,90,110,196,12,ES_AUTOHSCROLL | ES_READONLY
     LTEXT           "Format",IDC_TEXT_FORMAT,16,126,70,8
-    LTEXT           "-", IDC_TEXT_FORMAT_VALUE,90,126,196,8
+    LTEXT           "-",IDC_TEXT_FORMAT_VALUE,90,126,196,8
 END
 
 
@@ -162,10 +160,8 @@ END
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
-// Generated from the TEXTINCLUDE 3 resource.
+// Generated from the TEXTINCLUDE resource.
 //
-
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
-

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "pch.h"
-#include "frame_handler.h"
 #include "format.h"
 #include "interfaces.h"
 #include "registry.h"
+#include "source_clip.h"
 
 class RemoteControl;
 
@@ -18,6 +18,10 @@ public:
                             __in_opt LPCWSTR pName);
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
     auto STDMETHODCALLTYPE GetAllocator(IMemAllocator** ppAllocator) -> HRESULT override;
+    auto Active() -> HRESULT override;
+
+private:
+    CAviSynthFilter *_filter;
 };
 
 class CAviSynthFilter
@@ -46,14 +50,12 @@ public:
     auto Receive(IMediaSample *pSample) -> HRESULT override;
     auto EndFlush() -> HRESULT override;
 
-    auto STDMETHODCALLTYPE Pause() -> HRESULT override;
-
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
-    auto STDMETHODCALLTYPE GetAvsFile() const -> const std::wstring & override;
+    auto STDMETHODCALLTYPE GetAvsFile() const -> std::wstring override;
     auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
     auto STDMETHODCALLTYPE IsRemoteControlled() -> bool override;
@@ -62,14 +64,13 @@ public:
 
     // IAvsFilterStatus
     auto STDMETHODCALLTYPE GetBufferSize() -> int override;
-    auto STDMETHODCALLTYPE GetBufferUnderflowAhead() const -> int override;
-    auto STDMETHODCALLTYPE GetBufferUnderflowBack() const -> int override;
-    auto STDMETHODCALLTYPE GetSampleTimeOffset() const -> int override;
+    auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int override;
+    auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
     auto STDMETHODCALLTYPE GetInputFrameRate() const -> double override;
     auto STDMETHODCALLTYPE GetOutputFrameRate() const -> double override;
-    auto STDMETHODCALLTYPE GetMediaInfo() const -> const Format::VideoFormat * override;
+    auto STDMETHODCALLTYPE GetMediaInfo() const -> Format::VideoFormat override;
 
 private:
     struct DefinitionPair {
@@ -77,21 +78,16 @@ private:
         int output;
     };
 
-    struct SampleTimeInfo {
-        REFERENCE_TIME startTime;
-        REFERENCE_TIME stopTime;
-    };
-
-    static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> int;
+    static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
     static auto RetrieveSourcePath(IFilterGraph *graph) -> std::wstring;
 
-    auto TransformAndDeliver(IMediaSample *pIn, bool reloadedAvsForFormatChange, bool confirmNewOutputFormat) -> HRESULT;
+    auto TransformAndDeliver(IMediaSample *sample) -> HRESULT;
     auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force = false) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto Reset(bool lock = true) -> void;
     auto LoadSettings() -> void;
-    auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> int;
+    auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> void;
@@ -99,38 +95,33 @@ private:
     auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
-    auto FindCompatibleInputByOutput(int outputDefinition) const -> int;
-
-    FrameHandler _frameHandler;
-    std::map<int, SampleTimeInfo> _sampleTimes;
+    auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
     IScriptEnvironment2 *_avsEnv;
+    SourceClip *_sourceClip;
     PClip _avsScriptClip;
 
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
     double _frameTimeScaling;
-    REFERENCE_TIME _timePerFrame;
 
-    std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableInputTypes;
-    std::unordered_map<int, AM_MEDIA_TYPE *> _acceptableOuputTypes;
+    std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
+    std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
-    bool _reloadAvsEnvFlag;
     bool _reloadAvsFileFlag;
     std::wstring _sourcePath;
 
-    int _inputSampleNb;
     int _deliveryFrameNb;
+    int _deliverySourceSampleNb;
     REFERENCE_TIME _deliveryFrameStartTime;
-    int _sampleTimeOffset;
+    bool _confirmNewOutputFormat;
 
-    int _bufferUnderflowAhead;
-    int _bufferUnderflowBack;
-    int _maxBufferUnderflowAhead;
+    int _currentPrefetch;
+    int _initialPrefetch;
 
     double _inputFrameRate;
     double _outputFrameRate;

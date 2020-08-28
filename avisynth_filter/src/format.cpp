@@ -56,14 +56,14 @@ auto Format::VideoFormat::GetCodecName() const -> std::string {
     }
 }
 
-auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> int {
+auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<int> {
     for (int i = 0; i < static_cast<int>(DEFINITIONS.size()); ++i) {
         if (mediaSubtype == DEFINITIONS[i].mediaSubtype) {
             return i;
         }
     }
 
-    return INVALID_DEFINITION;
+    return std::nullopt;
 }
 
 auto Format::LookupAvsType(int avsType) -> std::vector<int> {
@@ -84,7 +84,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     const REFERENCE_TIME frameTime = info.vih->AvgTimePerFrame > 0 ? info.vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
-    info.definition = LookupMediaSubtype(mediaType.subtype);
+    info.definition = *LookupMediaSubtype(mediaType.subtype);
     info.bmi = *GetBitmapInfo(mediaType);
 
     info.videoInfo.width = info.bmi.biWidth;
@@ -95,6 +95,24 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     info.videoInfo.num_frames = NUM_FRAMES_FOR_INFINITE_STREAM;
 
     return info;
+}
+
+auto Format::WriteSample(const VideoFormat &format, PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void {
+    const BYTE *srcSlices[] = { srcFrame->GetReadPtr(), srcFrame->GetReadPtr(PLANAR_U), srcFrame->GetReadPtr(PLANAR_V) };
+    const int srcStrides[] = { srcFrame->GetPitch(), srcFrame->GetPitch(PLANAR_U), srcFrame->GetPitch(PLANAR_V) };
+
+    CopyToOutput(format, srcSlices, srcStrides, dstBuffer, srcFrame->GetRowSize(), srcFrame->GetHeight(), avsEnv);
+}
+
+auto Format::CreateFrame(const VideoFormat &format, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> PVideoFrame {
+    PVideoFrame frame = avsEnv->NewVideoFrame(format.videoInfo, sizeof(__m128i));
+
+    BYTE *dstSlices[] = { frame->GetWritePtr(), frame->GetWritePtr(PLANAR_U), frame->GetWritePtr(PLANAR_V) };
+    const int dstStrides[] = { frame->GetPitch(), frame->GetPitch(PLANAR_U), frame->GetPitch(PLANAR_V) };
+
+    CopyFromInput(format, srcBuffer, dstSlices, dstStrides, frame->GetRowSize(), frame->GetHeight(), avsEnv);
+
+    return frame;
 }
 
 auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int dstRowSize, int dstHeight, IScriptEnvironment *avsEnv) -> void {

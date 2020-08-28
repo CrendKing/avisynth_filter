@@ -1,4 +1,4 @@
-﻿//{{NO_DEPENDENCIES}}
+//{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
 // Used by avisynth_filter.rc
 //
@@ -37,26 +37,24 @@
 #define IDC_TEXT_FRAME_NUMBER_VALUE       2002
 #define IDC_TEXT_BUFFER_SIZE              2003
 #define IDC_TEXT_BUFFER_SIZE_VALUE        2004
-#define IDC_TEXT_BUFFER_AHEAD             2005
-#define IDC_TEXT_BUFFER_AHEAD_VALUE       2006
-#define IDC_TEXT_BUFFER_BACK              2007
-#define IDC_TEXT_BUFFER_BACK_VALUE        2008
-#define IDC_TEXT_SAMPLE_TIME_OFFSET       2009
-#define IDC_TEXT_SAMPLE_TIME_OFFSET_VALUE 2010
-#define IDC_TEXT_FRAME_RATE               2011
-#define IDC_TEXT_FRAME_RATE_VALUE         2012
-#define IDC_TEXT_PATH                     2013
-#define IDC_EDIT_PATH_VALUE               2014
-#define IDC_TEXT_FORMAT                   2015
-#define IDC_TEXT_FORMAT_VALUE             2016
+#define IDC_TEXT_CURRENT_PREFETCH         2005
+#define IDC_TEXT_CURRENT_PREFETCH_VALUE   2006
+#define IDC_TEXT_INITIAL_PREFETCH         2007
+#define IDC_TEXT_INITIAL_PREFETCH_VALUE   2008
+#define IDC_TEXT_FRAME_RATE               2009
+#define IDC_TEXT_FRAME_RATE_VALUE         2010
+#define IDC_TEXT_PATH                     2011
+#define IDC_EDIT_PATH_VALUE               2012
+#define IDC_TEXT_FORMAT                   2013
+#define IDC_TEXT_FORMAT_VALUE             2014
 
 // Next default values for new objects
-// 
+//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        106
-#define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1009
-#define _APS_NEXT_SYMED_VALUE           102
+#define _APS_NEXT_RESOURCE_VALUE          106
+#define _APS_NEXT_COMMAND_VALUE           40001
+#define _APS_NEXT_CONTROL_VALUE           1009
+#define _APS_NEXT_SYMED_VALUE             102
 #endif
 #endif
