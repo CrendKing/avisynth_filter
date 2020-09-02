@@ -3,6 +3,8 @@
 #include "pch.h"
 
 
+namespace AvsFilter {
+
 class Format {
 public:
     struct Definition {
@@ -17,16 +19,16 @@ public:
     struct VideoFormat {
         int definition;
         VideoInfo videoInfo;
-        double par;
-        int hdr;
-        int hdr_luminance;
+        int pixelAspectRatio;
+        int hdrType;
+        int hdrLuminance;
 
         BITMAPINFOHEADER bmi;
         VIDEOINFOHEADER *vih;
 
         auto operator!=(const VideoFormat &other) const -> bool;
 
-        auto GetCodec() const -> DWORD;
+        auto GetCodecFourCC() const -> DWORD;
         auto GetCodecName() const -> std::string;
     };
 
@@ -56,5 +58,7 @@ public:
 
 private:
     static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void;
-    static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, uint8_t bytesPerComponent) -> void;
+    static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, int bytesPerComponent) -> void;
 };
+
+}

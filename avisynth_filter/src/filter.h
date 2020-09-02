@@ -4,25 +4,11 @@
 #include "format.h"
 #include "interfaces.h"
 #include "registry.h"
+#include "remote_control.h"
 #include "source_clip.h"
 
-class RemoteControl;
 
-class CAviSynthFilterInputPin : public CTransformInputPin {
-    friend class CAviSynthFilter;
-
-public:
-    CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
-                            __inout CTransformFilter *pTransformFilter,
-                            __inout HRESULT *phr,
-                            __in_opt LPCWSTR pName);
-    auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
-    auto STDMETHODCALLTYPE GetAllocator(IMemAllocator** ppAllocator) -> HRESULT override;
-    auto Active() -> HRESULT override;
-
-private:
-    CAviSynthFilter *_filter;
-};
+namespace AvsFilter {
 
 class CAviSynthFilter
     : public CVideoTransformFilter
@@ -33,7 +19,7 @@ class CAviSynthFilter
 
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
-    ~CAviSynthFilter();
+    virtual ~CAviSynthFilter();
 
     DECLARE_IUNKNOWN
 
@@ -55,11 +41,11 @@ public:
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
-    auto STDMETHODCALLTYPE GetAvsFile() const -> std::wstring override;
-    auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
-    auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
-    auto STDMETHODCALLTYPE GetAvsError() const -> std::string override;
-    auto STDMETHODCALLTYPE IsRemoteControlled() -> bool override;
+    auto STDMETHODCALLTYPE GetAvsSourceFile() const -> std::optional<std::wstring> override;
+    auto STDMETHODCALLTYPE GetAvsSourceScript() const -> std::optional<std::wstring> override;
+    auto STDMETHODCALLTYPE SetAvsSourceFile(const std::wstring &avsFile) -> void override;
+    auto STDMETHODCALLTYPE SetAvsSourceScript(const std::wstring &avsScript) -> void override;
+    auto STDMETHODCALLTYPE ReloadAvsSource() -> void override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
@@ -67,13 +53,16 @@ public:
     auto STDMETHODCALLTYPE GetBufferSize() -> int override;
     auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int override;
     auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
-    auto STDMETHODCALLTYPE GetPlayState() const -> PlayState override;
-    auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
-    auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
-    auto STDMETHODCALLTYPE GetInputFrameRate() const -> double override;
-    auto STDMETHODCALLTYPE GetOutputFrameRate() const -> double override;
-    auto STDMETHODCALLTYPE GetMediaInfo() const -> Format::VideoFormat override;
-    auto STDMETHODCALLTYPE GetFiltersList() const -> std::list<std::wstring> override;
+    auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int override;
+    auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int override;
+    auto STDMETHODCALLTYPE GetInputFrameRate() const -> int override;
+    auto STDMETHODCALLTYPE GetOutputFrameRate() const -> int override;
+    auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring override;
+    auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat override;
+
+    auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring> override;
+    auto STDMETHODCALLTYPE GetAvsState() const -> AvsState override;
+    auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string> override;
 
 private:
     struct DefinitionPair {
@@ -82,13 +71,14 @@ private:
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
-    auto RetrieveSourcePathAndFiltersList() -> std::wstring;
 
-    auto TransformAndDeliver(IMediaSample *sample) -> HRESULT;
-    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force = false) -> HRESULT;
+    auto TransformAndDeliver(IMediaSample *inSample) -> HRESULT;
+    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
+    auto RefreshFrameRates(REFERENCE_TIME currentSampleStartTime, int currentSampleNb) -> void;
 
-    auto Reset(bool lock = true) -> void;
+    auto Reset() -> void;
+    auto TraverseFiltersInGraph() -> void;
     auto LoadSettings() -> void;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
@@ -115,29 +105,32 @@ private:
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
 
-    bool _reloadAvsFileFlag;
-    std::wstring _sourcePath;
-    std::list<std::wstring> _filtersList;
+    std::wstring _avsSourceFile;
+    std::wstring _avsSourceScript;
+    bool _reloadAvsSource;
+    RemoteControl *_remoteControl;
 
-    PlayState _playState;
+    REFERENCE_TIME _deliveryFrameStartTime;
     int _deliveryFrameNb;
     int _deliverySourceSampleNb;
-    REFERENCE_TIME _deliveryFrameStartTime;
     bool _confirmNewOutputFormat;
 
     int _currentPrefetch;
     int _initialPrefetch;
 
-    double _inputFrameRate;
-    double _outputFrameRate;
-    std::list<REFERENCE_TIME> _samplesIn;
-    std::list<REFERENCE_TIME> _samplesOut;
+    REFERENCE_TIME _frameRateCheckpointInSampleStartTime;
+    int _frameRateCheckpointInSampleNb;
+    REFERENCE_TIME _frameRateCheckpointOutFrameStartTime;
+    int _frameRateCheckpointOutFrameNb;
+    int _inputFrameRate;
+    int _outputFrameRate;
+
+    std::wstring _videoSourcePath;
+    std::vector<std::wstring> _videoFilterNames;
+    std::string _avsError;
 
     Registry _registry;
-
-    std::wstring _avsFile;
-    std::string _avsError;
     DWORD _inputFormatBits;
-
-    RemoteControl* _remoteControl;
 };
+
+}

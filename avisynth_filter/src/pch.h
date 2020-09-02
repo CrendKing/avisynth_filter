@@ -7,14 +7,11 @@
 #include <algorithm>
 #include <deque>
 #include <mutex>
+#include <numeric>
 #include <optional>
 #include <string>
 #include <thread>
-#include <numeric>
 #include <vector>
-#include <map>
-#include <list>
-#include <cmath>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -24,7 +21,6 @@
 #include <cguid.h>
 #include <initguid.h>
 #include <shellapi.h>
-#include <shlwapi.h>
 
 // DirectShow BaseClasses
 #include <streams.h>

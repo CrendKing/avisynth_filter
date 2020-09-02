@@ -3,6 +3,8 @@
 #include "constants.h"
 
 
+namespace AvsFilter {
+
 Registry::Registry()
     : _registryKey(nullptr) {
     RegCreateKeyEx(HKEY_CURRENT_USER, REGISTRY_KEY_NAME, 0, nullptr, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, nullptr, &_registryKey, nullptr);
@@ -51,4 +53,6 @@ auto Registry::WriteNumber(const wchar_t *valueName, DWORD valueNumber) const ->
     if (_registryKey) {
         RegSetValueEx(_registryKey, valueName, 0, REG_DWORD, reinterpret_cast<const BYTE *>(&valueNumber), sizeof(valueNumber));
     }
+}
+
 }

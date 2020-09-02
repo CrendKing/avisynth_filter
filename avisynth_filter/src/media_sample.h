@@ -1,45 +1,28 @@
 #pragma once
 
 #include "pch.h"
-#include "IMediaSideData.h"
+#include "side_data.h"
+
+
+namespace AvsFilter {
 
 class CAviSynthFilterMediaSample
     : public CMediaSample
-    , public IMediaSideData
-{
+    , public IMediaSideData {
 public:
-    CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator* pAllocator, HRESULT* phr,
-        LPBYTE pBuffer = nullptr, LONG length = 0);
+    CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator *pAllocator, HRESULT *phr, LPBYTE pBuffer = nullptr, LONG length = 0);
 
-    ~CAviSynthFilterMediaSample();
+    // IUnknown
+    auto STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppv) -> HRESULT override;
+    auto STDMETHODCALLTYPE AddRef() -> ULONG override;
+    auto STDMETHODCALLTYPE Release() -> ULONG override;
 
-    //IUnknown
-    auto STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv) -> HRESULT;
-    auto STDMETHODCALLTYPE AddRef() -> ULONG;
-    auto STDMETHODCALLTYPE Release() -> ULONG;
-
-    //IMediaSideData
-    auto STDMETHODCALLTYPE SetSideData(GUID guidType, const BYTE* pData, size_t size) -> HRESULT;
-    auto STDMETHODCALLTYPE GetSideData(GUID guidType, const BYTE** pData, size_t* pSize) -> HRESULT;
+    // IMediaSideData
+    auto STDMETHODCALLTYPE SetSideData(GUID guidType, const BYTE *pData, size_t size) -> HRESULT override;
+    auto STDMETHODCALLTYPE GetSideData(GUID guidType, const BYTE **pData, size_t *pSize) -> HRESULT override;
 
 private:
-    std::map<std::wstring, std::vector<BYTE>> _sideData;
+    HDRSideData _hdr;
 };
 
-//The exact copy of CMemAllocator
-class CAviSynthFilterAllocator : public CBaseAllocator {
-public:
-    CAviSynthFilterAllocator(HRESULT* phr);
-    ~CAviSynthFilterAllocator();
-
-    auto STDMETHODCALLTYPE SetProperties(ALLOCATOR_PROPERTIES* pRequest, ALLOCATOR_PROPERTIES* pActual) -> HRESULT;
-
-private:
-    auto Alloc()->HRESULT override;
-
-    auto Free() -> void override;
-    auto ReallyFree() -> void;
-
-private:
-    LPBYTE m_pBuffer;   // combined memory for all buffers
-};
+}

@@ -4,6 +4,8 @@
 #include "interfaces.h"
 
 
+namespace AvsFilter {
+
 class CAvsFilterPropStatus : public CBasePropertyPage {
 public:
     CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr);
@@ -18,3 +20,5 @@ private:
     IAvsFilterStatus *_status;
     bool _isSourcePathSet;
 };
+
+}

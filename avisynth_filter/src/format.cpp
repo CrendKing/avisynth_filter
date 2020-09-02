@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "format.h"
+#include "api.h"
 #include "constants.h"
 
+
+namespace AvsFilter {
 
 static const __m128i DEINTERLEAVE_MASK_8_BIT_1 = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 14, 12, 10, 8, 6, 4, 2, 0);
 static const __m128i DEINTERLEAVE_MASK_8_BIT_2 = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 15, 13, 11, 9, 7, 5, 3, 1);
@@ -37,7 +40,7 @@ auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
         || memcmp(vih, other.vih, sizeof(VIDEOINFOHEADER)) != 0;
 }
 
-auto Format::VideoFormat::GetCodec() const -> DWORD {
+auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
     return FOURCCMap(&DEFINITIONS[definition].mediaSubtype).GetFOURCC();
 }
 
@@ -55,7 +58,7 @@ auto Format::VideoFormat::GetCodecName() const -> std::string {
             return "RGB0";
         }
     } else {
-        const DWORD fourCC = FOURCCMap(&subtype).GetFOURCC();
+        const DWORD fourCC = GetCodecFourCC();
         return std::string(reinterpret_cast<const char *>(&fourCC), 4);
     }
 }
@@ -82,7 +85,7 @@ auto Format::LookupAvsType(int avsType) -> std::vector<int> {
     return indices;
 }
 
-auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> Format::VideoFormat {
+auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     VideoFormat info {};
 
     info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
@@ -98,17 +101,24 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> Format::VideoForm
     info.videoInfo.pixel_type = DEFINITIONS[info.definition].avsType;
     info.videoInfo.num_frames = NUM_FRAMES_FOR_INFINITE_STREAM;
 
-    info.par = 1.0;
+    info.pixelAspectRatio = PAR_SCALE_FACTOR;
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2*>(info.vih);
+        VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(info.vih);
         if (vih2->dwPictAspectRatioY > 0) {
-            double dar = static_cast<double>(vih2->dwPictAspectRatioX) / vih2->dwPictAspectRatioY;
-            double sar = static_cast<double>(info.videoInfo.width) / info.videoInfo.height;
-            info.par = dar / sar;
+            /*
+             * pixel aspect ratio = display aspect ratio (DAR) / storage aspect ratio (SAR)
+             * DAR comes from VIDEOINFOHEADER2.dwPictAspectRatioX / VIDEOINFOHEADER2.dwPictAspectRatioY
+             * SAR comes from info.videoInfo.width / info.videoInfo.height
+             */
+            info.pixelAspectRatio = static_cast<int>(llMulDiv(static_cast<LONGLONG>(vih2->dwPictAspectRatioX) * info.videoInfo.height,
+                                                     PAR_SCALE_FACTOR,
+                                                     static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * info.videoInfo.width,
+                                                     0));
         }
     }
-    info.hdr = 0;
-    info.hdr_luminance = 0;
+
+    info.hdrType = 0;
+    info.hdrLuminance = 0;
 
     return info;
 }
@@ -270,7 +280,7 @@ auto Format::Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2
     }
 }
 
-auto Format::Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, uint8_t bytesPerComponent) -> void {
+auto Format::Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, int bytesPerComponent) -> void {
     const int iterations = rowSize / sizeof(__m128i);
     const int remainderStart = iterations * sizeof(__m128i);
 
@@ -306,4 +316,6 @@ auto Format::Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE 
         src2 += srcStride;
         dst += dstStride;
     }
+}
+
 }

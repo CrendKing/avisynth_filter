@@ -3,25 +3,29 @@
 #include "pch.h"
 #include "interfaces.h"
 
+
+namespace AvsFilter {
+
 class RemoteControl {
 public:
-    RemoteControl(IAvsFilterStatus* status, IAvsFilterSettings* settings);
+    RemoteControl(IAvsFilterStatus *status, IAvsFilterSettings *settings);
     virtual ~RemoteControl();
 
     auto Start() -> void;
 
 private:
-    static auto GetInstance(HWND wnd) -> RemoteControl*;
-    auto SendData(HWND receiver, DWORD id, const std::string& data) -> void;
-    auto SendData(HWND receiver, DWORD id, const std::wstring& data) -> void;
+    static auto CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
-    static auto Run(LPVOID lpParam) -> DWORD;
-    static auto WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT;
+    auto Run() -> void;
+    auto SendString(HWND receiver, ULONG_PTR id, const std::string &data) const->LRESULT;
+    auto SendString(HWND receiver, ULONG_PTR id, const std::wstring &data) const -> LRESULT;
+    auto HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyData) const -> LRESULT;
 
-private:
-    HANDLE _hThread;
+    std::thread _msgThread;
     HWND _hWnd;
 
-    IAvsFilterStatus* _status;
-    IAvsFilterSettings* _settings;
+    IAvsFilterStatus *_status;
+    IAvsFilterSettings *_settings;
 };
+
+}

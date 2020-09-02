@@ -3,10 +3,12 @@
 #include "pch.h"
 
 
+namespace AvsFilter {
+
 class Registry {
 public:
     Registry();
-    ~Registry();
+    virtual ~Registry();
 
     auto ReadString(const wchar_t *valueName) const -> std::wstring;
     auto ReadNumber(const wchar_t *valueName, int defaultValue) const -> DWORD;
@@ -16,3 +18,5 @@ public:
 private:
     HKEY _registryKey;
 };
+
+}

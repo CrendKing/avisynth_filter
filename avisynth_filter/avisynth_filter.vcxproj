@@ -19,29 +19,32 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\remote_api.h" />
-    <ClInclude Include="src\IMediaSideData.h" />
-    <ClInclude Include="src\media_sample.h" />
-    <ClCompile Include="src\remote_control.h" />
-    <ClInclude Include="src\format.h" />
-    <ClInclude Include="src\filter.h" />
-    <ClInclude Include="src\logging.h" />
-    <ClInclude Include="src\prop_settings.h" />
+    <ClInclude Include="src\allocator.h" />
     <ClInclude Include="src\constants.h" />
+    <ClInclude Include="src\filter.h" />
+    <ClInclude Include="src\format.h" />
+    <ClInclude Include="src\input_pin.h" />
+    <ClInclude Include="src\interfaces.h" />
+    <ClInclude Include="src\logging.h" />
+    <ClInclude Include="src\media_sample.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\prop_settings.h" />
     <ClInclude Include="src\prop_status.h" />
     <ClInclude Include="src\registry.h" />
+    <ClInclude Include="src\api.h" />
+    <ClInclude Include="src\remote_control.h" />
     <ClInclude Include="src\resource.h" />
-    <ClInclude Include="src\interfaces.h" />
+    <ClInclude Include="src\side_data.h" />
     <ClInclude Include="src\source_clip.h" />
+    <ClInclude Include="src\util.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\media_sample.cpp" />
-    <ClCompile Include="src\remote_control.cpp" />
-    <ClCompile Include="src\format.cpp" />
+    <ClCompile Include="src\allocator.cpp" />
     <ClCompile Include="src\filter.cpp" />
-    <ClCompile Include="src\prop_settings.cpp" />
+    <ClCompile Include="src\format.cpp" />
+    <ClCompile Include="src\input_pin.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\media_sample.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -49,9 +52,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
+    <ClCompile Include="src\prop_settings.cpp" />
     <ClCompile Include="src\prop_status.cpp" />
     <ClCompile Include="src\registry.cpp" />
+    <ClCompile Include="src\side_data.cpp" />
     <ClCompile Include="src\source_clip.cpp" />
+    <ClCompile Include="src\remote_control.cpp" />
+    <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\$(ProjectName).def" />
@@ -144,6 +151,9 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>$(ProjectDir)src\$(ProjectName).def</ModuleDefinitionFile>
@@ -162,6 +172,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>$(ProjectDir)src\$(ProjectName).def</ModuleDefinitionFile>
@@ -185,6 +196,9 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>$(ProjectDir)src\$(ProjectName).def</ModuleDefinitionFile>
@@ -206,6 +220,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>$(ProjectDir)src\$(ProjectName).def</ModuleDefinitionFile>

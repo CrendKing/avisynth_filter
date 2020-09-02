@@ -3,6 +3,8 @@
 #include "constants.h"
 
 
+namespace AvsFilter {
+
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_PROPPAGE, IDS_SETTINGS)
     , _settings(nullptr) {
@@ -23,11 +25,10 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    _avsFile = _settings->GetAvsFile();
-    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsFile.c_str());
-
-    if (_settings->IsRemoteControlled())
-    {
+    if (auto optAvsSourceFile = _settings->GetAvsSourceFile()) {
+        _avsSourceFile = optAvsSourceFile.value();
+        SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsSourceFile.c_str());
+    } else {
         EnableWindow(GetDlgItem(m_Dlg, IDC_EDIT_AVS_FILE), false);
         EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_EDIT), false);
         EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), false);
@@ -47,7 +48,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
-    _settings->SetAvsFile(_avsFile);
+    _settings->SetAvsSourceFile(_avsSourceFile);
 
     DWORD formatBits = 0;
     for (int i = IDC_INPUT_FORMAT_NV12; i < IDC_INPUT_FORMAT_END; ++i) {
@@ -59,49 +60,45 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
 
     _settings->SaveSettings();
 
-    _settings->ReloadAvsFile();
+    _settings->ReloadAvsSource();
 
     return S_OK;
 }
 
 auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR {
-    switch (uMsg) {
-        case WM_COMMAND: {
-            if (HIWORD(wParam) == EN_CHANGE) {
-                if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
-                    wchar_t buf[STR_MAX_LENGTH];
-                    GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
-                    const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
+    if (uMsg == WM_COMMAND) {
+        if (HIWORD(wParam) == EN_CHANGE) {
+            if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
+                wchar_t buf[STR_MAX_LENGTH];
+                GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
+                const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
 
-                    if (newValue != _avsFile) {
-                        _avsFile = newValue;
-                        SetDirty();
-                    }
+                if (newValue != _avsSourceFile) {
+                    _avsSourceFile = newValue;
+                    SetDirty();
                 }
-            } else if (HIWORD(wParam) == BN_CLICKED) {
-                if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
-                    ShellExecute(hwnd, L"edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
-                } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
-                    _settings->ReloadAvsFile();
-                } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
-                    wchar_t szFile[MAX_PATH] {};
+            }
+        } else if (HIWORD(wParam) == BN_CLICKED) {
+            if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsSourceFile.empty()) {
+                ShellExecute(hwnd, L"edit", _avsSourceFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+            } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
+                _settings->ReloadAvsSource();
+            } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
+                wchar_t szFile[MAX_PATH] {};
 
-                    OPENFILENAME ofn {};
-                    ofn.lStructSize = sizeof(OPENFILENAME);
-                    ofn.lpstrFile = szFile;
-                    ofn.nMaxFile = sizeof(szFile);
-                    ofn.lpstrFilter = L"avs Files\0*.avs\0All Files\0*.*\0";
-                    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+                OPENFILENAME ofn {};
+                ofn.lStructSize = sizeof(OPENFILENAME);
+                ofn.lpstrFile = szFile;
+                ofn.nMaxFile = sizeof(szFile);
+                ofn.lpstrFilter = L"avs Files\0*.avs\0All Files\0*.*\0";
+                ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-                    if (GetOpenFileName(&ofn) == TRUE) {
-                        SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
-                    }
+                if (GetOpenFileName(&ofn) == TRUE) {
+                    SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
                 }
-
-                SetDirty();
             }
 
-            break;
+            SetDirty();
         }
     }
 
@@ -113,4 +110,6 @@ void CAvsFilterPropSettings::SetDirty() {
     if (m_pPageSite) {
         m_pPageSite->OnStatusChange(PROPPAGESTATUS_DIRTY);
     }
+}
+
 }

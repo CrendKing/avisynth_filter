@@ -143,7 +143,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,5,0,0
+ FILEVERSION 0,6,0,0
  PRODUCTVERSION 1,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -152,7 +152,7 @@ VS_VERSION_INFO VERSIONINFO
  FILEFLAGS 0x0L
 #endif
  FILEOS 0x40004L
- FILETYPE 0x0L
+ FILETYPE 0x2L
  FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
@@ -160,8 +160,8 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "CrendKing"
-            VALUE "FileDescription", "AviSynth DirectShow filter"
-            VALUE "FileVersion", "0.5.0.0"
+            VALUE "FileDescription", "AviSynth DirectShow Filter"
+            VALUE "FileVersion", "0.6.0.0"
             VALUE "InternalName", "avisynth_filter.ax"
             VALUE "LegalCopyright", "Copyright (C) 2020"
             VALUE "OriginalFilename", "avisynth_filter.rc"

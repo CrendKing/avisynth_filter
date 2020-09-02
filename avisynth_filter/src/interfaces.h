@@ -1,42 +1,39 @@
 #pragma once
 
 #include "pch.h"
+#include "api.h"
 #include "format.h"
 
+
+namespace AvsFilter {
 
 DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
     virtual auto STDMETHODCALLTYPE SaveSettings() const -> void = 0;
 
-    virtual auto STDMETHODCALLTYPE GetAvsFile() const -> std::wstring = 0;
-    virtual auto STDMETHODCALLTYPE SetAvsFile(const std::wstring & avsFile) -> void = 0;
-
-    virtual auto STDMETHODCALLTYPE ReloadAvsFile() -> void = 0;
-    virtual auto STDMETHODCALLTYPE GetAvsError() const -> std::string = 0;
-
-    virtual auto STDMETHODCALLTYPE IsRemoteControlled() -> bool = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsSourceFile() const -> std::optional<std::wstring> = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsSourceScript() const -> std::optional<std::wstring> = 0;
+    virtual auto STDMETHODCALLTYPE SetAvsSourceFile(const std::wstring &avsFile) -> void = 0;
+    virtual auto STDMETHODCALLTYPE SetAvsSourceScript(const std::wstring &avsScript) -> void = 0;
+    virtual auto STDMETHODCALLTYPE ReloadAvsSource() -> void = 0;
 
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
     virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;
 };
 
 DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
-    enum PlayState {
-        StateInitializing,
-        StateError,
-        StatePlaying,
-        StatePaused
-    };
-
     virtual auto STDMETHODCALLTYPE GetBufferSize() -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetInputFrameRate() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetOutputFrameRate() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring = 0;
+    virtual auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat = 0;
 
-    virtual auto STDMETHODCALLTYPE GetPlayState() const -> PlayState = 0;
-    virtual auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> = 0;
-    virtual auto STDMETHODCALLTYPE GetInputFrameRate() const -> double = 0;
-    virtual auto STDMETHODCALLTYPE GetOutputFrameRate() const -> double = 0;
-
-    virtual auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring = 0;
-    virtual auto STDMETHODCALLTYPE GetMediaInfo() const -> Format::VideoFormat = 0;
-    virtual auto STDMETHODCALLTYPE GetFiltersList() const -> std::list<std::wstring> = 0;
+    virtual auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring> = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsState() const -> AvsState = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string> = 0;
 };
+
+}

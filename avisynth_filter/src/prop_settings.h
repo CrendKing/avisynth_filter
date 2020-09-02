@@ -4,6 +4,8 @@
 #include "interfaces.h"
 
 
+namespace AvsFilter {
+
 class CAvsFilterPropSettings : public CBasePropertyPage {
 public:
     CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr);
@@ -18,5 +20,7 @@ private:
     auto SetDirty() -> void;
 
     IAvsFilterSettings *_settings;
-    std::wstring _avsFile;
+    std::wstring _avsSourceFile;
 };
+
+}

@@ -13,7 +13,6 @@
 #pragma comment(lib, "strmbase.lib")
 #endif
 #pragma comment(lib, "winmm.lib")
-#pragma comment(lib, "Shlwapi.lib")
 
 #pragma comment(lib, "AviSynth.lib")
 
@@ -42,17 +41,17 @@ static REGFILTERPINS PIN_REG[] = {
 static constexpr ULONG PIN_COUNT = sizeof(PIN_REG) / sizeof(PIN_REG[0]);
 
 static constexpr AMOVIESETUP_FILTER FILTER_REG = {
-    &CLSID_AviSynthFilter,  // filter CLSID
-    FILTER_NAME_WIDE,       // filter name
-    MERIT_DO_NOT_USE,       // filter merit
-    PIN_COUNT,              // pin count
-    PIN_REG                 // pin information
+    &AvsFilter::CLSID_AviSynthFilter,  // filter CLSID
+    FILTER_NAME_WIDE,                  // filter name
+    MERIT_DO_NOT_USE,                  // filter merit
+    PIN_COUNT,                         // pin count
+    PIN_REG                            // pin information
 };
 
 static std::vector<REGPINTYPES> g_PinTypes;
 
 static void FillPinTypes() {
-    for (const Format::Definition &info : Format::DEFINITIONS) {
+    for (const AvsFilter::Format::Definition &info : AvsFilter::Format::DEFINITIONS) {
         g_PinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
     }
 
@@ -70,7 +69,7 @@ static FILE *g_logFile = nullptr;
 static DWORD g_logStartTime;
 #endif
 
-void Log(const char *format, ...) {
+void AvsFilter::Log(const char *format, ...) {
 #ifdef LOGGING
     fprintf_s(g_logFile, "T %6i @ %8i: ", GetCurrentThreadId(), timeGetTime() - g_logStartTime);
 
@@ -129,20 +128,20 @@ static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * 
 
 CFactoryTemplate g_Templates[] = {
     { FILTER_NAME_WIDE
-    , &CLSID_AviSynthFilter
-    , CreateInstance<CAviSynthFilter>
+    , &AvsFilter::CLSID_AviSynthFilter
+    , CreateInstance<AvsFilter::CAviSynthFilter>
     , InitRoutine
     , &FILTER_REG },
 
     { SETTINGS_WIDE
-    , &CLSID_AvsPropSettings
-    , CreateInstance<CAvsFilterPropSettings>
+    , &AvsFilter::CLSID_AvsPropSettings
+    , CreateInstance<AvsFilter::CAvsFilterPropSettings>
     , nullptr
     , nullptr },
 
     { STATUS_WIDE
-    , &CLSID_AvsPropStatus
-    , CreateInstance<CAvsFilterPropStatus>
+    , &AvsFilter::CLSID_AvsPropStatus
+    , CreateInstance<AvsFilter::CAvsFilterPropStatus>
     , nullptr
     , nullptr },
 };
