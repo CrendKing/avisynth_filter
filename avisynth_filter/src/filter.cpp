@@ -830,10 +830,12 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
 
     if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
         VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
-        const int gcd = std::gcd(_avsScriptVideoInfo.width, _avsScriptVideoInfo.height);
-        newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width / gcd;
-        newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height / gcd;
         newBmi = &newVih2->bmiHeader;
+        const __int64 ax = static_cast<__int64>(_avsScriptVideoInfo.width) * newVih2->dwPictAspectRatioX * std::abs(newBmi->biHeight);
+        const __int64 ay = static_cast<__int64>(_avsScriptVideoInfo.height) * newVih2->dwPictAspectRatioY * newBmi->biWidth;
+        const __int64 gcd = std::gcd(ax, ay);
+        newVih2->dwPictAspectRatioX = static_cast<DWORD>(ax / gcd);
+        newVih2->dwPictAspectRatioY = static_cast<DWORD>(ay / gcd);
     } else {
         newBmi = &newVih->bmiHeader;
     }
