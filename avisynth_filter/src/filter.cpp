@@ -129,6 +129,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _sourceClip(nullptr)
     , _avsScriptClip(nullptr)
     , _remoteControl(nullptr)
+    , _playState(StateInitializing)
     , _reloadAvsFileFlag(false)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
@@ -344,7 +345,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
                     CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[*compatibleInput]));
                 } else {
                     Log("Connected with types: in %2i out %2i", *inputDefiniton, *outputDefinition);
-                    _sourcePath = RetrieveSourcePath(m_pGraph);
+                    _sourcePath = RetrieveSourcePath();
                 }
             } else {
                 Log("Unexpected lookup result for compatible definition");
@@ -621,6 +622,10 @@ auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile() -> void {
     _initialPrefetch = 0;
 }
 
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const -> std::string {
+    return _avsError;
+}
+
 auto STDMETHODCALLTYPE CAviSynthFilter::IsRemoteControlled() -> bool {
     return _remoteControl != nullptr;
 }
@@ -645,6 +650,12 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetInitialPrefetch() const -> int {
     return _initialPrefetch;
 }
 
+auto STDMETHODCALLTYPE CAviSynthFilter::GetPlayState() const -> PlayState {
+    if (_playState == StatePlaying && m_State == State_Paused)
+        return StatePaused;
+    return _playState;
+}
+
 auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers() const -> std::pair<int, int> {
     return { _deliverySourceSampleNb, _deliveryFrameNb };
 }
@@ -665,6 +676,10 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaInfo() const -> Format::VideoFor
     return _inputFormat;
 }
 
+auto STDMETHODCALLTYPE CAviSynthFilter::GetFiltersList() const -> std::list<std::wstring> {
+    return _filtersList;
+}
+
 /**
  * Check if the media type has valid VideoInfo * definition block.
  */
@@ -680,11 +695,12 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
     return Format::LookupMediaSubtype(mediaType->subtype);
 }
 
-auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
+auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
     std::wstring ret;
+    _filtersList.clear();
 
     IEnumFilters *filters;
-    if (FAILED(graph->EnumFilters(&filters))) {
+    if (FAILED(m_pGraph->EnumFilters(&filters))) {
         return ret;
     }
 
@@ -701,6 +717,7 @@ auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
             QueryFilterInfoReleaseGraph(info);
 
             Log("Filter: '%ls'", info.achName);
+            _filtersList.push_back(info.achName);
 
             IFileSourceFilter *source;
             if (!FAILED(filter->QueryInterface(&source))) {
@@ -892,8 +909,6 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
 
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
         _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
-        //TODO: remove me!
-        _avsEnv->AddFunction("potplayer_source", "", Create_AvsFilterSource, _sourceClip);
     }
     return true;
 }
@@ -923,13 +938,16 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
      * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
      */
     
+    _playState = StateInitializing;
+
     if (recreateEnv) {
         DeleteAviSynth();
         CreateAviSynth();
     }
+    
+    _avsError.clear();
 
     AVSValue invokeResult;
-    std::string errorScript;
     try {
         bool isImportSuccess = false;
 
@@ -937,10 +955,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
             const std::string utf8File = ConvertWideToUtf8(_avsFile);
             const AVSValue args[2] = { utf8File.c_str(), true };
             const char* const argNames[2] = { nullptr, "utf8" };
-            if(PathFileExists(_avsFile.c_str()))                
-                invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
-            else
-                invokeResult = _avsEnv->Invoke("Eval", AVSValue(args, 1), nullptr);
+            invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
             isImportSuccess = invokeResult.Defined();
         }
 
@@ -955,15 +970,17 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
         }
 
         if (!invokeResult.IsClip()) {
-            errorScript = "Unrecognized return value from script. Invalid script.";
+            _avsError = "Unrecognized return value from script. Invalid script.";
         }
     } catch (AvisynthError &err) {
-        errorScript = err.msg;
-        ReplaceSubstring(errorScript, "\"", "\'");
-        ReplaceSubstring(errorScript, "\n", "\\n");
+        _avsError = err.msg;
+
     }
 
-    if (!errorScript.empty()) {
+    if (!_avsError.empty()) {
+        std::string errorScript = _avsError;
+        ReplaceSubstring(errorScript, "\"", "\'");
+        ReplaceSubstring(errorScript, "\n", "\\n");
         errorScript.insert(0, "return AvsFilterSource().Subtitle(\"");
         errorScript.append("\", lsp=0, utf8=true)");
         const AVSValue evalArgs[] = { AVSValue(errorScript.c_str())
@@ -974,6 +991,8 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
+
+    _playState = _avsError.empty() ? StatePlaying : StateError;
 
     return true;
 }

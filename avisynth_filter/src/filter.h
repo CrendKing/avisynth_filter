@@ -58,6 +58,7 @@ public:
     auto STDMETHODCALLTYPE GetAvsFile() const -> std::wstring override;
     auto STDMETHODCALLTYPE SetAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsFile() -> void override;
+    auto STDMETHODCALLTYPE GetAvsError() const -> std::string override;
     auto STDMETHODCALLTYPE IsRemoteControlled() -> bool override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
@@ -66,11 +67,13 @@ public:
     auto STDMETHODCALLTYPE GetBufferSize() -> int override;
     auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int override;
     auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
+    auto STDMETHODCALLTYPE GetPlayState() const -> PlayState override;
     auto STDMETHODCALLTYPE GetFrameNumbers() const -> std::pair<int, int> override;
     auto STDMETHODCALLTYPE GetSourcePath() const -> std::wstring override;
     auto STDMETHODCALLTYPE GetInputFrameRate() const -> double override;
     auto STDMETHODCALLTYPE GetOutputFrameRate() const -> double override;
     auto STDMETHODCALLTYPE GetMediaInfo() const -> Format::VideoFormat override;
+    auto STDMETHODCALLTYPE GetFiltersList() const -> std::list<std::wstring> override;
 
 private:
     struct DefinitionPair {
@@ -79,7 +82,7 @@ private:
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
-    static auto RetrieveSourcePath(IFilterGraph *graph) -> std::wstring;
+    auto RetrieveSourcePath() -> std::wstring;
 
     auto TransformAndDeliver(IMediaSample *sample) -> HRESULT;
     auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force = false) -> HRESULT;
@@ -114,7 +117,9 @@ private:
 
     bool _reloadAvsFileFlag;
     std::wstring _sourcePath;
+    std::list<std::wstring> _filtersList;
 
+    PlayState _playState;
     int _deliveryFrameNb;
     int _deliverySourceSampleNb;
     REFERENCE_TIME _deliveryFrameStartTime;
@@ -128,11 +133,10 @@ private:
     std::list<REFERENCE_TIME> _samplesIn;
     std::list<REFERENCE_TIME> _samplesOut;
 
-    // settings related variables
-
     Registry _registry;
 
     std::wstring _avsFile;
+    std::string _avsError;
     DWORD _inputFormatBits;
 
     RemoteControl* _remoteControl;

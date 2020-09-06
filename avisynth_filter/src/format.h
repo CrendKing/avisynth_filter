@@ -17,10 +17,14 @@ public:
     struct VideoFormat {
         int definition;
         VideoInfo videoInfo;
+        double par;
+
         BITMAPINFOHEADER bmi;
         VIDEOINFOHEADER *vih;
 
         auto operator!=(const VideoFormat &other) const -> bool;
+
+        auto GetCodec() const -> DWORD;
         auto GetCodecName() const -> std::string;
     };
 

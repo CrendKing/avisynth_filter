@@ -37,6 +37,10 @@ auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
         || memcmp(vih, other.vih, sizeof(VIDEOINFOHEADER)) != 0;
 }
 
+auto Format::VideoFormat::GetCodec() const -> DWORD {
+    return FOURCCMap(&DEFINITIONS[definition].mediaSubtype).GetFOURCC();
+}
+
 auto Format::VideoFormat::GetCodecName() const -> std::string {
     const CLSID subtype = DEFINITIONS[definition].mediaSubtype;
 
@@ -78,7 +82,7 @@ auto Format::LookupAvsType(int avsType) -> std::vector<int> {
     return indices;
 }
 
-auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
+auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> Format::VideoFormat {
     VideoFormat info {};
 
     info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
@@ -93,6 +97,16 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     info.videoInfo.fps_denominator = static_cast<unsigned int>(frameTime);
     info.videoInfo.pixel_type = DEFINITIONS[info.definition].avsType;
     info.videoInfo.num_frames = NUM_FRAMES_FOR_INFINITE_STREAM;
+
+    info.par = 1.0;
+    if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
+        VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2*>(info.vih);
+        if (vih2->dwPictAspectRatioY > 0) {
+            double dar = static_cast<double>(vih2->dwPictAspectRatioX) / vih2->dwPictAspectRatioY;
+            double sar = static_cast<double>(info.videoInfo.width) / info.videoInfo.height;
+            info.par = dar / sar;
+        }
+    }
 
     return info;
 }
