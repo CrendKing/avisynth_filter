@@ -764,6 +764,9 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
             newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str());
         _outputFormat = newOutputFormat;
 
+        if (_remoteControl)
+            _remoteControl->Start();
+
         return S_OK;
     }
 

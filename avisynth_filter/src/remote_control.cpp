@@ -9,8 +9,8 @@ auto ConvertUtf8ToWide(const std::string& str) -> std::wstring;
 RemoteControl::RemoteControl(IAvsFilterStatus* status, IAvsFilterSettings* settings):
 	_status(status),
 	_settings(settings),
-	_hWnd(0) {
-	_hThread = CreateThread(NULL, 0, &RemoteControl::Run, this, 0, 0);
+	_hWnd(0),
+	_hThread(0) {	
 }
 
 RemoteControl::~RemoteControl() {
@@ -21,6 +21,12 @@ RemoteControl::~RemoteControl() {
 		WaitForSingleObject(_hThread, INFINITE);
 		CloseHandle(_hThread);
 	}
+}
+
+auto RemoteControl::Start() -> void {
+	if (_hThread) return;
+
+	_hThread = CreateThread(nullptr, 0, &RemoteControl::Run, this, 0, 0);
 }
 
 auto RemoteControl::Run(LPVOID lpParam) -> DWORD {

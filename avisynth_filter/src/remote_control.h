@@ -11,6 +11,8 @@ public:
     RemoteControl(IAvsFilterStatus* status, IAvsFilterSettings* settings);
     virtual ~RemoteControl();
 
+    auto Start() -> void;
+
 private:
     static auto GetInstance(HWND wnd) -> RemoteControl*;
     auto SendData(HWND receiver, DWORD id, const std::wstring& data) -> void;
