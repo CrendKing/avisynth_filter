@@ -107,6 +107,8 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> Format::VideoForm
             info.par = dar / sar;
         }
     }
+    info.hdr = 0;
+    info.hdr_luminance = 0;
 
     return info;
 }

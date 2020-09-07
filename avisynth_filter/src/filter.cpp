@@ -505,6 +505,14 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
         sideData = new SourceClip::SideData;
         sideData->Read(sideDataRW);
         sideDataRW->Release();
+
+        if (sideData->hasHDR || sideData->hasHDR_CLL) {
+            _inputFormat.hdr = 1; //TODO: PQ / HLG / ???
+            if (sideData->hasHDR)
+                _inputFormat.hdr_luminance = static_cast<int>(sideData->hdr.max_display_mastering_luminance);
+            if (sideData->hasHDR_CLL)
+                _inputFormat.hdr_luminance = sideData->hdr_cll.MaxCLL;
+        }
     }
 
     const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime, sideData);
@@ -695,6 +703,38 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
     return Format::LookupMediaSubtype(mediaType->subtype);
 }
 
+// TODO: unused, but may need this later (?)
+static auto FindVideoPin(IBaseFilter* pFilter) -> IPin* {
+    IEnumPins* pEnum = NULL;
+    if (FAILED(pFilter->EnumPins(&pEnum)))
+        return nullptr;
+
+    IPin* pPin = nullptr;
+    while (pEnum->Next(1, &pPin, 0) == S_OK) {
+        PIN_DIRECTION dir;
+        if (FAILED(pPin->QueryDirection(&dir))) {
+            pPin->Release();
+            pEnum->Release();
+            return nullptr;
+        }
+        if (dir == PINDIR_OUTPUT) {
+            AM_MEDIA_TYPE am;
+            if (pPin->ConnectionMediaType(&am) == S_OK)
+            {
+                if (am.majortype == MEDIATYPE_Video) {
+                    FreeMediaType(am);
+                    pEnum->Release();
+                    return pPin;
+                }
+                FreeMediaType(am);
+            }
+        }
+        pPin->Release();
+    }
+    pEnum->Release();
+    return nullptr;
+}
+
 auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
     std::wstring ret;
     _filtersList.clear();
@@ -725,9 +765,9 @@ auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
                 if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
                     Log("Source path: '%ls'", filename);
                     ret = std::wstring(filename);
-                    break;
                 }
                 source->Release();
+                break;
             }
 
             filter->Release();

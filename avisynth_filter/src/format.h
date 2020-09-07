@@ -18,6 +18,8 @@ public:
         int definition;
         VideoInfo videoInfo;
         double par;
+        int hdr;
+        int hdr_luminance;
 
         BITMAPINFOHEADER bmi;
         VIDEOINFOHEADER *vih;

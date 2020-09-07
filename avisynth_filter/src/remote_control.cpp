@@ -90,16 +90,20 @@ auto RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		case AVSF_GET_API_VERSION:
 			return AVSF_API_VERSION;
 
-		case AVSF_GET_VIDEO_WIDTH:
+		case AVSF_GET_INPUT_WIDTH:
 			return rc->_status->GetMediaInfo().videoInfo.width;
-		case AVSF_GET_VIDEO_HEIGHT:
+		case AVSF_GET_INPUT_HEIGHT:
 			return rc->_status->GetMediaInfo().videoInfo.height;
-		case AVSF_GET_VIDEO_PAR:
+		case AVSF_GET_INPUT_PAR:
 			return static_cast<int>(std::round(rc->_status->GetMediaInfo().par * 1000));
-		case AVSF_GET_VIDEO_COLOR:
+		case AVSF_GET_INPUT_COLOR:
 			return rc->_status->GetMediaInfo().GetCodec();
-		case AVSF_GET_VIDEO_FPS:
+		case AVSF_GET_INPUT_FPS:
 			return static_cast<int>(std::round(rc->_status->GetInputFrameRate() * 1000));
+		case AVSF_GET_HDR_TYPE:
+			return rc->_status->GetMediaInfo().hdr;
+		case AVSF_GET_HDR_LUMINANCE:
+			return rc->_status->GetMediaInfo().hdr_luminance;
 
 		case AVSF_GET_PLAY_STATE:
 			return static_cast<int>(rc->_status->GetPlayState());

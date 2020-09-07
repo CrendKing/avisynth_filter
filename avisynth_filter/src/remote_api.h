@@ -16,8 +16,10 @@
 #define AVSF_GET_FILTERS		101 // ;-separated DS filters list (UTF-8 string)
 
 #define AVSF_GET_FILENAME		200	// path / URL (UTF-8 string)
-#define AVSF_GET_VIDEO_WIDTH	201 // source width, px
-#define AVSF_GET_VIDEO_HEIGHT	202 // source height, px
-#define AVSF_GET_VIDEO_PAR		203 // source PAR multiplied by 1000 (i.e. 1.5 -> 1500)
-#define AVSF_GET_VIDEO_FPS		204 // measured source FPS multipled by 1000
-#define AVSF_GET_VIDEO_COLOR	205 // FOURCC of source color space
+#define AVSF_GET_INPUT_WIDTH	201 // source width, px
+#define AVSF_GET_INPUT_HEIGHT	202 // source height, px
+#define AVSF_GET_INPUT_PAR		203 // source PAR multiplied by 1000 (i.e. 1.5 -> 1500)
+#define AVSF_GET_INPUT_FPS		204 // measured source FPS multipled by 1000
+#define AVSF_GET_INPUT_COLOR	205 // FOURCC of source color space
+#define AVSF_GET_HDR_TYPE		206 // is HDR? (TODO: PQ or HLG?)
+#define AVSF_GET_HDR_LUMINANCE	207 // HDR signal peak (i.e. MaxCLL or "mastering display luminance")
