@@ -13,6 +13,7 @@
 #pragma comment(lib, "strmbase.lib")
 #endif
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "Shlwapi.lib")
 
 #pragma comment(lib, "AviSynth.lib")
 

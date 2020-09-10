@@ -1,9 +1,10 @@
 #include "pch.h"
 #include "filter.h"
+#include "media_sample.h"
 #include "constants.h"
+#include "remote_control.h"
 #include "logging.h"
 #include "prop_settings.h"
-
 
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
@@ -29,6 +30,13 @@ auto ConvertWideToUtf8(const std::wstring &wstr) -> std::string {
     return str;
 }
 
+auto ConvertUtf8ToWide(const std::string& str) -> std::wstring {
+    const int count = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0);
+    std::wstring wstr(count, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), &wstr[0], count);
+    return wstr;
+}
+
 auto __cdecl Create_AvsFilterSource(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     return static_cast<SourceClip *>(user_data);
 }
@@ -44,6 +52,31 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
                                                  __in_opt LPCWSTR pName)
     : CTransformInputPin(pObjectName, pTransformFilter, phr, pName)
     , _filter(reinterpret_cast<CAviSynthFilter *>(m_pFilter)) {
+}
+
+// overridden to return out custom CAviSynthFilterAllocator instead of CMemAllocator,
+// which allocates media sample with IMedaSideData attached
+auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(IMemAllocator** ppAllocator)->HRESULT {
+    CheckPointer(ppAllocator, E_POINTER);
+    ValidateReadWritePtr(ppAllocator, sizeof(IMemAllocator*));
+    CAutoLock cObjectLock(m_pLock);
+
+    Log("CAviSynthFilterInputPin::GetAllocator");
+
+    if (m_pAllocator)
+    {
+        *ppAllocator = m_pAllocator;
+        m_pAllocator->AddRef();
+        return S_OK;
+    }
+
+    HRESULT hr = S_OK;
+    CAviSynthFilterAllocator*pAlloc = new CAviSynthFilterAllocator(&hr);
+    if (FAILED(hr)) {
+        delete pAlloc;
+        return hr;
+    }
+    return pAlloc->QueryInterface(IID_IMemAllocator, (void**)ppAllocator);
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
@@ -95,6 +128,9 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsEnv(nullptr)
     , _sourceClip(nullptr)
     , _avsScriptClip(nullptr)
+    , _remoteControl(nullptr)
+    , _playState(StateInitializing)
+    , _reloadAvsFileFlag(false)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
     , _initialPrefetch(0) {
@@ -103,6 +139,11 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
+    if (_remoteControl) {
+        delete _remoteControl;
+        _remoteControl = nullptr;
+    }
+
     DeletePinTypes();
     DeleteAviSynth();
 }
@@ -147,7 +188,8 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
     HRESULT ret = S_OK;
     HRESULT hr;
 
-    CreateAviSynth();
+    if (!CreateAviSynth())
+        return E_FAIL;
 
     if (direction == PINDIR_INPUT) {
         IEnumMediaTypes *enumTypes;
@@ -303,7 +345,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
                     CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[*compatibleInput]));
                 } else {
                     Log("Connected with types: in %2i out %2i", *inputDefiniton, *outputDefinition);
-                    _sourcePath = RetrieveSourcePath(m_pGraph);
+                    _sourcePath = RetrieveSourcePathAndFiltersList();
                 }
             } else {
                 Log("Unexpected lookup result for compatible definition");
@@ -327,16 +369,28 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     IMediaSample *pOutSample;
 
     pSample->GetMediaType(&pmt);
-    if (pmt != nullptr && pmt->pbFormat != nullptr) {
+    bool mediaTypeChanged = pmt != nullptr && pmt->pbFormat != nullptr;
+    if (mediaTypeChanged || _reloadAvsFileFlag) {
         StopStreaming();
-        m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
 
-        hr = HandleInputFormatChange(pmt);
+        if (_reloadAvsFileFlag)
+            Reset(false);
+
+        if(mediaTypeChanged)
+            m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
+        else
+            pmt = reinterpret_cast<AM_MEDIA_TYPE*>(&m_pInput->CurrentMediaType());
+        
+        hr = HandleInputFormatChange(pmt, _reloadAvsFileFlag);
+        _reloadAvsFileFlag = false;
+
         if (FAILED(hr)) {
             return AbortPlayback(hr);
         }
+        
+        if(mediaTypeChanged)
+            DeleteMediaType(pmt);
 
-        DeleteMediaType(pmt);
         hr = StartStreaming();
         if (FAILED(hr)) {
             return AbortPlayback(hr);
@@ -372,6 +426,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         m_nWaitForKey = 30;
     }
 
+    if (_remoteControl)
+        _remoteControl->Start();
+
     if (SUCCEEDED(hr)) {
         hr = TransformAndDeliver(pSample);
 
@@ -394,6 +451,20 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     }
 
     return hr;
+}
+
+static auto GetAverageFps(std::list<REFERENCE_TIME>& samples, REFERENCE_TIME sample) -> double {
+    if (samples.size() > 0 && samples.front() > sample)
+        samples.clear();
+    else {
+        samples.push_back(sample);
+        if (samples.size() > 10)
+            samples.pop_front();
+
+        if (samples.size() >= 2)
+            return std::round(static_cast<double>((samples.size() - 1) * UNITS) / (samples.back() - samples.front()) * 1000.0) / 1000.0;
+    }
+    return 0.0;
 }
 
 auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
@@ -429,7 +500,25 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
     BYTE *inputBuffer;
     CheckHr(sample->GetPointer(&inputBuffer));
     const PVideoFrame frame = Format::CreateFrame(_inputFormat, inputBuffer, _avsEnv);
-    const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime);
+
+    SourceClip::SideData *sideData = nullptr;
+    IMediaSideData *sideDataRW;
+    if (SUCCEEDED(sample->QueryInterface(&sideDataRW)))
+    {
+        sideData = new SourceClip::SideData;
+        sideData->Read(sideDataRW);
+        sideDataRW->Release();
+
+        if (sideData->hasHDR || sideData->hasHDR_CLL) {
+            _inputFormat.hdr = 1; //TODO: PQ / HLG / ???
+            if (sideData->hasHDR)
+                _inputFormat.hdr_luminance = static_cast<int>(sideData->hdr.max_display_mastering_luminance);
+            if (sideData->hasHDR_CLL)
+                _inputFormat.hdr_luminance = sideData->hdr_cll.MaxCLL;
+        }
+    }
+
+    const int sampleNb = _sourceClip->PushBackFrame(frame, sampleStartTime, sideData);
 
     Log("Late: %10i streamTime: %10lli sampleNb: %4i sampleTime: %10lli ~ %10lli bufferPrefetch: %6i",
         m_itrLate, static_cast<REFERENCE_TIME>(streamTime), sampleNb, sampleStartTime, dbgSampleStopTime, _currentPrefetch);
@@ -446,7 +535,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
                 _deliveryFrameStartTime = currentFrame->startTime;
             }
 
-            while (currentFrame->stopTime - _deliveryFrameStartTime >= frameTime) {
+            while (currentFrame->stopTime - _deliveryFrameStartTime >= 0) {
                 const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
 
                 IMediaSample *outSample = nullptr;
@@ -462,10 +551,18 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
                 _deliveryFrameStartTime = outStopTime;
                 CheckHr(outSample->SetTime(&outStartTime, &outStopTime));
 
+                _outputFrameRate = GetAverageFps(_samplesOut, outStartTime);
+
                 BYTE *outBuffer;
                 CheckHr(outSample->GetPointer(&outBuffer));
-
                 Format::WriteSample(_outputFormat, clipFrame, outBuffer, _avsEnv);
+
+                if (SUCCEEDED(outSample->QueryInterface(&sideDataRW))) {
+                    if (currentFrame->sideData)
+                        currentFrame->sideData->Write(sideDataRW);
+                    sideDataRW->Release();
+                }
+
                 CheckHr(m_pOutput->Deliver(outSample));
                 outSample->Release();
 
@@ -487,6 +584,8 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *sample) -> HRESULT {
     }
 
 END_OF_DELIVERY:
+    _inputFrameRate = GetAverageFps(_samplesIn, sampleStartTime);
+
     return S_OK;
 }
 
@@ -529,8 +628,17 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsFile(const std::wstring &avsFile) 
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile() -> void {
+    // this will also result in async Reset() call from Receive()
+    _reloadAvsFileFlag = true;
     _initialPrefetch = 0;
-    Reset();
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const -> std::string {
+    return _avsError;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::IsRemoteControlled() -> bool {
+    return _remoteControl != nullptr;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormats() const -> DWORD {
@@ -553,8 +661,22 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetInitialPrefetch() const -> int {
     return _initialPrefetch;
 }
 
+auto STDMETHODCALLTYPE CAviSynthFilter::GetPlayState() const -> PlayState {
+    if (_playState == StatePlaying && m_State == State_Paused)
+        return StatePaused;
+    return _playState;
+}
+
 auto STDMETHODCALLTYPE  CAviSynthFilter::GetFrameNumbers() const -> std::pair<int, int> {
     return { _deliverySourceSampleNb, _deliveryFrameNb };
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFrameRate() const -> double {
+    return _inputFrameRate;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputFrameRate() const -> double {
+    return _outputFrameRate;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetSourcePath() const -> std::wstring {
@@ -563,6 +685,10 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetSourcePath() const -> std::wstring {
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetMediaInfo() const -> Format::VideoFormat {
     return _inputFormat;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetFiltersList() const -> std::list<std::wstring> {
+    return _filtersList;
 }
 
 /**
@@ -580,37 +706,61 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
     return Format::LookupMediaSubtype(mediaType->subtype);
 }
 
-auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
+// TODO: unused, but may need this later (?)
+static auto FindVideoPin(IBaseFilter* pFilter) -> IPin* {
+    IEnumPins* pEnum = NULL;
+    if (FAILED(pFilter->EnumPins(&pEnum)))
+        return nullptr;
+
+    IPin* pPin = nullptr;
+    while (pEnum->Next(1, &pPin, 0) == S_OK) {
+        PIN_DIRECTION dir;
+        if (FAILED(pPin->QueryDirection(&dir))) {
+            pPin->Release();
+            pEnum->Release();
+            return nullptr;
+        }
+        if (dir == PINDIR_OUTPUT) {
+            AM_MEDIA_TYPE am;
+            if (pPin->ConnectionMediaType(&am) == S_OK) {
+                if (am.majortype == MEDIATYPE_Video) {
+                    FreeMediaType(am);
+                    pEnum->Release();
+                    return pPin;
+                }
+                FreeMediaType(am);
+            }
+        }
+        pPin->Release();
+    }
+    pEnum->Release();
+    return nullptr;
+}
+
+auto CAviSynthFilter::RetrieveSourcePathAndFiltersList() -> std::wstring {
     std::wstring ret;
+    _filtersList.clear();
 
     IEnumFilters *filters;
-    if (FAILED(graph->EnumFilters(&filters))) {
+    if (FAILED(m_pGraph->EnumFilters(&filters))) {
         return ret;
     }
 
     IBaseFilter *filter;
-    ULONG n;
+    bool foundSource = false;
     while (true) {
-        const HRESULT hr = filters->Next(1, &filter, &n);
+        const HRESULT hr = filters->Next(1, &filter, nullptr);
         if (hr == S_OK) {
-            FILTER_INFO	info;
-            if (FAILED(filter->QueryFilterInfo(&info))) {
-                continue;
-            }
-
-            QueryFilterInfoReleaseGraph(info);
-
-            Log("Filter: '%ls'", info.achName);
-
             IFileSourceFilter *source;
             if (!FAILED(filter->QueryInterface(&source))) {
                 LPOLESTR filename;
                 if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
                     Log("Source path: '%ls'", filename);
                     ret = std::wstring(filename);
-                    break;
                 }
                 source->Release();
+                foundSource = true;
+                break;
             }
 
             filter->Release();
@@ -622,6 +772,37 @@ auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
     }
     filters->Release();
 
+    if (!foundSource)
+        return ret;
+    
+    while (true) {
+        FILTER_INFO	finfo;
+        if (SUCCEEDED(filter->QueryFilterInfo(&finfo))) {
+            QueryFilterInfoReleaseGraph(finfo);
+
+            Log("Filter: '%ls'", finfo.achName);
+            _filtersList.push_back(finfo.achName);
+        }
+
+        IPin* opin = FindVideoPin(filter);
+        filter->Release();
+        if (opin == nullptr)
+            break;
+
+        IPin* ipin;
+        if (FAILED(opin->ConnectedTo(&ipin))) {
+            opin->Release();
+            break;
+        }
+
+        PIN_INFO pinfo;
+        if (SUCCEEDED(ipin->QueryPinInfo(&pinfo)))
+            filter = pinfo.pFilter;
+
+        ipin->Release();
+        opin->Release();
+    }
+
     return ret;
 }
 
@@ -631,11 +812,11 @@ auto CAviSynthFilter::RetrieveSourcePath(IFilterGraph *graph) -> std::wstring {
  *
  * returns S_OK if the avs script is reloaded due to format change.
  */
-auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT {
+auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force) -> HRESULT {
     HRESULT hr;
 
     const Format::VideoFormat receivedInputFormat = Format::GetVideoFormat(*pmt);
-    if (_inputFormat != receivedInputFormat) {
+    if ((_inputFormat != receivedInputFormat) || force) {
         Log("new input format:  definition %i, width %5i, height %5i, codec %s",
             receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.GetCodecName().c_str());
         _inputFormat = receivedInputFormat;
@@ -670,8 +851,9 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
     return S_FALSE;
 }
 
-auto CAviSynthFilter::Reset() -> void {
-    const CAutoLock lock(&m_csReceive);
+auto CAviSynthFilter::Reset(bool lock) -> void {
+    if (lock)
+        m_csReceive.Lock();
 
     ReloadAviSynth(m_pInput->CurrentMediaType(), false);
 
@@ -680,10 +862,22 @@ auto CAviSynthFilter::Reset() -> void {
     _deliveryFrameStartTime = 0;
     _currentPrefetch = _initialPrefetch;
     _sourceClip->FlushOnNextInput();
+
+    _inputFrameRate = 0.0;
+    _outputFrameRate = 0.0;
+    _samplesIn.clear();
+    _samplesOut.clear();
+
+    if (lock)
+        m_csReceive.Unlock();
 }
 
 auto CAviSynthFilter::LoadSettings() -> void {
-    _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
+    if (_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE, 0))
+        _remoteControl = new RemoteControl(this, this);
+    else
+        SetAvsFile(_registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE));
+
     _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
 }
 
@@ -717,10 +911,12 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
 
     if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
         VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
-        const int gcd = std::gcd(_avsScriptVideoInfo.width, _avsScriptVideoInfo.height);
-        newVih2->dwPictAspectRatioX = _avsScriptVideoInfo.width / gcd;
-        newVih2->dwPictAspectRatioY = _avsScriptVideoInfo.height / gcd;
         newBmi = &newVih2->bmiHeader;
+        const __int64 ax = static_cast<__int64>(_avsScriptVideoInfo.width) * newVih2->dwPictAspectRatioX * std::abs(newBmi->biHeight);
+        const __int64 ay = static_cast<__int64>(_avsScriptVideoInfo.height) * newVih2->dwPictAspectRatioY * newBmi->biWidth;
+        const __int64 gcd = std::gcd(ax, ay);
+        newVih2->dwPictAspectRatioX = static_cast<DWORD>(ax / gcd);
+        newVih2->dwPictAspectRatioY = static_cast<DWORD>(ay / gcd);
     } else {
         newBmi = &newVih->bmiHeader;
     }
@@ -763,14 +959,19 @@ auto CAviSynthFilter::DeletePinTypes() -> void {
     _compatibleDefinitions.clear();
 }
 
-auto CAviSynthFilter::CreateAviSynth() -> void {
+auto CAviSynthFilter::CreateAviSynth() -> bool {
     if (_avsEnv == nullptr) {
         _avsEnv = CreateScriptEnvironment2();
+        if (_avsEnv == nullptr) {
+            Log("CreateAviSynth: FAILED!");
+            return false;
+        }
         _sourceClip = new SourceClip(_avsSourceVideoInfo);
 
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
         _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
     }
+    return true;
 }
 
 /**
@@ -798,13 +999,16 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
      * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
      */
     
+    _playState = StateInitializing;
+
     if (recreateEnv) {
         DeleteAviSynth();
         CreateAviSynth();
     }
+    
+    _avsError.clear();
 
     AVSValue invokeResult;
-    std::string errorScript;
     try {
         bool isImportSuccess = false;
 
@@ -817,7 +1021,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
         }
 
         if (!isImportSuccess) {
-            if (m_State == State_Stopped) {
+            if (m_State == State_Stopped && !IsRemoteControlled()) {
                 return false;
             }
 
@@ -827,15 +1031,17 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
         }
 
         if (!invokeResult.IsClip()) {
-            errorScript = "Unrecognized return value from script. Invalid script.";
+            _avsError = "Unrecognized return value from script. Invalid script.";
         }
     } catch (AvisynthError &err) {
-        errorScript = err.msg;
-        ReplaceSubstring(errorScript, "\"", "\'");
-        ReplaceSubstring(errorScript, "\n", "\\n");
+        _avsError = err.msg;
+
     }
 
-    if (!errorScript.empty()) {
+    if (!_avsError.empty()) {
+        std::string errorScript = _avsError;
+        ReplaceSubstring(errorScript, "\"", "\'");
+        ReplaceSubstring(errorScript, "\n", "\\n");
         errorScript.insert(0, "return AvsFilterSource().Subtitle(\"");
         errorScript.append("\", lsp=0, utf8=true)");
         const AVSValue evalArgs[] = { AVSValue(errorScript.c_str())
@@ -846,6 +1052,8 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
+
+    _playState = _avsError.empty() ? StatePlaying : StateError;
 
     return true;
 }
