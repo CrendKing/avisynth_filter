@@ -345,7 +345,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
                     CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[*compatibleInput]));
                 } else {
                     Log("Connected with types: in %2i out %2i", *inputDefiniton, *outputDefinition);
-                    _sourcePath = RetrieveSourcePath();
+                    _sourcePath = RetrieveSourcePathAndFiltersList();
                 }
             } else {
                 Log("Unexpected lookup result for compatible definition");
@@ -425,6 +425,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     if (pSample->IsDiscontinuity() == S_OK) {
         m_nWaitForKey = 30;
     }
+
+    if (_remoteControl)
+        _remoteControl->Start();
 
     if (SUCCEEDED(hr)) {
         hr = TransformAndDeliver(pSample);
@@ -719,8 +722,7 @@ static auto FindVideoPin(IBaseFilter* pFilter) -> IPin* {
         }
         if (dir == PINDIR_OUTPUT) {
             AM_MEDIA_TYPE am;
-            if (pPin->ConnectionMediaType(&am) == S_OK)
-            {
+            if (pPin->ConnectionMediaType(&am) == S_OK) {
                 if (am.majortype == MEDIATYPE_Video) {
                     FreeMediaType(am);
                     pEnum->Release();
@@ -735,7 +737,7 @@ static auto FindVideoPin(IBaseFilter* pFilter) -> IPin* {
     return nullptr;
 }
 
-auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
+auto CAviSynthFilter::RetrieveSourcePathAndFiltersList() -> std::wstring {
     std::wstring ret;
     _filtersList.clear();
 
@@ -745,20 +747,10 @@ auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
     }
 
     IBaseFilter *filter;
-    ULONG n;
+    bool foundSource = false;
     while (true) {
-        const HRESULT hr = filters->Next(1, &filter, &n);
+        const HRESULT hr = filters->Next(1, &filter, nullptr);
         if (hr == S_OK) {
-            FILTER_INFO	info;
-            if (FAILED(filter->QueryFilterInfo(&info))) {
-                continue;
-            }
-
-            QueryFilterInfoReleaseGraph(info);
-
-            Log("Filter: '%ls'", info.achName);
-            _filtersList.push_back(info.achName);
-
             IFileSourceFilter *source;
             if (!FAILED(filter->QueryInterface(&source))) {
                 LPOLESTR filename;
@@ -767,6 +759,7 @@ auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
                     ret = std::wstring(filename);
                 }
                 source->Release();
+                foundSource = true;
                 break;
             }
 
@@ -778,6 +771,37 @@ auto CAviSynthFilter::RetrieveSourcePath() -> std::wstring {
         }
     }
     filters->Release();
+
+    if (!foundSource)
+        return ret;
+    
+    while (true) {
+        FILTER_INFO	finfo;
+        if (SUCCEEDED(filter->QueryFilterInfo(&finfo))) {
+            QueryFilterInfoReleaseGraph(finfo);
+
+            Log("Filter: '%ls'", finfo.achName);
+            _filtersList.push_back(finfo.achName);
+        }
+
+        IPin* opin = FindVideoPin(filter);
+        filter->Release();
+        if (opin == nullptr)
+            break;
+
+        IPin* ipin;
+        if (FAILED(opin->ConnectedTo(&ipin))) {
+            opin->Release();
+            break;
+        }
+
+        PIN_INFO pinfo;
+        if (SUCCEEDED(ipin->QueryPinInfo(&pinfo)))
+            filter = pinfo.pFilter;
+
+        ipin->Release();
+        opin->Release();
+    }
 
     return ret;
 }
@@ -820,9 +844,6 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
         Log("new output format: definition %i, width %5i, height %5i, codec %s",
             newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str());
         _outputFormat = newOutputFormat;
-
-        if (_remoteControl)
-            _remoteControl->Start();
 
         return S_OK;
     }

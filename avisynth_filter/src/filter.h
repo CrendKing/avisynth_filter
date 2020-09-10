@@ -82,7 +82,7 @@ private:
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
-    auto RetrieveSourcePath() -> std::wstring;
+    auto RetrieveSourcePathAndFiltersList() -> std::wstring;
 
     auto TransformAndDeliver(IMediaSample *sample) -> HRESULT;
     auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt, bool force = false) -> HRESULT;
