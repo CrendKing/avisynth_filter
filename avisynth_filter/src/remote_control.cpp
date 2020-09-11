@@ -15,7 +15,7 @@ RemoteControl::RemoteControl(IAvsFilterStatus *status, IAvsFilterSettings *setti
 
 RemoteControl::~RemoteControl() {
 	if (_hWnd) {
-		PostMessage(_hWnd, WM_QUIT, 0, 0);
+		PostMessage(_hWnd, WM_CLOSE, 0, 0);
 	}
 
 	if (_msgThread.joinable()) {
@@ -28,12 +28,20 @@ auto RemoteControl::Start() -> void {
 }
 
 auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
-	if (uMsg == WM_COPYDATA) {
+	switch (uMsg) {
+	case WM_COPYDATA: {
 		const RemoteControl *rc = reinterpret_cast<const RemoteControl *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 		return rc->HandleCopyData(reinterpret_cast<HWND>(wParam), reinterpret_cast<const COPYDATASTRUCT *>(lParam));
 	}
 
-	return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	case WM_CLOSE: {
+		PostQuitMessage(0);
+		return 0;
+	}
+
+	default:
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	}
 }
 
 auto RemoteControl::Run() -> void {
@@ -45,7 +53,7 @@ auto RemoteControl::Run() -> void {
 		return;
 	}
 
-	_hWnd = CreateWindowEx(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, wc.hInstance, nullptr);
+	_hWnd = CreateWindowEx(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, 0, nullptr, wc.hInstance, nullptr);
 	if (!_hWnd) {
 		return;
 	}
@@ -54,11 +62,18 @@ auto RemoteControl::Run() -> void {
 	Log("Remote control started");
 
 	MSG msg;
-	while (GetMessage(&msg, _hWnd, 0, 0)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+	BOOL msgRet;
+	while ((msgRet = GetMessage(&msg, _hWnd, 0, 0)) != 0) {
+		if (msgRet == -1) {
+			Log("Remote control message loop error: %5i", GetLastError());
+			break;
+		} else {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
 
+	DestroyWindow(_hWnd);
 	UnregisterClass(API_CLASS_NAME, wc.hInstance);
 
 	Log("Remote control stopped");

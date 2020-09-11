@@ -418,7 +418,7 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *inSample) -> HRESULT {
                 _deliveryFrameStartTime = currentFrame->startTime;
             }
 
-            while (currentFrame->stopTime - _deliveryFrameStartTime >= frameTime) {
+            while (currentFrame->stopTime - _deliveryFrameStartTime >= 0) {
                 const PVideoFrame clipFrame = _avsScriptClip->GetFrame(_deliveryFrameNb, _avsEnv);
 
                 IMediaSample *outSample = nullptr;
@@ -446,13 +446,14 @@ auto CAviSynthFilter::TransformAndDeliver(IMediaSample *inSample) -> HRESULT {
                 CheckHr(m_pOutput->Deliver(outSample));
                 outSample->Release();
 
-                Log("Deliver frameNb: %6i from %6i at %10lli ~ %10lli frameTime: %10lli",
-                    _deliveryFrameNb, _deliverySourceSampleNb, outStartTime, outStopTime, outStopTime - outStartTime);
-
                 _deliveryFrameNb += 1;
 
                 _currentPrefetch = _sourceClip->GetMaxAccessedFrameNb() - inSampleNb + 1;
                 _initialPrefetch = max(_currentPrefetch, _initialPrefetch);
+
+                Log("Deliver frameNb: %6i from %6i at %10lli ~ %10lli frameTime: %10lli Prefetch: %4i",
+                    _deliveryFrameNb, _deliverySourceSampleNb, outStartTime, outStopTime, outStopTime - outStartTime, _currentPrefetch);
+
                 if (_currentPrefetch > 0) {
                     goto END_OF_DELIVERY;
                 }
