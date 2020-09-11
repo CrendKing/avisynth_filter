@@ -266,12 +266,16 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     bool reloadedAvsForFormatChange = false;
 
     pSample->GetMediaType(&pmt);
-    if (pmt != nullptr && pmt->pbFormat != nullptr) {
+    const bool inputFormatChanged = (pmt != nullptr && pmt->pbFormat != nullptr);
+
+    if (inputFormatChanged || _reloadAvsSource) {
         StopStreaming();
 
-        m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
+        if (inputFormatChanged) {
+            m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
+        }
 
-        hr = HandleInputFormatChange(pmt);
+        hr = UpdateOutputFormat();
 
         if (FAILED(hr)) {
             return AbortPlayback(hr);
@@ -625,27 +629,23 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
  *
  * returns S_OK if the avs script is reloaded due to format change.
  */
-auto CAviSynthFilter::HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT {
+auto CAviSynthFilter::UpdateOutputFormat() -> HRESULT {
     HRESULT hr;
 
-    const Format::VideoFormat receivedInputFormat = Format::GetVideoFormat(*pmt);
-    if (_inputFormat != receivedInputFormat) {
-        Log("new input format:  definition %i, width %5i, height %5i, codec %s",
-            receivedInputFormat.definition, receivedInputFormat.bmi.biWidth, receivedInputFormat.bmi.biHeight, receivedInputFormat.GetCodecName().c_str());
-        _inputFormat = receivedInputFormat;
+    _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
 
-        ReloadAviSynth(*pmt, true);
-        AM_MEDIA_TYPE *replaceOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], pmt);
-        if (m_pOutput->GetConnected()->QueryAccept(replaceOutputType) != S_OK) {
-            return VFW_E_TYPE_NOT_ACCEPTED;
-        }
-        CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, replaceOutputType));
-        DeleteMediaType(replaceOutputType);
+    Log("update output format using input format: definition %i, width %5i, height %5i, codec %s",
+        _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
-        return S_OK;
+    ReloadAviSynth(m_pInput->CurrentMediaType(), true);
+    AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
+    if (m_pOutput->GetConnected()->QueryAccept(newOutputType) != S_OK) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
     }
+    CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, newOutputType));
+    DeleteMediaType(newOutputType);
 
-    return S_FALSE;
+    return S_OK;
 }
 
 /**

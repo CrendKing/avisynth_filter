@@ -73,7 +73,7 @@ private:
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
 
     auto TransformAndDeliver(IMediaSample *inSample) -> HRESULT;
-    auto HandleInputFormatChange(const AM_MEDIA_TYPE *pmt) -> HRESULT;
+    auto UpdateOutputFormat() -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
     auto RefreshFrameRates(REFERENCE_TIME currentSampleStartTime, int currentSampleNb) -> void;
 

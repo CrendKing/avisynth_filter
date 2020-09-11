@@ -68,7 +68,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
         }
 
         CheckHr(SetMediaType(cmt));
-        CheckHr(_filter->HandleInputFormatChange(pmt));
+        CheckHr(_filter->UpdateOutputFormat());
 
         return S_OK;
     }
