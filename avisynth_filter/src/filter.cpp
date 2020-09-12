@@ -263,7 +263,6 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     HRESULT hr;
     AM_MEDIA_TYPE *pmtOut, *pmt;
     IMediaSample *pOutSample;
-    bool reloadedAvsForFormatChange = false;
 
     pSample->GetMediaType(&pmt);
     const bool inputFormatChanged = (pmt != nullptr && pmt->pbFormat != nullptr);
@@ -275,6 +274,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
             m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
         }
 
+        Reset(true);
+        _reloadAvsSource = false;
+
         hr = UpdateOutputFormat();
 
         if (FAILED(hr)) {
@@ -285,8 +287,6 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         if (FAILED(hr)) {
             return AbortPlayback(hr);
         }
-
-        reloadedAvsForFormatChange = true;
     }
 
     CheckHr(m_pOutput->GetDeliveryBuffer(&pOutSample, nullptr, nullptr, 0));
@@ -319,13 +319,6 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     }
 
     if (SUCCEEDED(hr)) {
-        if (_reloadAvsSource) {
-            if (!reloadedAvsForFormatChange) {
-                ReloadAviSynth(m_pInput->CurrentMediaType(), false);
-            }
-            _reloadAvsSource = false;
-        }
-
         hr = TransformAndDeliver(pSample);
 
         if (m_nWaitForKey) {
@@ -473,7 +466,7 @@ END_OF_DELIVERY:
 }
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
-    Reset();
+    Reset(false);
     return __super::EndFlush();
 }
 
@@ -533,7 +526,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsSourceScript(const std::wstring &a
 
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsSource() -> void {
     _initialPrefetch = 0;
-    Reset();
+    _reloadAvsSource = true;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormats() const -> DWORD {
@@ -637,7 +630,6 @@ auto CAviSynthFilter::UpdateOutputFormat() -> HRESULT {
     Log("update output format using input format: definition %i, width %5i, height %5i, codec %s",
         _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
-    ReloadAviSynth(m_pInput->CurrentMediaType(), true);
     AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
     if (m_pOutput->GetConnected()->QueryAccept(newOutputType) != S_OK) {
         return VFW_E_TYPE_NOT_ACCEPTED;
@@ -692,10 +684,11 @@ auto CAviSynthFilter::RefreshFrameRates(REFERENCE_TIME currentSampleStartTime, i
     }
 }
 
-auto CAviSynthFilter::Reset() -> void {
+auto CAviSynthFilter::Reset(bool recreateAvsEnv) -> void {
     const CAutoLock lock(&m_csReceive);
 
-    _reloadAvsSource = true;
+    ReloadAviSynth(m_pInput->CurrentMediaType(), recreateAvsEnv);
+
     _deliveryFrameStartTime = 0;
     _deliveryFrameNb = 0;
     _deliverySourceSampleNb = 0;
@@ -888,7 +881,7 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
  * Create new AviSynth script clip with specified media type.
  * If allowDisconnect == true, return false early if no avs script or AvsFilterDisconnect() is returned from script
  */
-auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateEnv) -> bool {
+auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateAvsEnv) -> bool {
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
 
     /*
@@ -909,7 +902,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
      * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
      */
 
-    if (recreateEnv) {
+    if (recreateAvsEnv) {
         DeleteAviSynth();
         CreateAviSynth();
     }

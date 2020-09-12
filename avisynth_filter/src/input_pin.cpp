@@ -81,7 +81,7 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
     _filter->_outputFormat = Format::GetVideoFormat(_filter->m_pOutput->CurrentMediaType());
 
     _filter->TraverseFiltersInGraph();
-    _filter->Reset();
+    _filter->Reset(false);
 
     if (_filter->_remoteControl) {
         _filter->_remoteControl->Start();

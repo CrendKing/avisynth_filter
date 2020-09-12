@@ -77,14 +77,14 @@ private:
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
     auto RefreshFrameRates(REFERENCE_TIME currentSampleStartTime, int currentSampleNb) -> void;
 
-    auto Reset() -> void;
+    auto Reset(bool recreateAvsEnv) -> void;
     auto TraverseFiltersInGraph() -> void;
     auto LoadSettings() -> void;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> bool;
-    auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateEnv) -> bool;
+    auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateAvsEnv) -> bool;
     auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
