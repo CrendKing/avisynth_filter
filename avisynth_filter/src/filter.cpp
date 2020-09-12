@@ -539,12 +539,12 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetDeliveryFrameNumber() const -> int {
     return _deliveryFrameNb;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFrameRate() const -> int {
-    return _inputFrameRate;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentInputFrameRate() const -> int {
+    return _currentInputFrameRate;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputFrameRate() const -> int {
-    return _outputFrameRate;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentOutputFrameRate() const -> int {
+    return _currentOutputFrameRate;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
@@ -557,6 +557,10 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetInputMediaInfo() const -> Format::Vid
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
     return _videoFilterNames;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetSourceAvgFrameRate() const -> int {
+    return _sourceAvgFrameRate;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsState() const -> AvsState {
@@ -645,14 +649,14 @@ auto CAviSynthFilter::RefreshFrameRates(REFERENCE_TIME currentSampleStartTime, i
     if (_frameRateCheckpointInSampleStartTime == 0) {
         reachCheckpointIn = true;
     } else if (const REFERENCE_TIME elapsedRefTime = currentSampleStartTime - _frameRateCheckpointInSampleStartTime; elapsedRefTime >= UNITS) {
-        _inputFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(currentSampleNb) - _frameRateCheckpointInSampleNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
+        _currentInputFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(currentSampleNb) - _frameRateCheckpointInSampleNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
         reachCheckpointIn = true;
     }
 
     if (_frameRateCheckpointOutFrameStartTime == 0) {
         reachCheckpointOut = true;
     } else if (const REFERENCE_TIME elapsedRefTime = _deliveryFrameStartTime - _frameRateCheckpointOutFrameStartTime; elapsedRefTime >= UNITS) {
-        _outputFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(_deliveryFrameNb) - _frameRateCheckpointOutFrameNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
+        _currentOutputFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(_deliveryFrameNb) - _frameRateCheckpointOutFrameNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
         reachCheckpointOut = true;
     }
 
@@ -681,8 +685,8 @@ auto CAviSynthFilter::Reset(bool recreateAvsEnv) -> void {
     _frameRateCheckpointInSampleNb = 0;
     _frameRateCheckpointOutFrameStartTime = 0;
     _frameRateCheckpointOutFrameNb = 0;
-    _inputFrameRate = 0;
-    _outputFrameRate = 0;
+    _currentInputFrameRate = 0;
+    _currentOutputFrameRate = 0;
 }
 
 auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
@@ -934,6 +938,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
 
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
+    _sourceAvgFrameRate = static_cast<int>(llMulDiv(_avsSourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _avsScriptVideoInfo.fps_denominator, 0));
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
 
     return true;

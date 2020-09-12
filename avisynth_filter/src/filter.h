@@ -53,12 +53,13 @@ public:
     auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
     auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int override;
     auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int override;
-    auto STDMETHODCALLTYPE GetInputFrameRate() const -> int override;
-    auto STDMETHODCALLTYPE GetOutputFrameRate() const -> int override;
+    auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int override;
+    auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int override;
     auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring override;
     auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat override;
 
     auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring> override;
+    auto STDMETHODCALLTYPE GetSourceAvgFrameRate() const -> int override;
     auto STDMETHODCALLTYPE GetAvsState() const -> AvsState override;
     auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string> override;
 
@@ -94,6 +95,7 @@ private:
 
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
+    int _sourceAvgFrameRate;
     double _frameTimeScaling;
 
     std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
@@ -119,8 +121,8 @@ private:
     int _frameRateCheckpointInSampleNb;
     REFERENCE_TIME _frameRateCheckpointOutFrameStartTime;
     int _frameRateCheckpointOutFrameNb;
-    int _inputFrameRate;
-    int _outputFrameRate;
+    int _currentInputFrameRate;
+    int _currentOutputFrameRate;
 
     std::wstring _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;

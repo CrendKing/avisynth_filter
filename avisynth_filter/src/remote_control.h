@@ -17,8 +17,8 @@ private:
     static auto CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
     auto Run() -> void;
-    auto SendString(HWND receiver, ULONG_PTR id, const std::string &data) const->LRESULT;
-    auto SendString(HWND receiver, ULONG_PTR id, const std::wstring &data) const -> LRESULT;
+    auto SendString(HWND receiver, ULONG_PTR id, const std::string &data) const -> void;
+    auto SendString(HWND receiver, ULONG_PTR id, const std::wstring &data) const -> void;
     auto HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyData) const -> LRESULT;
 
     std::thread _msgThread;

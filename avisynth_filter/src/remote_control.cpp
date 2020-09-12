@@ -79,22 +79,22 @@ auto RemoteControl::Run() -> void {
 	Log("Remote control stopped");
 }
 
-auto RemoteControl::SendString(HWND receiver, ULONG_PTR id, const std::string &data) const -> LRESULT {
+auto RemoteControl::SendString(HWND receiver, ULONG_PTR id, const std::string &data) const -> void {
 	if (!receiver) {
-		return FALSE;
+		return;
 	}
-
+	
 	const COPYDATASTRUCT copyData { id, static_cast<DWORD>(data.size()), const_cast<char *>(data.c_str()) };
-	return SendMessage(receiver, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData));
+	SendMessage(receiver, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData));
 }
 
-auto RemoteControl::SendString(HWND receiver, ULONG_PTR id, const std::wstring &data) const -> LRESULT {
+auto RemoteControl::SendString(HWND receiver, ULONG_PTR id, const std::wstring &data) const -> void {
 	std::string utf8Data;
 	if (!data.empty()) {
 		utf8Data = ConvertWideToUtf8(data);
 	}
 
-	return SendString(receiver, id, utf8Data);
+	SendString(receiver, id, utf8Data);
 }
 
 auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyData) const -> LRESULT {
@@ -115,8 +115,8 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 	case API_MSG_GET_INPUT_PAR:
 		return _status->GetInputMediaInfo().pixelAspectRatio;
 
-	case API_MSG_GET_INPUT_FPS:
-		return _status->GetInputFrameRate();
+	case API_MSG_GET_CURRENT_INPUT_FPS:
+		return _status->GetCurrentInputFrameRate();
 
 	case API_MSG_GET_INPUT_SOURCE_PATH:
 		SendString(senderWnd, copyData->dwData, _status->GetVideoSourcePath());
@@ -131,8 +131,11 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 	case API_MSG_GET_INPUT_HDR_LUMINANCE:
 		return _status->GetInputMediaInfo().hdrLuminance;
 
-	case API_MSG_GET_OUTPUT_FPS:
-		return _status->GetOutputFrameRate();
+	case API_MSG_GET_SOURCE_AVG_FPS:
+		return _status->GetSourceAvgFrameRate();
+
+	case API_MSG_GET_CURRENT_OUTPUT_FPS:
+		return _status->GetCurrentOutputFrameRate();
 
 	case API_MSG_GET_AVS_STATE:
 		return static_cast<LRESULT>(_status->GetAvsState());

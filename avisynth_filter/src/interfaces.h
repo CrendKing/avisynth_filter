@@ -24,12 +24,13 @@ DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetInputFrameRate() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetOutputFrameRate() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring = 0;
     virtual auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat = 0;
 
     virtual auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring> = 0;
+    virtual auto STDMETHODCALLTYPE GetSourceAvgFrameRate() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetAvsState() const -> AvsState = 0;
     virtual auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string> = 0;
 };

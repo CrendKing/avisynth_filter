@@ -62,9 +62,11 @@ static constexpr ULONG_PTR API_MSG_GET_INPUT_PAR           = 202;
 
 /**
  * input : none
- * output: input video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
+ * output: current input video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
+ * note  : unlike API_MSG_GET_SOURCE_AVG_FPS, this FPS could become 0 when paused,
+ *         or source filter stops delivering samples
  */
-static constexpr ULONG_PTR API_MSG_GET_INPUT_FPS           = 203;
+static constexpr ULONG_PTR API_MSG_GET_CURRENT_INPUT_FPS   = 203;
 
 /**
  * input : none
@@ -90,14 +92,20 @@ static constexpr ULONG_PTR API_MSG_GET_INPUT_HDR_TYPE      = 206;
  * output: input video's HDR liminance, in cd/m2
  */
 static constexpr ULONG_PTR API_MSG_GET_INPUT_HDR_LUMINANCE = 207;
+
+/**
+ * input : none
+ * output: average frames per second from the source video, scaled by FRAME_RATE_SCALE_FACTOR
+ */
+static constexpr ULONG_PTR API_MSG_GET_SOURCE_AVG_FPS      = 208;
                                                            
 ////// output related messages //////
 
 /**
  * input : none
- * output: output video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
+ * output: current output video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
  */
-static constexpr ULONG_PTR API_MSG_GET_OUTPUT_FPS          = 300;
+static constexpr ULONG_PTR API_MSG_GET_CURRENT_OUTPUT_FPS  = 300;
                                                            
 ////// AviSynth related messages //////
 
