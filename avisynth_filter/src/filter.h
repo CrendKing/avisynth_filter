@@ -41,10 +41,8 @@ public:
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
-    auto STDMETHODCALLTYPE GetAvsSourceFile() const -> std::optional<std::wstring> override;
-    auto STDMETHODCALLTYPE GetAvsSourceScript() const -> std::optional<std::wstring> override;
-    auto STDMETHODCALLTYPE SetAvsSourceFile(const std::wstring &avsFile) -> void override;
-    auto STDMETHODCALLTYPE SetAvsSourceScript(const std::wstring &avsScript) -> void override;
+    auto STDMETHODCALLTYPE GetAvsSourceFile() const -> std::wstring override;
+    auto STDMETHODCALLTYPE SetAvsSourceFile(const std::wstring &avsSourceFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsSource() -> void override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
@@ -106,7 +104,6 @@ private:
     Format::VideoFormat _outputFormat;
 
     std::wstring _avsSourceFile;
-    std::wstring _avsSourceScript;
     bool _reloadAvsSource;
     RemoteControl *_remoteControl;
 

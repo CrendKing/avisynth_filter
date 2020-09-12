@@ -137,36 +137,6 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 	case API_MSG_GET_AVS_STATE:
 		return static_cast<LRESULT>(_status->GetAvsState());
 
-	case API_MSG_GET_AVS_SOURCE_FILE:
-		if (auto avsSource = _settings->GetAvsSourceFile()) {
-			SendString(senderWnd, copyData->dwData, *avsSource);
-			return TRUE;
-		} else {
-			return FALSE;
-		}
-
-	case API_MSG_SET_AVS_SOURCE_FILE: {
-		const std::wstring newAvsSourceFile = ConvertUtf8ToWide(std::string(static_cast<const char *>(copyData->lpData), copyData->cbData));
-		_settings->SetAvsSourceFile(newAvsSourceFile);
-		_settings->ReloadAvsSource();
-		return TRUE;
-	}
-
-	case API_MSG_GET_AVS_SOURCE_SCRIPT:
-		if (auto avsSource = _settings->GetAvsSourceScript()) {
-			SendString(senderWnd, copyData->dwData, *avsSource);
-			return TRUE;
-		} else {
-			return FALSE;
-		}
-
-	case API_MSG_SET_AVS_SOURCE_SCRIPT: {
-		const std::wstring newAvsSourceScript = ConvertUtf8ToWide(std::string(static_cast<const char *>(copyData->lpData), copyData->cbData));
-		_settings->SetAvsSourceScript(newAvsSourceScript);
-		_settings->ReloadAvsSource();
-		return TRUE;
-	}
-
 	case API_MSG_GET_AVS_ERROR:
 		if (auto avsError = _status->GetAvsError()) {
 			SendString(senderWnd, copyData->dwData, *avsError);
@@ -174,6 +144,23 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 		} else {
 			return FALSE;
 		}
+
+	case API_MSG_GET_AVS_SOURCE_FILE: {
+		const std::wstring avsSourceFile = _settings->GetAvsSourceFile();
+		if (avsSourceFile.empty()) {
+			return FALSE;
+		}
+
+		SendString(senderWnd, copyData->dwData, avsSourceFile);
+		return TRUE;
+	}
+
+	case API_MSG_SET_AVS_SOURCE_FILE: {
+		const std::wstring newAvsSourceFile = ConvertUtf8ToWide(std::string(static_cast<const char *>(copyData->lpData), copyData->cbData));
+		_settings->SetAvsSourceFile(newAvsSourceFile);
+		_settings->ReloadAvsSource();
+		return TRUE;
+	}
 
 	default:
 		return FALSE;

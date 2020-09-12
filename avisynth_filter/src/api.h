@@ -109,35 +109,22 @@ static constexpr ULONG_PTR API_MSG_GET_AVS_STATE           = 400;
 
 /**
  * input : none
+ * output: current AviSynth environment error message, if available
+ * return: 0 if there is no error, 1 otherwise
+ */
+static constexpr ULONG_PTR API_MSG_GET_AVS_ERROR           = 401;
+
+/**
+ * input : none
  * output: AviSynth source file path, if available
  * return: 0 if current AviSynth source is not a file, 1 otherwise
  */
-static constexpr ULONG_PTR API_MSG_GET_AVS_SOURCE_FILE     = 401;
+static constexpr ULONG_PTR API_MSG_GET_AVS_SOURCE_FILE     = 402;
 
 /**
  * input : AviSynth source file path
  * output: none
  */
-static constexpr ULONG_PTR API_MSG_SET_AVS_SOURCE_FILE     = 402;
-
-/**
- * input : none
- * output: AviSynth source script content, if available
- * return: 0 if current AviSynth source is not a script, 1 otherwise
- */
-static constexpr ULONG_PTR API_MSG_GET_AVS_SOURCE_SCRIPT   = 403;
-
-/**
- * input : AviSynth source script
- * output: none
- */
-static constexpr ULONG_PTR API_MSG_SET_AVS_SOURCE_SCRIPT   = 404;
-
-/**
- * input : none
- * output: current AviSynth environment error message, if available
- * return: 0 if there is no error, 1 otherwise
- */
-static constexpr ULONG_PTR API_MSG_GET_AVS_ERROR           = 405;
+static constexpr ULONG_PTR API_MSG_SET_AVS_SOURCE_FILE     = 403;
 
 }

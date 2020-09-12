@@ -10,10 +10,8 @@ namespace AvsFilter {
 DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
     virtual auto STDMETHODCALLTYPE SaveSettings() const -> void = 0;
 
-    virtual auto STDMETHODCALLTYPE GetAvsSourceFile() const -> std::optional<std::wstring> = 0;
-    virtual auto STDMETHODCALLTYPE GetAvsSourceScript() const -> std::optional<std::wstring> = 0;
+    virtual auto STDMETHODCALLTYPE GetAvsSourceFile() const -> std::wstring = 0;
     virtual auto STDMETHODCALLTYPE SetAvsSourceFile(const std::wstring &avsFile) -> void = 0;
-    virtual auto STDMETHODCALLTYPE SetAvsSourceScript(const std::wstring &avsScript) -> void = 0;
     virtual auto STDMETHODCALLTYPE ReloadAvsSource() -> void = 0;
 
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;

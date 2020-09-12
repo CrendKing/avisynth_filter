@@ -25,17 +25,8 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    if (auto optAvsSourceFile = _settings->GetAvsSourceFile()) {
-        _avsSourceFile = optAvsSourceFile.value();
-        SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsSourceFile.c_str());
-    } else {
-        EnableWindow(GetDlgItem(m_Dlg, IDC_EDIT_AVS_FILE), false);
-        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_EDIT), false);
-        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), false);
-        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_BROWSE), false);
-    }
-
-    // the reset buffer size check box is always unchecked initially
+    _avsSourceFile = _settings->GetAvsSourceFile();
+    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsSourceFile.c_str());
 
     const DWORD formatBits = _settings->GetInputFormats();
     for (int i = 0; i < sizeof(formatBits) * 8; ++i) {

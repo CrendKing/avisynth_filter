@@ -498,30 +498,12 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SaveSettings() const -> void {
     _registry.WriteNumber(REGISTRY_VALUE_NAME_FORMATS, _inputFormatBits);
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsSourceFile() const -> std::optional<std::wstring> {
-    if (_avsSourceFile.empty()) {
-        return std::nullopt;
-    }
-
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsSourceFile() const -> std::wstring {
     return _avsSourceFile;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsSourceScript() const -> std::optional<std::wstring> {
-    if (_avsSourceScript.empty()) {
-        return std::nullopt;
-    }
-
-    return _avsSourceScript;
-
-}
-auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsSourceFile(const std::wstring &avsFile) -> void {
-    _avsSourceFile = avsFile;
-    _avsSourceScript.clear();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsSourceScript(const std::wstring &avsScript) -> void {
-    _avsSourceFile.clear();
-    _avsSourceScript = avsScript;
+auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsSourceFile(const std::wstring &avsSourceFile) -> void {
+    _avsSourceFile = avsSourceFile;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsSource() -> void {
@@ -918,10 +900,6 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
             const AVSValue args[2] = { utf8File.c_str(), true };
             const char *const argNames[2] = { nullptr, "utf8" };
             invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
-            isImportSuccess = invokeResult.Defined();
-        } else if (!_avsSourceScript.empty()) {
-            const std::string utf8Script = ConvertWideToUtf8(_avsSourceScript);
-            invokeResult = _avsEnv->Invoke("Eval", AVSValue(utf8Script.c_str()), nullptr);
             isImportSuccess = invokeResult.Defined();
         }
 
