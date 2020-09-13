@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "remote_control.h"
 #include "api.h"
+#include "constants.h"
 #include "logging.h"
 #include "util.h"
 
@@ -79,31 +80,36 @@ auto RemoteControl::Run() -> void {
 	Log("Remote control stopped");
 }
 
-auto RemoteControl::SendString(HWND receiver, ULONG_PTR id, const std::string &data) const -> void {
-	if (!receiver) {
+auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {
+	if (!hReceiverWindow) {
 		return;
 	}
 	
-	const COPYDATASTRUCT copyData { id, static_cast<DWORD>(data.size()), const_cast<char *>(data.c_str()) };
-	SendMessage(receiver, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData));
+	const COPYDATASTRUCT copyData { msgId, static_cast<DWORD>(data.size()), const_cast<char *>(data.c_str()) };
+	SendMessageTimeout(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
+					   SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
 }
 
-auto RemoteControl::SendString(HWND receiver, ULONG_PTR id, const std::wstring &data) const -> void {
+auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void {
 	std::string utf8Data;
 	if (!data.empty()) {
 		utf8Data = ConvertWideToUtf8(data);
 	}
 
-	SendString(receiver, id, utf8Data);
+	SendString(hReceiverWindow, msgId, utf8Data);
 }
 
-auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyData) const -> LRESULT {
+auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *copyData) const -> LRESULT {
+	if (copyData == nullptr) {
+		return FALSE;
+	}
+
 	switch (copyData->dwData) {
 	case API_MSG_GET_API_VERSION:
 		return API_VERSION;
 
 	case API_MSG_GET_VIDEO_FILTERS:
-		SendString(senderWnd, copyData->dwData, JoinStrings(_status->GetVideoFilterNames(), API_CSV_DELIMITER));
+		SendString(hSenderWindow, copyData->dwData, JoinStrings(_status->GetVideoFilterNames(), API_CSV_DELIMITER));
 		return TRUE;
 
 	case API_MSG_GET_INPUT_WIDTH:
@@ -119,7 +125,7 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 		return _status->GetCurrentInputFrameRate();
 
 	case API_MSG_GET_INPUT_SOURCE_PATH:
-		SendString(senderWnd, copyData->dwData, _status->GetVideoSourcePath());
+		SendString(hSenderWindow, copyData->dwData, _status->GetVideoSourcePath());
 		return TRUE;
 
 	case API_MSG_GET_INPUT_CODEC:
@@ -142,7 +148,7 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 
 	case API_MSG_GET_AVS_ERROR:
 		if (auto avsError = _status->GetAvsError()) {
-			SendString(senderWnd, copyData->dwData, *avsError);
+			SendString(hSenderWindow, copyData->dwData, *avsError);
 			return TRUE;
 		} else {
 			return FALSE;
@@ -154,7 +160,7 @@ auto RemoteControl::HandleCopyData(HWND senderWnd, const COPYDATASTRUCT *copyDat
 			return FALSE;
 		}
 
-		SendString(senderWnd, copyData->dwData, effectiveAvsFile);
+		SendString(hSenderWindow, copyData->dwData, effectiveAvsFile);
 		return TRUE;
 	}
 

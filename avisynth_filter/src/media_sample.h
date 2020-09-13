@@ -10,7 +10,7 @@ class CAviSynthFilterMediaSample
     : public CMediaSample
     , public IMediaSideData {
 public:
-    CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator *pAllocator, HRESULT *phr, LPBYTE pBuffer = nullptr, LONG length = 0);
+    CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator *pAllocator, HRESULT *phr, LPBYTE pBuffer, LONG length);
 
     // IUnknown
     auto STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppv) -> HRESULT override;

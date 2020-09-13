@@ -83,4 +83,5 @@ static constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS = L"Formats";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_REMOTE_CONTROL = L"RemoteControl";
 static constexpr wchar_t *UNAVAILABLE_SOURCE_PATH = L"N/A";
 
+static constexpr int REMOTE_CONTROL_SMTO_TIMEOUT_MS = 1000;
 }

@@ -35,7 +35,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
-    if (_remoteControl) {
+    if (_remoteControl != nullptr) {
         delete _remoteControl;
         _remoteControl = nullptr;
     }
