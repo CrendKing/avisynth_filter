@@ -491,19 +491,27 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::SaveSettings() const -> void {
-    if (!_avsSourceFile.empty()) {
-        _registry.WriteString(REGISTRY_VALUE_NAME_AVS_FILE, _avsSourceFile);
+    if (!_prefAvsFile.empty()) {
+        _registry.WriteString(REGISTRY_VALUE_NAME_AVS_FILE, _prefAvsFile);
     }
 
     _registry.WriteNumber(REGISTRY_VALUE_NAME_FORMATS, _inputFormatBits);
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsSourceFile() const -> std::wstring {
-    return _avsSourceFile;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetPrefAvsFile() const -> std::wstring {
+    return _prefAvsFile;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::SetAvsSourceFile(const std::wstring &avsSourceFile) -> void {
-    _avsSourceFile = avsSourceFile;
+auto STDMETHODCALLTYPE CAviSynthFilter::SetPrefAvsFile(const std::wstring &avsFile) -> void {
+    _prefAvsFile = avsFile;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
+    return _effectiveAvsFile;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::SetEffectiveAvsFile(const std::wstring &avsFile) -> void {
+    _effectiveAvsFile = avsFile;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsSource() -> void {
@@ -758,7 +766,10 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
 }
 
 auto CAviSynthFilter::LoadSettings() -> void {
-    SetAvsSourceFile(_registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE));
+    const std::wstring avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
+    SetPrefAvsFile(avsFile);
+    SetEffectiveAvsFile(avsFile);
+
     _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
 
     if (_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0) {
@@ -899,8 +910,8 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
     try {
         bool isImportSuccess = false;
 
-        if (!_avsSourceFile.empty()) {
-            const std::string utf8File = ConvertWideToUtf8(_avsSourceFile);
+        if (!_effectiveAvsFile.empty()) {
+            const std::string utf8File = ConvertWideToUtf8(_effectiveAvsFile);
             const AVSValue args[2] = { utf8File.c_str(), true };
             const char *const argNames[2] = { nullptr, "utf8" };
             invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);

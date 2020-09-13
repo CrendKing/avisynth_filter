@@ -25,8 +25,10 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    _avsSourceFile = _settings->GetAvsSourceFile();
-    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsSourceFile.c_str());
+    _avsFile = _settings->GetPrefAvsFile();
+    _avsFileManagedByRC = _avsFile != _settings->GetEffectiveAvsFile();
+
+    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsFile.c_str());
 
     const DWORD formatBits = _settings->GetInputFormats();
     for (int i = 0; i < sizeof(formatBits) * 8; ++i) {
@@ -39,7 +41,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
-    _settings->SetAvsSourceFile(_avsSourceFile);
+    _settings->SetPrefAvsFile(_avsFile);
 
     DWORD formatBits = 0;
     for (int i = IDC_INPUT_FORMAT_NV12; i < IDC_INPUT_FORMAT_END; ++i) {
@@ -51,7 +53,14 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
 
     _settings->SaveSettings();
 
-    _settings->ReloadAvsSource();
+    if (_avsFileManagedByRC) {
+        // TODO: put message in string table when going multi-language
+        MessageBox(m_hwnd, L"AviSynth source file is currently managed by remote control. Your change is saved but not used.",
+                   FILTER_NAME_WIDE, MB_OK | MB_ICONINFORMATION);
+    } else {
+        _settings->SetEffectiveAvsFile(_avsFile);
+        _settings->ReloadAvsSource();
+    }
 
     return S_OK;
 }
@@ -64,14 +73,14 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
                 const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
 
-                if (newValue != _avsSourceFile) {
-                    _avsSourceFile = newValue;
+                if (newValue != _avsFile) {
+                    _avsFile = newValue;
                     SetDirty();
                 }
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
-            if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsSourceFile.empty()) {
-                ShellExecute(hwnd, L"edit", _avsSourceFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+            if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
+                ShellExecute(hwnd, L"edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
             } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
                 _settings->ReloadAvsSource();
             } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {

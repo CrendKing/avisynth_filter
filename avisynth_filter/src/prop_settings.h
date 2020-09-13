@@ -20,7 +20,8 @@ private:
     auto SetDirty() -> void;
 
     IAvsFilterSettings *_settings;
-    std::wstring _avsSourceFile;
+    std::wstring _avsFile;
+    bool _avsFileManagedByRC;
 };
 
 }

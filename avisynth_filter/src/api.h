@@ -7,7 +7,8 @@ namespace AvsFilter {
 	
 /**
  * All requests and responses are transmitted through WM_COPYDATA message.
- * To access the API, activate the remote control module by creating the registry value defined by REGISTRY_VALUE_NAME_REMOTE_CONTROL.
+ * To access the API, activate the remote control module by setting the registry value REGISTRY_VALUE_NAME_REMOTE_CONTROL to non-zero.
+ * The return value of each API is either noted as their output value, specified in the documentation, or TRUE if call is successful and FALSE if failed.
  */
 
 enum class AvsState {
@@ -118,16 +119,16 @@ static constexpr ULONG_PTR API_MSG_GET_AVS_STATE           = 400;
 /**
  * input : none
  * output: current AviSynth environment error message, if available
- * return: 0 if there is no error, 1 otherwise
+ * return: FALSE if there is no error, TRUE otherwise
  */
 static constexpr ULONG_PTR API_MSG_GET_AVS_ERROR           = 401;
 
 /**
  * input : none
- * output: AviSynth source file path, if available
- * return: 0 if current AviSynth source is not a file, 1 otherwise
+ * output: effective AviSynth source file path, if available
+ * return: FALSE if AviSynth source file is effective, TRUE otherwise
  */
-static constexpr ULONG_PTR API_MSG_GET_AVS_SOURCE_FILE     = 402;
+static constexpr ULONG_PTR API_MSG_GET_AVS_SOURCE_FILE = 402;
 
 /**
  * input : AviSynth source file path
