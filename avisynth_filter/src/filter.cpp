@@ -491,10 +491,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::SaveSettings() const -> void {
-    if (!_prefAvsFile.empty()) {
-        _registry.WriteString(REGISTRY_VALUE_NAME_AVS_FILE, _prefAvsFile);
-    }
-
+    _registry.WriteString(REGISTRY_VALUE_NAME_AVS_FILE, _prefAvsFile);
     _registry.WriteNumber(REGISTRY_VALUE_NAME_FORMATS, _inputFormatBits);
 }
 
@@ -876,7 +873,6 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
 
 /**
  * Create new AviSynth script clip with specified media type.
- * If allowDisconnect == true, return false early if no avs script or AvsFilterDisconnect() is returned from script
  */
 auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateAvsEnv) -> bool {
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
@@ -919,7 +915,7 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
         }
 
         if (!isImportSuccess) {
-            if (m_State == State_Stopped) {
+            if (m_State == State_Stopped && _remoteControl == nullptr) {
                 return false;
             }
 
