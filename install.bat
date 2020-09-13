@@ -1,1 +1,2 @@
-regsvr32 avisynth_filter.ax
+regsvr32 avisynth_filter_64.ax
+regsvr32 avisynth_filter_32.ax

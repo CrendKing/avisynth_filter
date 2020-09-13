@@ -1,4 +1,3 @@
-LIBRARY     avisynth_filter.ax
 EXPORTS
             DllMain                 PRIVATE
             DllGetClassObject       PRIVATE
