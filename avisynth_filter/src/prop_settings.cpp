@@ -6,8 +6,9 @@
 namespace AvsFilter {
 
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_PROPPAGE, IDS_SETTINGS)
-    , _settings(nullptr) {
+    : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
+    , _settings(nullptr)
+    , _avsFileManagedByRC(false) {
 }
 
 auto CAvsFilterPropSettings::OnConnect(IUnknown *pUnk) -> HRESULT {
@@ -27,6 +28,9 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
     _avsFile = _settings->GetPrefAvsFile();
     _avsFileManagedByRC = _avsFile != _settings->GetEffectiveAvsFile();
+    if (_avsFileManagedByRC) {
+        ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
+    }
 
     SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsFile.c_str());
 
@@ -66,7 +70,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR {
-    if (uMsg == WM_COMMAND) {
+    switch (uMsg) {
+    case WM_COMMAND:
         if (HIWORD(wParam) == EN_CHANGE) {
             if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
                 wchar_t buf[STR_MAX_LENGTH];
@@ -77,6 +82,8 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                     _avsFile = newValue;
                     SetDirty();
                 }
+
+                return 0;
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
             if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
@@ -99,7 +106,21 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             }
 
             SetDirty();
+            return 0;
         }
+        break;
+
+    case WM_CTLCOLORSTATIC:
+        // make the color of the text control (IDC_TEXT_RC_CONTROLLING) blue
+
+        if (GetWindowLong(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
+            const HDC hdc = reinterpret_cast<HDC>(wParam);
+
+            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdc, RGB(0, 0, 0xff));
+            return reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_BTNFACE));
+        }
+        break;
     }
 
     return CBasePropertyPage::OnReceiveMessage(hwnd, uMsg, wParam, lParam);

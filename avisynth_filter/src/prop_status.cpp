@@ -9,7 +9,7 @@
 namespace AvsFilter {
 
 CAvsFilterPropStatus::CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUSPAGE, IDS_STATUS)
+    : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUS_PAGE, IDS_STATUS)
     , _status(nullptr)
     , _isSourcePathSet(false) {
 }
@@ -45,11 +45,15 @@ auto CAvsFilterPropStatus::OnApplyChanges() -> HRESULT {
 }
 
 auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR {
-    if (uMsg == WM_COMMAND) {
+    switch (uMsg) {
+    case WM_COMMAND:
         if (HIWORD(wParam) == EN_SETFOCUS) {
             HideCaret(reinterpret_cast<HWND>(lParam));
+            return 0;
         }
-    } else if (uMsg == WM_TIMER) {
+        break;
+
+    case WM_TIMER:
         SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_string(_status->GetBufferSize()).c_str());
         SetDlgItemTextA(hwnd, IDC_TEXT_CURRENT_PREFETCH_VALUE, std::to_string(_status->GetCurrentPrefetch()).c_str());
         SetDlgItemTextA(hwnd, IDC_TEXT_INITIAL_PREFETCH_VALUE, std::to_string(_status->GetInitialPrefetch()).c_str());
@@ -76,6 +80,8 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         const Format::VideoFormat format = _status->GetInputMediaInfo();
         const std::string infoStr = std::to_string(format.bmi.biWidth).append(" x ").append(std::to_string(abs(format.bmi.biHeight))).append(" ").append(format.GetCodecName());
         SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
+
+        return 0;
     }
 
     return CBasePropertyPage::OnReceiveMessage(hwnd, uMsg, wParam, lParam);
