@@ -64,8 +64,8 @@ static constexpr ULONG_PTR API_MSG_GET_INPUT_PAR           = 202;
 /**
  * input : none
  * output: current input video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
- * note  : unlike API_MSG_GET_SOURCE_AVG_FPS, this FPS could become 0 when paused,
- *         or source filter stops delivering samples
+ * note  : unlike API_MSG_GET_SOURCE_AVG_FPS, this FPS could vary if the input video
+ *         has variable frame rate, or source filter delivers sample in stuttering way
  */
 static constexpr ULONG_PTR API_MSG_GET_CURRENT_INPUT_FPS   = 203;
 

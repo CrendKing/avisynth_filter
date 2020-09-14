@@ -25,7 +25,9 @@ RemoteControl::~RemoteControl() {
 }
 
 auto RemoteControl::Start() -> void {
-	_msgThread = std::thread(&RemoteControl::Run, this);
+	if (!_msgThread.joinable()) {
+		_msgThread = std::thread(&RemoteControl::Run, this);
+	}
 }
 
 auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
