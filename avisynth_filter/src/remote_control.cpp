@@ -56,7 +56,7 @@ auto RemoteControl::Run() -> void {
 		return;
 	}
 
-	_hWnd = CreateWindowEx(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, 0, nullptr, wc.hInstance, nullptr);
+	_hWnd = CreateWindowEx(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
 	if (!_hWnd) {
 		return;
 	}

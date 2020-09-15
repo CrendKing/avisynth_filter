@@ -46,6 +46,12 @@ This function takes no argument.
 * The optimal buffer sizes depends on the performance of the computer hardware as well as the AviSynth script. If any change is made to to the script during playback, user could use the "Reload" button in the settings page to trigger recalibration.
 * Use the input format selectors if user wants to only activate the filter on certain video formats.
 
+## Remote Control and API
+
+Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated by adding a non-zero DWORD value **RemoteControl** to registry key **HKEY_CURRENT_USER\SOFTWARE\AviSynthFilter**.
+
+For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
+
 ## Example script
 
 Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.
