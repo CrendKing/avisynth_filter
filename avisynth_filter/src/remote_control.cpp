@@ -50,7 +50,7 @@ auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 auto RemoteControl::Run() -> void {
 	WNDCLASS wc {};
 	wc.lpfnWndProc = &RemoteControl::WndProc;
-	wc.hInstance = GetModuleHandle(nullptr);
+	wc.hInstance = g_hInst;
 	wc.lpszClassName = API_CLASS_NAME;
 	if (!RegisterClass(&wc)) {
 		return;

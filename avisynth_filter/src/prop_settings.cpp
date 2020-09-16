@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "prop_settings.h"
 #include "constants.h"
+#include "util.h"
 
 
 namespace AvsFilter {
@@ -40,6 +41,18 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
             CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_NV12 + i, 1);
         }
     }
+
+    std::wstring title = L"<a>AviSynth Filter";
+    if (auto productVersion = GetModuleProductVersion(g_hInst)) {
+        title += L" v";
+        title += *productVersion;
+    }
+    title += L"</a>";
+
+    SetDlgItemText(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
+
+    // move the focus to the tab of the settings page, effectively unfocus all controls in the page
+    PostMessage(m_hwnd, WM_NEXTDLGCTL, 1, FALSE);
 
     return S_OK;
 }
@@ -111,16 +124,28 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         break;
 
     case WM_CTLCOLORSTATIC:
-        // make the color of the text control (IDC_TEXT_RC_CONTROLLING) blue
-
         if (GetWindowLong(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
             const HDC hdc = reinterpret_cast<HDC>(wParam);
-
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, RGB(0, 0, 0xff));
             return reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_BTNFACE));
         }
         break;
+
+    case WM_NOTIFY: {
+        const LPNMHDR notifyHeader = reinterpret_cast<LPNMHDR>(lParam);
+
+        if (notifyHeader->idFrom == IDC_SYSLINK_TITLE) {
+            switch (notifyHeader->code) {
+            case NM_CLICK:
+            case NM_RETURN:
+                ShellExecute(hwnd, L"open", L"https://github.com/CrendKing/avisynth_filter", nullptr, nullptr, SW_SHOW);
+                return 0;
+            }
+        }
+
+        break;
+    }
     }
 
     return CBasePropertyPage::OnReceiveMessage(hwnd, uMsg, wParam, lParam);

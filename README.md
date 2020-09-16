@@ -1,4 +1,4 @@
-# AviSynth Filter
+# [AviSynth Filter](https://github.com/CrendKing/avisynth_filter)
 
 A DirectShow filter that loads an AviSynth script and feed the frames to the video player.
 
@@ -46,9 +46,9 @@ This function takes no argument.
 * The optimal buffer sizes depends on the performance of the computer hardware as well as the AviSynth script. If any change is made to to the script during playback, user could use the "Reload" button in the settings page to trigger recalibration.
 * Use the input format selectors if user wants to only activate the filter on certain video formats.
 
-## Remote Control and API
+## API and Remote Control
 
-Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated by adding a non-zero DWORD value **RemoteControl** to registry key **HKEY_CURRENT_USER\SOFTWARE\AviSynthFilter**.
+Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated by importing **activate_remote_control.reg** file.
 
 For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
 
@@ -74,4 +74,6 @@ A build script `build.bat` is included to automate the process. It obtains depen
 
 ## Credit
 
-Many thanks to Milardo from Doom9's Forum (https://forum.doom9.org/member.php?u=159393) for help testing the project.
+Thanks to [Milardo from Doom9's Forum](https://forum.doom9.org/member.php?u=159393) for help initially testing the project.
+
+Thanks to [chainikdn from SVP team](https://github.com/chainikdn) for contributing features.

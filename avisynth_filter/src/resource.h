@@ -12,6 +12,7 @@
 #define IDC_BUTTON_BROWSE               1003
 #define IDC_EDIT_AVS_FILE               1004
 #define IDC_TEXT_RC_CONTROLLING         1005
+#define IDC_SYSLINK_TITLE               1006
 #define IDC_INPUT_FORMATS               1100
 #define IDC_INPUT_FORMAT_8BIT           1101
 #define IDC_INPUT_FORMAT_10BIT          1102
@@ -53,7 +54,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        106
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1009
+#define _APS_NEXT_CONTROL_VALUE         1007
 #define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif
