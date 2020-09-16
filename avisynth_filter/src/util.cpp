@@ -86,30 +86,4 @@ auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> IPin * {
     return nullptr;
 }
 
-auto GetModuleProductVersion(HMODULE hModule) -> std::optional<std::wstring> {
-    const HRSRC hVersion = FindResource(hModule, MAKEINTRESOURCE(VS_VERSION_INFO), RT_VERSION);
-    if (hVersion == nullptr) {
-        return std::nullopt;
-    }
-
-    const HGLOBAL res = LoadResource(hModule, hVersion);
-    if (res == nullptr) {
-        return std::nullopt;
-    }
-
-    const LPVOID versionInfo = LockResource(res);
-    if (versionInfo == nullptr) {
-        return std::nullopt;
-    }
-
-    wchar_t *version;
-    UINT versionSize;
-    if (VerQueryValue(versionInfo, L"\\StringFileInfo\\040904b0\\ProductVersion", reinterpret_cast<void **>(&version), &versionSize) == FALSE) {
-        return std::nullopt;
-    }
-
-    // ignore the last ".0"
-    return std::wstring(version, versionSize - 3);
-}
-
 }

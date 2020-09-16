@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "version.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -145,35 +146,35 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,6,0,0
- PRODUCTVERSION 0,6,0,0
- FILEFLAGSMASK 0x3fL
+FILEVERSION    FILTER_VERSION_MAJOR,FILTER_VERSION_MINOR,FILTER_VERSION_PATCH,0
+PRODUCTVERSION FILTER_VERSION_MAJOR,FILTER_VERSION_MINOR,FILTER_VERSION_PATCH,0
+FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
 #ifdef _DEBUG
- FILEFLAGS 0x1L
+FILEFLAGS      VS_FF_DEBUG
 #else
- FILEFLAGS 0x0L
+FILEFLAGS      0
 #endif
- FILEOS 0x40004L
- FILETYPE 0x2L
- FILESUBTYPE 0x0L
+FILEOS         VOS_NT_WINDOWS32
+FILETYPE       VFT_DLL
+FILESUBTYPE    VFT2_UNKNOWN
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904b0"
+        BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "CrendKing"
-            VALUE "FileDescription", "AviSynth DirectShow Filter"
-            VALUE "FileVersion", "0.6.0.0"
-            VALUE "InternalName", "avisynth_filter.ax"
-            VALUE "LegalCopyright", "Copyright (C) 2020"
-            VALUE "OriginalFilename", "avisynth_filter.rc"
-            VALUE "ProductName", "AviSynth Filter"
-            VALUE "ProductVersion", "0.6.0.0"
+            VALUE "CompanyName",      "CrendKing"
+            VALUE "FileDescription",  "AviSynth DirectShow Filter"
+            VALUE "FileVersion",      FILTER_VERSION_STRING
+            VALUE "InternalName",     "avisynth_filter.ax"
+            VALUE "LegalCopyright",   "Copyright (C) 2020"
+            VALUE "OriginalFilename", "avisynth_filter.ax"
+            VALUE "ProductName",      FILTER_NAME_BASE
+            VALUE "ProductVersion",   FILTER_VERSION_STRING
         END
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x409, 1200
+        VALUE "Translation", 0x409, 04B0
     END
 END
 

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "prop_settings.h"
 #include "constants.h"
-#include "util.h"
+#include "version.h"
 
 
 namespace AvsFilter {
@@ -42,13 +42,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
         }
     }
 
-    std::wstring title = L"<a>AviSynth Filter";
-    if (auto productVersion = GetModuleProductVersion(g_hInst)) {
-        title += L" v";
-        title += *productVersion;
-    }
-    title += L"</a>";
-
+    const std::wstring title = std::wstring(L"<a>") + Widen(FILTER_NAME_BASE) + L" v" + Widen(FILTER_VERSION_STRING) + L"</a>";
     SetDlgItemText(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
@@ -127,6 +121,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         if (GetWindowLong(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
             const HDC hdc = reinterpret_cast<HDC>(wParam);
             SetBkMode(hdc, TRANSPARENT);
+            // make the color of the text control (IDC_TEXT_RC_CONTROLLING) blue to catch attention
             SetTextColor(hdc, RGB(0, 0, 0xff));
             return reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_BTNFACE));
         }

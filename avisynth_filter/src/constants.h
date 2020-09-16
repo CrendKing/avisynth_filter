@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pch.h"
+#include "version.h"
 
 
 namespace AvsFilter {
@@ -40,26 +41,24 @@ DEFINE_GUID(inline IID_MediaSideData3DOffset,
 static const GUID MEDIASUBTYPE_I420 = FOURCCMap('024I');
 static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 
-#define WidenHelper(str)  L##str
-#define Widen(str)        WidenHelper(str)
+#define WidenHelper(str)                  L##str
+#define Widen(str)                        WidenHelper(str)
 
 #ifdef _DEBUG
-#define FILTER_NAME_SUFFIX " [Debug]"
+#define FILTER_NAME_SUFFIX                " [Debug]"
 #else
 #define FILTER_NAME_SUFFIX
 #endif // DEBUG
-#define SETTINGS_SUFFIX " Settings"
-#define STATUS_SUFFIX " Status"
-
-#define FILTER_NAME_BASE "AviSynth Filter"
+#define SETTINGS_SUFFIX                   " Settings"
+#define STATUS_SUFFIX                     " Status"
 
 #define FILTER_NAME_FULL FILTER_NAME_BASE FILTER_NAME_SUFFIX
-#define SETTINGS_FULL FILTER_NAME_BASE SETTINGS_SUFFIX FILTER_NAME_SUFFIX
-#define STATUS_FULL FILTER_NAME_BASE STATUS_SUFFIX FILTER_NAME_SUFFIX
+#define SETTINGS_FULL FILTER_NAME_BASE    SETTINGS_SUFFIX FILTER_NAME_SUFFIX
+#define STATUS_FULL FILTER_NAME_BASE      STATUS_SUFFIX FILTER_NAME_SUFFIX
 
-#define FILTER_NAME_WIDE Widen(FILTER_NAME_FULL)
-#define SETTINGS_WIDE Widen(SETTINGS_FULL)
-#define STATUS_WIDE Widen(STATUS_FULL)
+#define FILTER_NAME_WIDE                  Widen(FILTER_NAME_FULL)
+#define SETTINGS_WIDE                     Widen(SETTINGS_FULL)
+#define STATUS_WIDE                       Widen(STATUS_FULL)
 
 /*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.

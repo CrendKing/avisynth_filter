@@ -37,6 +37,7 @@
     <ClInclude Include="src\side_data.h" />
     <ClInclude Include="src\source_clip.h" />
     <ClInclude Include="src\util.h" />
+    <ClInclude Include="src\version.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\allocator.cpp" />
