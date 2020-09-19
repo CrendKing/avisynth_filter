@@ -8,7 +8,7 @@ CAviSynthFilterMediaSample::CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAlloc
     : CMediaSample(pName, pAllocator, phr, pBuffer, length) {
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilterMediaSample::QueryInterface(REFIID riid, void **ppv) -> HRESULT {
+auto STDMETHODCALLTYPE CAviSynthFilterMediaSample::QueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
     if (riid == __uuidof(IMediaSideData)) {
         return GetInterface(static_cast<IMediaSideData *>(this), ppv);
     }

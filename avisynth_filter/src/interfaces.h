@@ -21,13 +21,16 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 };
 
 DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
-    virtual auto STDMETHODCALLTYPE GetInputBufferSize() -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetOutputBufferSize() -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetInputBufferSize() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetOutputBufferSize() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetOutputSampleNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetInputWorkerThreadCount() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetOutputWorkerThreadCount() const -> int = 0;
+
     virtual auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring = 0;
     virtual auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat = 0;
 

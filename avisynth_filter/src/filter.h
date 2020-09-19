@@ -24,7 +24,7 @@ public:
 
     DECLARE_IUNKNOWN
 
-    auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT override;
+    auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT override;
 
     // CVideoTransformFilter
     auto GetPin(int n) -> CBasePin * override;
@@ -39,7 +39,7 @@ public:
     auto EndFlush() -> HRESULT override;
 
     // ISpecifyPropertyPages
-    auto STDMETHODCALLTYPE GetPages(CAUUID *pPages) -> HRESULT override;
+    auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;
 
     // IAvsFilterSettings
     auto STDMETHODCALLTYPE SaveSettings() const -> void override;
@@ -52,13 +52,16 @@ public:
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
     // IAvsFilterStatus
-    auto STDMETHODCALLTYPE GetInputBufferSize() -> int override;
-    auto STDMETHODCALLTYPE GetOutputBufferSize() -> int override;
+    auto STDMETHODCALLTYPE GetInputBufferSize() const -> int override;
+    auto STDMETHODCALLTYPE GetOutputBufferSize() const -> int override;
     auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int override;
     auto STDMETHODCALLTYPE GetOutputSampleNumber() const -> int override;
     auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int override;
     auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int override;
     auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int override;
+    auto STDMETHODCALLTYPE GetInputWorkerThreadCount() const -> int override;
+    auto STDMETHODCALLTYPE GetOutputWorkerThreadCount() const -> int override;
+
     auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring override;
     auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat override;
 
@@ -77,18 +80,15 @@ private:
 
     auto UpdateOutputFormat() -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
-    auto RefreshInputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void;
-    auto RefreshOutputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void;
 
-    auto Reset(bool recreateAvsEnv) -> void;
     auto TraverseFiltersInGraph() -> void;
     auto LoadSettings() -> void;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> bool;
-    auto ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateAvsEnv) -> bool;
-    auto DeleteAviSynth() -> void;
+    auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
+    auto StopAviSynthScript() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
@@ -101,6 +101,7 @@ private:
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
     int _sourceAvgFrameRate;
+    REFERENCE_TIME _sourceAvgFrameTime;
     double _frameTimeScaling;
 
     std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
@@ -114,13 +115,6 @@ private:
     std::wstring _effectiveAvsFile;
     bool _reloadAvsSource;
     RemoteControl *_remoteControl;
-
-    int _frameRateCheckpointInSampleNb;
-    REFERENCE_TIME _frameRateCheckpointInSampleStartTime;
-    int _frameRateCheckpointOutFrameNb;
-    REFERENCE_TIME _frameRateCheckpointOutFrameStartTime;
-    int _currentInputFrameRate;
-    int _currentOutputFrameRate;
 
     std::wstring _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;

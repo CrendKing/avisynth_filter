@@ -7,7 +7,7 @@
 
 
 namespace AvsFilter {
-	
+
 RemoteControl::RemoteControl(IAvsFilterStatus *status, IAvsFilterSettings *settings)
 	: _hWnd(nullptr)
 	, _status(status)
@@ -86,7 +86,7 @@ auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std:
 	if (!hReceiverWindow) {
 		return;
 	}
-	
+
 	const COPYDATASTRUCT copyData { msgId, static_cast<DWORD>(data.size()), const_cast<char *>(data.c_str()) };
 	SendMessageTimeout(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
 					   SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
@@ -135,7 +135,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
 
 	case API_MSG_GET_INPUT_HDR_TYPE:
 		return _status->GetInputMediaInfo().hdrType;
-		
+
 	case API_MSG_GET_INPUT_HDR_LUMINANCE:
 		return _status->GetInputMediaInfo().hdrLuminance;
 

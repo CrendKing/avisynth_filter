@@ -16,12 +16,13 @@ public:
                             __in_opt LPCWSTR pName);
 
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
-    auto STDMETHODCALLTYPE GetAllocator(IMemAllocator **ppAllocator) -> HRESULT override;
+    auto STDMETHODCALLTYPE GetAllocator(__deref_out IMemAllocator **ppAllocator) -> HRESULT override;
+    auto STDMETHODCALLTYPE GetAllocatorRequirements(__out ALLOCATOR_PROPERTIES *pProps) -> HRESULT override;
     auto Active() -> HRESULT override;
     auto Inactive() -> HRESULT override;
 
 private:
-    CAviSynthFilter *_filter;
+    CAviSynthFilter &_filter;
 };
 
 }

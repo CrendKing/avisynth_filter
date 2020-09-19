@@ -28,6 +28,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsScriptClip(nullptr)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
+    , _reloadAvsSource(false)
     , _remoteControl(nullptr) {
     LoadSettings();
     Log("CAviSynthFilter::CAviSynthFilter()");
@@ -39,11 +40,15 @@ CAviSynthFilter::~CAviSynthFilter() {
         _remoteControl = nullptr;
     }
 
+    if (_avsEnv != nullptr) {
+        _avsEnv->DeleteScriptEnvironment();
+        _avsEnv = nullptr;
+    }
+
     DeletePinTypes();
-    DeleteAviSynth();
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, void **ppv) -> HRESULT {
+auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
     CheckPointer(ppv, E_POINTER);
 
     if (riid == IID_ISpecifyPropertyPages) {
@@ -101,7 +106,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 // this one will be the preferred media type for potential pin reconnection
                 if (inputDefinition && IsInputUniqueByAvsType(*inputDefinition)) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
-                    if (!ReloadAviSynth(*nextType, false)) {
+                    if (!ReloadAviSynthScript(*nextType)) {
                         Log("Disconnect due to AvsFilterDisconnect()");
 
                         DeleteMediaType(nextType);
@@ -348,13 +353,12 @@ auto CAviSynthFilter::BeginFlush() -> HRESULT {
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
     _frameHandler.EndFlush();
-
-    Reset(false);
+    _reloadAvsSource = true;
 
     return __super::EndFlush();
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(CAUUID *pPages) -> HRESULT {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> HRESULT {
     CheckPointer(pPages, E_POINTER);
 
     pPages->pElems = static_cast<GUID *>(CoTaskMemAlloc(2 * sizeof(GUID)));
@@ -407,11 +411,11 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetInputFormats(DWORD formatBits) -> voi
     _inputFormatBits = formatBits;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputBufferSize() -> int {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetInputBufferSize() const -> int {
     return _frameHandler.GetInputBufferSize();
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputBufferSize() -> int {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputBufferSize() const -> int {
     return _frameHandler.GetOutputBufferSize();
 }
 
@@ -428,11 +432,19 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetDeliveryFrameNumber() const -> int {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentInputFrameRate() const -> int {
-    return _currentInputFrameRate;
+    return _frameHandler.GetCurrentInputFrameRate();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentOutputFrameRate() const -> int {
-    return _currentOutputFrameRate;
+    return _frameHandler.GetCurrentOutputFrameRate();
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetInputWorkerThreadCount() const -> int {
+    return _frameHandler.GetInputWorkerThreadCount();
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputWorkerThreadCount() const -> int {
+    return _frameHandler.GetOutputWorkerThreadCount();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
@@ -501,7 +513,7 @@ auto CAviSynthFilter::UpdateOutputFormat() -> HRESULT {
 
     _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
 
-    Log("update output format using input format: definition %i, width %5i, height %5i, codec %s",
+    Log("Update output format using input format: definition %i, width %5i, height %5i, codec %s",
         _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
     AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
@@ -528,51 +540,6 @@ auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> H
     }
 
     return S_FALSE;
-}
-
-auto CAviSynthFilter::RefreshInputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void {
-    bool reachCheckpointIn = false;
-
-    if (_frameRateCheckpointInSampleStartTime == 0) {
-        reachCheckpointIn = true;
-    } else if (const REFERENCE_TIME elapsedRefTime = startTime - _frameRateCheckpointInSampleStartTime; elapsedRefTime >= UNITS) {
-        _currentInputFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - _frameRateCheckpointInSampleNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
-        reachCheckpointIn = true;
-    }
-
-    if (reachCheckpointIn) {
-        _frameRateCheckpointInSampleNb = sampleNb;
-        _frameRateCheckpointInSampleStartTime = startTime;
-    }
-}
-
-auto CAviSynthFilter::RefreshOutputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void {
-    bool reachCheckpointOut = false;
-
-    if (_frameRateCheckpointOutFrameStartTime == 0) {
-        reachCheckpointOut = true;
-    } else if (const REFERENCE_TIME elapsedRefTime = startTime - _frameRateCheckpointOutFrameStartTime; elapsedRefTime >= UNITS) {
-        _currentOutputFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - _frameRateCheckpointOutFrameNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
-        reachCheckpointOut = true;
-    }
-
-    if (reachCheckpointOut) {
-        _frameRateCheckpointOutFrameNb = sampleNb;
-        _frameRateCheckpointOutFrameStartTime = startTime;
-    }
-}
-
-auto CAviSynthFilter::Reset(bool recreateAvsEnv) -> void {
-    const CAutoLock lock(&m_csReceive);
-
-    ReloadAviSynth(m_pInput->CurrentMediaType(), recreateAvsEnv);
-
-    _frameRateCheckpointInSampleStartTime = 0;
-    _frameRateCheckpointInSampleNb = 0;
-    _frameRateCheckpointOutFrameStartTime = 0;
-    _frameRateCheckpointOutFrameNb = 0;
-    _currentInputFrameRate = 0;
-    _currentOutputFrameRate = 0;
 }
 
 auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
@@ -754,7 +721,7 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
 /**
  * Create new AviSynth script clip with specified media type.
  */
-auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recreateAvsEnv) -> bool {
+auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool {
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
 
     /*
@@ -774,11 +741,6 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
      *
      * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
      */
-
-    if (recreateAvsEnv) {
-        DeleteAviSynth();
-        CreateAviSynth();
-    }
 
     _avsError.clear();
 
@@ -826,22 +788,15 @@ auto CAviSynthFilter::ReloadAviSynth(const AM_MEDIA_TYPE &mediaType, bool recrea
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _sourceAvgFrameRate = static_cast<int>(llMulDiv(_avsSourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _avsScriptVideoInfo.fps_denominator, 0));
+    _sourceAvgFrameTime = llMulDiv(_avsSourceVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
 
     return true;
 }
 
-/**
- * Delete the AviSynth environment and all its cache
- */
-auto CAviSynthFilter::DeleteAviSynth() -> void {
+auto CAviSynthFilter::StopAviSynthScript() -> void {
     if (_avsScriptClip != nullptr) {
         _avsScriptClip = nullptr;
-    }
-
-    if (_avsEnv != nullptr) {
-        _avsEnv->DeleteScriptEnvironment();
-        _avsEnv = nullptr;
     }
 }
 

@@ -13,7 +13,7 @@ public:
     CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator *pAllocator, HRESULT *phr, LPBYTE pBuffer, LONG length);
 
     // IUnknown
-    auto STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppv) -> HRESULT override;
+    auto STDMETHODCALLTYPE QueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT override;
     auto STDMETHODCALLTYPE AddRef() -> ULONG override;
     auto STDMETHODCALLTYPE Release() -> ULONG override;
 
