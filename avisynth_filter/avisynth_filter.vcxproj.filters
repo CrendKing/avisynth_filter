@@ -133,6 +133,7 @@
     <None Include="src\$(ProjectName).def">
       <Filter>Source Files</Filter>
     </None>
+    <None Include=".editorconfig" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\$(ProjectName).rc">

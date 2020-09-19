@@ -4,7 +4,7 @@
 
 
 namespace AvsFilter {
-	
+
 /**
  * All requests and responses are transmitted through WM_COPYDATA message.
  * To access the API, activate the remote control module by setting the registry value REGISTRY_VALUE_NAME_REMOTE_CONTROL to non-zero.

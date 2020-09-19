@@ -66,6 +66,7 @@
     <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".editorconfig" />
     <None Include="src\$(ProjectName).def" />
   </ItemGroup>
   <ItemGroup>

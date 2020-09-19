@@ -580,7 +580,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
     }
 
     while (true) {
-        FILTER_INFO	filterInfo;
+        FILTER_INFO    filterInfo;
         if (SUCCEEDED(filter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
 
