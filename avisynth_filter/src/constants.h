@@ -38,7 +38,7 @@ DEFINE_GUID(inline IID_MediaSideDataHDRContentLightLevel,
 DEFINE_GUID(inline IID_MediaSideData3DOffset,
             0xf169b76c, 0x75a3, 0x49e6, 0xa2, 0x3a, 0x14, 0x98, 0x3e, 0xbf, 0x43, 0x70);
 
-static const GUID MEDIASUBTYPE_I420 = FOURCCMap('024I');
+static const GUID MEDIASUBTYPE_I420  = FOURCCMap('024I');
 static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 
 #define WidenHelper(str)                  L##str
@@ -60,16 +60,17 @@ static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 #define SETTINGS_WIDE                     Widen(SETTINGS_FULL)
 #define STATUS_WIDE                       Widen(STATUS_FULL)
 
-static constexpr int INPUT_SAMPLE_WORKER_THREAD_COUNT  = 2;
-static constexpr int OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 2;
+static constexpr int DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT  = 2;
+static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 2;
 
 /*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
  * Default to 25 FPS in such cases.
  */
-static constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME = 400000;
-static constexpr char *EVAL_FILENAME = "avisynth_filter_script";
-static constexpr int STATUS_PAGE_TIMER_INTERVAL_MS = 1000;
+static constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME     = 400000;
+static constexpr char *EVAL_FILENAME                           = "avisynth_filter_script";
+static constexpr int STATUS_PAGE_TIMER_INTERVAL_MS             = 1000;
+static constexpr wchar_t *UNAVAILABLE_SOURCE_PATH              = L"N/A";
 
 /*
  * Stream could last forever. Use a large power as the fake number of frames.
@@ -77,13 +78,15 @@ static constexpr int STATUS_PAGE_TIMER_INTERVAL_MS = 1000;
  * Also, some filters may perform calculation on it, resulting overflow.
  * Same as ffdshow, uses a highly composite number 10810800, which could last 50 hours for a 60fps stream.
  */
-static constexpr int NUM_FRAMES_FOR_INFINITE_STREAM = 10810800;
+static constexpr int NUM_FRAMES_FOR_INFINITE_STREAM            = 10810800;
 
-static constexpr wchar_t *REGISTRY_KEY_NAME = L"Software\\AviSynthFilter";
-static constexpr wchar_t *REGISTRY_VALUE_NAME_AVS_FILE = L"AvsFile";
-static constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS = L"Formats";
-static constexpr wchar_t *REGISTRY_VALUE_NAME_REMOTE_CONTROL = L"RemoteControl";
-static constexpr wchar_t *UNAVAILABLE_SOURCE_PATH = L"N/A";
+static constexpr wchar_t *REGISTRY_KEY_NAME                    = L"Software\\AviSynthFilter";
+static constexpr wchar_t *REGISTRY_VALUE_NAME_AVS_FILE         = L"AvsFile";
+static constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS          = L"Formats";
+static constexpr wchar_t *REGISTRY_VALUE_NAME_INPUT_THREADS    = L"InputThreads";
+static constexpr wchar_t *REGISTRY_VALUE_NAME_OUTPUT_THREADS   = L"OutputThreads";
+static constexpr wchar_t *REGISTRY_VALUE_NAME_REMOTE_CONTROL   = L"RemoteControl";
 
-static constexpr int REMOTE_CONTROL_SMTO_TIMEOUT_MS = 1000;
+static constexpr int REMOTE_CONTROL_SMTO_TIMEOUT_MS            = 1000;
+
 }

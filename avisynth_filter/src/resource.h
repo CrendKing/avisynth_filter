@@ -39,10 +39,12 @@
 #define IDC_TEXT_INPUT_BUFFER_SIZE_VALUE   2004
 #define IDC_TEXT_OUTPUT_BUFFER_SIZE        2005
 #define IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE  2006
-#define IDC_TEXT_WORKER_THREAD_COUNT       2007
-#define IDC_TEXT_WORKER_THREAD_COUNT_VALUE 2008
-#define IDC_TEXT_FRAME_RATE                2009
-#define IDC_TEXT_FRAME_RATE_VALUE          2010
+#define IDC_TEXT_FRAME_RATE                2007
+#define IDC_TEXT_FRAME_RATE_VALUE          2008
+#define IDC_TEXT_PAR                       2009
+#define IDC_TEXT_PAR_VALUE                 2010
+#define IDC_TEXT_WORKER_THREAD_COUNT       2011
+#define IDC_TEXT_WORKER_THREAD_COUNT_VALUE 2012
 #define IDC_TEXT_PATH                      2100
 #define IDC_EDIT_PATH_VALUE                2101
 #define IDC_TEXT_FORMAT                    2102

@@ -82,47 +82,50 @@ private:
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto TraverseFiltersInGraph() -> void;
-    auto LoadSettings() -> void;
+    auto LoadSettings() -> void *;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> bool;
     auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
     auto StopAviSynthScript() -> void;
+    auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
+    Registry _registry;
+    std::wstring _prefAvsFile;
+    std::wstring _effectiveAvsFile;
+    DWORD _inputFormatBits;
+    int _inputThreads;
+    int _outputThreads;
+    RemoteControl *_remoteControl;
+    void *_settingsLoader;
+
     FrameHandler _frameHandler;
+
+    std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
+    std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
+    std::vector<DefinitionPair> _compatibleDefinitions;
 
     IScriptEnvironment2 *_avsEnv;
     PClip _avsScriptClip;
 
+    bool _reloadAvsSource;
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
     int _sourceAvgFrameRate;
     REFERENCE_TIME _sourceAvgFrameTime;
     double _frameTimeScaling;
 
-    std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
-    std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
-    std::vector<DefinitionPair> _compatibleDefinitions;
-
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
     bool _confirmNewOutputFormat;
 
-    std::wstring _effectiveAvsFile;
-    bool _reloadAvsSource;
-    RemoteControl *_remoteControl;
-
     std::wstring _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;
     std::string _avsError;
-
-    Registry _registry;
-    std::wstring _prefAvsFile;
-    DWORD _inputFormatBits;
 };
 
 }

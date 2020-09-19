@@ -32,14 +32,6 @@ const std::vector<Format::Definition> Format::DEFINITIONS = {
     /* 10 */ { MEDIASUBTYPE_RGB48, VideoInfo::CS_BGR48, 48, 3 },
 };
 
-auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
-    return definition != other.definition
-        || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
-        || bmi.biSize != other.bmi.biSize
-        || memcmp(&bmi, &other.bmi, bmi.biSize) != 0
-        || memcmp(vih, other.vih, sizeof(VIDEOINFOHEADER)) != 0;
-}
-
 auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
     return FOURCCMap(&DEFINITIONS[definition].mediaSubtype).GetFOURCC();
 }

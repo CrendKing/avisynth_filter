@@ -26,8 +26,6 @@ public:
         BITMAPINFOHEADER bmi;
         VIDEOINFOHEADER *vih;
 
-        auto operator!=(const VideoFormat &other) const -> bool;
-
         auto GetCodecFourCC() const -> DWORD;
         auto GetCodecName() const -> std::string;
     };

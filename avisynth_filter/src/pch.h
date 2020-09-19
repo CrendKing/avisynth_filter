@@ -19,6 +19,7 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <cguid.h>
+#include <immintrin.h>
 #include <initguid.h>
 #include <shellapi.h>
 
@@ -29,9 +30,6 @@
 // AviSynth
 #define AVS_LINKAGE_DLLIMPORT
 #include <avisynth.h>
-
-// intrinsics for fast (de-)interleaving array
-#include <immintrin.h>
 
 #pragma warning(pop)
 

@@ -23,14 +23,25 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
+    , _inputFormatBits(0)
+    , _inputThreads(DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT)
+    , _outputThreads(DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT)
+    , _remoteControl(nullptr)
+    , _settingsLoader(LoadSettings())
     , _frameHandler(*this)
-    , _avsEnv(nullptr)
-    , _avsScriptClip(nullptr)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
+    , _avsEnv(nullptr)
+    , _avsScriptClip(nullptr)
     , _reloadAvsSource(false)
-    , _remoteControl(nullptr) {
-    LoadSettings();
+    , _avsSourceVideoInfo()
+    , _avsScriptVideoInfo()
+    , _sourceAvgFrameRate(0)
+    , _sourceAvgFrameTime(0)
+    , _frameTimeScaling(0)
+    , _inputFormat()
+    , _outputFormat()
+    , _confirmNewOutputFormat(false) {
     Log("CAviSynthFilter::CAviSynthFilter()");
 }
 
@@ -40,12 +51,11 @@ CAviSynthFilter::~CAviSynthFilter() {
         _remoteControl = nullptr;
     }
 
-    if (_avsEnv != nullptr) {
-        _avsEnv->DeleteScriptEnvironment();
-        _avsEnv = nullptr;
-    }
-
     DeletePinTypes();
+
+    ASSERT(_avsScriptClip == nullptr);
+
+    DeleteAviSynth();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
@@ -193,7 +203,7 @@ auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *m
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
     HRESULT hr;
 
-    pProperties->cBuffers = max(OUTPUT_SAMPLE_WORKER_THREAD_COUNT, pProperties->cBuffers);
+    pProperties->cBuffers = max(_outputThreads, pProperties->cBuffers);
 
     BITMAPINFOHEADER *bih = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
     pProperties->cbBuffer = max(static_cast<long>(bih->biSizeImage), pProperties->cbBuffer);
@@ -305,12 +315,8 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         StopStreaming();
         m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(pmtOut));
 
-        hr = HandleOutputFormatChange(pmtOut);
-        if (FAILED(hr)) {
-            return AbortPlayback(hr);
-        }
-
-        _confirmNewOutputFormat = hr == S_OK;
+        HandleOutputFormatChange(pmtOut);
+        _confirmNewOutputFormat = true;
 
         DeleteMediaType(pmtOut);
         hr = StartStreaming();
@@ -530,16 +536,12 @@ auto CAviSynthFilter::UpdateOutputFormat() -> HRESULT {
  * returns S_OK if the next media sample should carry the media type on the output pin.
  */
 auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT {
-    const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(*pmtOut);
-    if (_outputFormat != newOutputFormat) {
-        Log("new output format: definition %i, width %5i, height %5i, codec %s",
-            newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str());
-        _outputFormat = newOutputFormat;
+    _outputFormat = Format::GetVideoFormat(*pmtOut);
 
-        return S_OK;
-    }
+    Log("new output format: definition %i, width %5i, height %5i, codec %s",
+        _outputFormat.definition, _outputFormat.bmi.biWidth, _outputFormat.bmi.biHeight, _outputFormat.GetCodecName().c_str());
 
-    return S_FALSE;
+    return S_OK;
 }
 
 auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
@@ -610,16 +612,20 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
     }
 }
 
-auto CAviSynthFilter::LoadSettings() -> void {
+auto CAviSynthFilter::LoadSettings() -> void * {
     const std::wstring avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
     SetPrefAvsFile(avsFile);
     SetEffectiveAvsFile(avsFile);
 
     _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
+    _inputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_INPUT_THREADS, DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT);
+    _outputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
 
     if (_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0) {
         _remoteControl = new RemoteControl(this, this);
     }
+
+    return nullptr;
 }
 
 auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int> {
@@ -797,6 +803,13 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
 auto CAviSynthFilter::StopAviSynthScript() -> void {
     if (_avsScriptClip != nullptr) {
         _avsScriptClip = nullptr;
+    }
+}
+
+auto CAviSynthFilter::DeleteAviSynth() -> void {
+    if (_avsEnv != nullptr) {
+        _avsEnv->DeleteScriptEnvironment();
+        _avsEnv = nullptr;
     }
 }
 

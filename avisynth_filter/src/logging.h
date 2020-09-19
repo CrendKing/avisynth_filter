@@ -3,6 +3,6 @@
 
 namespace AvsFilter {
 
-extern auto Log(const char *format, ...) -> void;
+auto Log(const char *format, ...) -> void;
 
 }

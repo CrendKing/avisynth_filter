@@ -54,10 +54,18 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         break;
 
     case WM_TIMER:
+        const Format::VideoFormat format = _status->GetInputMediaInfo();
+
+        const int frameRatePrecision = static_cast<int>(log10(FRAME_RATE_SCALE_FACTOR));
+        const int parPrecision = static_cast<int>(log10(PAR_SCALE_FACTOR));
+
+        std::string inputFrameRateStr = DoubleToString(static_cast<double>(_status->GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::string outputFrameRateStr = DoubleToString(static_cast<double>(_status->GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::string outputParStr = DoubleToString(static_cast<double>(format.pixelAspectRatio) / PAR_SCALE_FACTOR, parPrecision);
+
         SetDlgItemTextA(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_string(_status->GetInputBufferSize()).c_str());
         SetDlgItemTextA(hwnd, IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE, std::to_string(_status->GetOutputBufferSize()).c_str());
 
-        const int deliverFrameNb = _status->GetDeliveryFrameNumber();
         SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
                         std::to_string(_status->GetSourceSampleNumber())
                         .append(" -> ")
@@ -66,11 +74,8 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
                         .append(std::to_string(_status->GetDeliveryFrameNumber()))
                         .c_str());
 
-        const int frameRatePrecision = static_cast<int>(log10(FRAME_RATE_SCALE_FACTOR));
-        std::string inputFrameRateStr = DoubleToString(static_cast<double>(_status->GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
-        const std::string outputFrameRateStr = DoubleToString(static_cast<double>(_status->GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
         SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, inputFrameRateStr.append(" -> ").append(outputFrameRateStr).c_str());
-
+        SetDlgItemTextA(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
         SetDlgItemTextA(hwnd, IDC_TEXT_WORKER_THREAD_COUNT_VALUE,
                         std::to_string(_status->GetInputWorkerThreadCount())
                         .append(" / ")
@@ -86,7 +91,6 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             _isSourcePathSet = true;
         }
 
-        const Format::VideoFormat format = _status->GetInputMediaInfo();
         const std::string infoStr = std::to_string(format.bmi.biWidth).append(" x ").append(std::to_string(abs(format.bmi.biHeight))).append(" ").append(format.GetCodecName());
         SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
