@@ -34,10 +34,10 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(IMemAllocator **ppA
         m_pAllocator->AddRef();
     }
 
-    ASSERT(m_pAllocator != NULL);
+    ASSERT(m_pAllocator != nullptr);
     *ppAllocator = m_pAllocator;
     m_pAllocator->AddRef();
-    return NOERROR;
+    return S_OK;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
@@ -77,6 +77,8 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
 }
 
 auto CAviSynthFilterInputPin::Active() -> HRESULT {
+    const CAutoLock lock(m_pLock);
+
     _filter->_inputFormat = Format::GetVideoFormat(CurrentMediaType());
     _filter->_outputFormat = Format::GetVideoFormat(_filter->m_pOutput->CurrentMediaType());
 
@@ -87,7 +89,17 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
         _filter->_remoteControl->Start();
     }
 
+    _filter->_frameHandler.StartWorkerThreads();
+
     return __super::Active();
+}
+
+auto CAviSynthFilterInputPin::Inactive() -> HRESULT {
+    const CAutoLock lock(m_pLock);
+
+    _filter->_frameHandler.StopWorkerThreads();
+
+    return __super::Inactive();
 }
 
 }

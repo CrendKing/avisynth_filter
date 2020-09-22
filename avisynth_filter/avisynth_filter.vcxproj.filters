@@ -72,6 +72,12 @@
     <ClInclude Include="src\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\barrier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame_handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\pch.cpp">
@@ -114,6 +120,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\side_data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\barrier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\frame_handler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

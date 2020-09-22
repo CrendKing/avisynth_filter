@@ -21,10 +21,10 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 };
 
 DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
-    virtual auto STDMETHODCALLTYPE GetBufferSize() -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetInputBufferSize() -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetOutputBufferSize() -> int = 0;
     virtual auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int = 0;
+    virtual auto STDMETHODCALLTYPE GetOutputSampleNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int = 0;

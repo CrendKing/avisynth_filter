@@ -5,7 +5,7 @@
 #include "interfaces.h"
 #include "registry.h"
 #include "remote_control.h"
-#include "source_clip.h"
+#include "frame_handler.h"
 
 
 namespace AvsFilter {
@@ -16,6 +16,7 @@ class CAviSynthFilter
     , public IAvsFilterSettings
     , public IAvsFilterStatus {
     friend class CAviSynthFilterInputPin;
+    friend class FrameHandler;
 
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
@@ -34,6 +35,7 @@ public:
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
     auto Receive(IMediaSample *pSample) -> HRESULT override;
+    auto BeginFlush() -> HRESULT override;
     auto EndFlush() -> HRESULT override;
 
     // ISpecifyPropertyPages
@@ -50,10 +52,10 @@ public:
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
 
     // IAvsFilterStatus
-    auto STDMETHODCALLTYPE GetBufferSize() -> int override;
-    auto STDMETHODCALLTYPE GetCurrentPrefetch() const -> int override;
-    auto STDMETHODCALLTYPE GetInitialPrefetch() const -> int override;
+    auto STDMETHODCALLTYPE GetInputBufferSize() -> int override;
+    auto STDMETHODCALLTYPE GetOutputBufferSize() -> int override;
     auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int override;
+    auto STDMETHODCALLTYPE GetOutputSampleNumber() const -> int override;
     auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int override;
     auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int override;
     auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int override;
@@ -73,10 +75,10 @@ private:
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
 
-    auto TransformAndDeliver(IMediaSample *inSample) -> HRESULT;
     auto UpdateOutputFormat() -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
-    auto RefreshFrameRates(REFERENCE_TIME currentSampleStartTime, int currentSampleNb) -> void;
+    auto RefreshInputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void;
+    auto RefreshOutputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void;
 
     auto Reset(bool recreateAvsEnv) -> void;
     auto TraverseFiltersInGraph() -> void;
@@ -91,8 +93,9 @@ private:
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
+    FrameHandler _frameHandler;
+
     IScriptEnvironment2 *_avsEnv;
-    SourceClip *_sourceClip;
     PClip _avsScriptClip;
 
     VideoInfo _avsSourceVideoInfo;
@@ -106,23 +109,16 @@ private:
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
+    bool _confirmNewOutputFormat;
 
     std::wstring _effectiveAvsFile;
     bool _reloadAvsSource;
     RemoteControl *_remoteControl;
 
-    REFERENCE_TIME _deliveryFrameStartTime;
-    int _deliveryFrameNb;
-    int _deliverySourceSampleNb;
-    bool _confirmNewOutputFormat;
-
-    int _currentPrefetch;
-    int _initialPrefetch;
-
-    REFERENCE_TIME _frameRateCheckpointInSampleStartTime;
     int _frameRateCheckpointInSampleNb;
-    REFERENCE_TIME _frameRateCheckpointOutFrameStartTime;
+    REFERENCE_TIME _frameRateCheckpointInSampleStartTime;
     int _frameRateCheckpointOutFrameNb;
+    REFERENCE_TIME _frameRateCheckpointOutFrameStartTime;
     int _currentInputFrameRate;
     int _currentOutputFrameRate;
 

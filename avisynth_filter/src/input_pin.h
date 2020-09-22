@@ -18,6 +18,7 @@ public:
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
     auto STDMETHODCALLTYPE GetAllocator(IMemAllocator **ppAllocator) -> HRESULT override;
     auto Active() -> HRESULT override;
+    auto Inactive() -> HRESULT override;
 
 private:
     CAviSynthFilter *_filter;

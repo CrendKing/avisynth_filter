@@ -4,8 +4,8 @@
 #pragma warning(push)
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS 26812)
 
-#include <algorithm>
 #include <deque>
+#include <map>
 #include <mutex>
 #include <numeric>
 #include <optional>

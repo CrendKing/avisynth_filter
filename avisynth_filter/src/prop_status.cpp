@@ -54,13 +54,17 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         break;
 
     case WM_TIMER:
-        SetDlgItemTextA(hwnd, IDC_TEXT_BUFFER_SIZE_VALUE, std::to_string(_status->GetBufferSize()).c_str());
-        SetDlgItemTextA(hwnd, IDC_TEXT_CURRENT_PREFETCH_VALUE, std::to_string(_status->GetCurrentPrefetch()).c_str());
-        SetDlgItemTextA(hwnd, IDC_TEXT_INITIAL_PREFETCH_VALUE, std::to_string(_status->GetInitialPrefetch()).c_str());
+        SetDlgItemTextA(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_string(_status->GetInputBufferSize()).c_str());
+        SetDlgItemTextA(hwnd, IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE, std::to_string(_status->GetOutputBufferSize()).c_str());
 
-        const int sourceSampleNb = _status->GetSourceSampleNumber();
         const int deliverFrameNb = _status->GetDeliveryFrameNumber();
-        SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, std::to_string(sourceSampleNb).append(" -> ").append(std::to_string(deliverFrameNb)).c_str());
+        SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
+                        std::to_string(_status->GetSourceSampleNumber())
+                        .append(" -> ")
+                        .append(std::to_string(_status->GetOutputSampleNumber()))
+                        .append(" -> ")
+                        .append(std::to_string(_status->GetDeliveryFrameNumber()))
+                        .c_str());
 
         const int frameRatePrecision = static_cast<int>(log10(FRAME_RATE_SCALE_FACTOR));
         std::string inputFrameRateStr = DoubleToString(static_cast<double>(_status->GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);

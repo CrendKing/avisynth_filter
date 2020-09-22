@@ -67,10 +67,13 @@ static void FillPinTypes() {
 #ifdef LOGGING
 static FILE *g_logFile = nullptr;
 static DWORD g_logStartTime;
+static std::mutex g_logMutex;
 #endif
 
-void AvsFilter::Log(const char *format, ...) {
+auto AvsFilter::Log(const char *format, ...) -> void {
 #ifdef LOGGING
+    std::unique_lock<std::mutex> srcLock(g_logMutex);
+
     fprintf_s(g_logFile, "T %6i @ %8i: ", GetCurrentThreadId(), timeGetTime() - g_logStartTime);
 
     va_list args;

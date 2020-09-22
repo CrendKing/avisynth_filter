@@ -60,6 +60,9 @@ static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 #define SETTINGS_WIDE                     Widen(SETTINGS_FULL)
 #define STATUS_WIDE                       Widen(STATUS_FULL)
 
+static constexpr int INPUT_SAMPLE_WORKER_THREAD_COUNT  = 2;
+static constexpr int OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 2;
+
 /*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
  * Default to 25 FPS in such cases.
