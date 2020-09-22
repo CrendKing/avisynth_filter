@@ -298,8 +298,8 @@ auto FrameHandler::ProcessInputSamples() -> void {
         currSrcFrameInfo.sample->Release();
         currSrcFrameInfo.sample = nullptr;
 
-        Log("Processed source frame: next %6i process %6i at %10lli ~ %10lli, nextOutputFrameStartTime %10lli",
-            _nextSourceFrameNb, _processInputFrameNb, currSrcFrameInfo.startTime, inSampleStopTime, _nextOutputFrameStartTime);
+        Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
+            _processInputFrameNb, currSrcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
 
         if ((iter = _sourceFrames.find(_processInputFrameNb - 1)) != _sourceFrames.cend()) {
             /*
@@ -316,10 +316,12 @@ auto FrameHandler::ProcessInputSamples() -> void {
 
             std::unique_lock<std::mutex> outLock(_outputFramesMutex);
 
-            while (currSrcFrameInfo.startTime - _nextOutputFrameStartTime > 0) {
+            while (currSrcFrameInfo.startTime > _nextOutputFrameStartTime) {
                 const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
                 const REFERENCE_TIME outStopTime = outStartTime + prevSrcFrameTime;
                 _nextOutputFrameStartTime = outStopTime;
+
+                Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli", _nextOutputFrameNb, preSrcFrameInfo.frameNb, outStartTime, outStopTime);
 
                 _outputFrames.emplace_back(OutputFrameInfo { _nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfo });
                 _nextOutputFrameNb += 1;
@@ -329,10 +331,10 @@ auto FrameHandler::ProcessInputSamples() -> void {
             outLock.unlock();
             _outputFramesCv.notify_one();
         }
-
+        
+        _processInputFrameNb += 1;
         srcLock.unlock();
         _sourceFrameAvailCv.notify_all();
-        _processInputFrameNb += 1;
     }
 
     Log("Stop input sample worker thread %6i", std::this_thread::get_id());

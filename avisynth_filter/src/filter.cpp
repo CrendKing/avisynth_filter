@@ -294,7 +294,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         _reloadAvsSource = false;
 
         m_csReceive.Unlock();
-        hr = UpdateOutputFormat();
+        hr = UpdateOutputFormat(m_pInput->CurrentMediaType());
         m_csReceive.Lock();
 
         if (FAILED(hr)) {
@@ -514,15 +514,15 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
  *
  * returns S_OK if the avs script is reloaded due to format change.
  */
-auto CAviSynthFilter::UpdateOutputFormat() -> HRESULT {
+auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT {
     HRESULT hr;
 
-    _inputFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType());
+    _inputFormat = Format::GetVideoFormat(inputMediaType);
 
     Log("Update output format using input format: definition %i, width %5i, height %5i, codec %s",
         _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
-    AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &m_pInput->CurrentMediaType());
+    AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &inputMediaType);
     if (m_pOutput->GetConnected()->QueryAccept(newOutputType) != S_OK) {
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
@@ -538,7 +538,7 @@ auto CAviSynthFilter::UpdateOutputFormat() -> HRESULT {
 auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT {
     _outputFormat = Format::GetVideoFormat(*pmtOut);
 
-    Log("new output format: definition %i, width %5i, height %5i, codec %s",
+    Log("New output format: definition %i, width %5i, height %5i, codec %s",
         _outputFormat.definition, _outputFormat.bmi.biWidth, _outputFormat.bmi.biHeight, _outputFormat.GetCodecName().c_str());
 
     return S_OK;
@@ -794,7 +794,7 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
     _avsScriptClip = invokeResult.AsClip();
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _sourceAvgFrameRate = static_cast<int>(llMulDiv(_avsSourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _avsScriptVideoInfo.fps_denominator, 0));
-    _sourceAvgFrameTime = llMulDiv(_avsSourceVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
+    _sourceAvgFrameTime = llMulDiv(_avsSourceVideoInfo.fps_denominator, UNITS, _avsSourceVideoInfo.fps_numerator, 0);
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
 
     return true;

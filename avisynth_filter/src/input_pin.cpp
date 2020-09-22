@@ -17,38 +17,34 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
-    HRESULT hr;
-
     const CAutoLock lock(m_pLock);
 
+    HRESULT hr;
+
     if (m_Connected) {
+        ASSERT(m_pAllocator != nullptr);
+
         const CMediaType *cmt = static_cast<const CMediaType *>(pmt);
+        if (CheckMediaType(cmt) == S_OK) {
+            ALLOCATOR_PROPERTIES props, actual;
 
-        if (CheckMediaType(cmt) != S_OK) {
-            return VFW_E_TYPE_NOT_ACCEPTED;
+            CheckHr(m_pAllocator->Decommit());
+            CheckHr(m_pAllocator->GetProperties(&props));
+
+            props.cBuffers = max(_filter._outputThreads, props.cBuffers);
+
+            const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*pmt);
+            props.cbBuffer = bih->biSizeImage;
+
+            CheckHr(m_pAllocator->SetProperties(&props, &actual));
+            CheckHr(m_pAllocator->Commit());
+
+            if (props.cBuffers > actual.cBuffers || props.cbBuffer > actual.cbBuffer) {
+                return E_FAIL;
+            }
+
+            CheckHr(_filter.UpdateOutputFormat(*pmt));
         }
-
-        ALLOCATOR_PROPERTIES props, actual;
-
-        CheckHr(m_pAllocator->Decommit());
-        CheckHr(m_pAllocator->GetProperties(&props));
-
-        props.cBuffers = max(_filter._outputThreads, props.cBuffers);
-
-        const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*pmt);
-        props.cbBuffer = bih->biSizeImage;
-
-        CheckHr(m_pAllocator->SetProperties(&props, &actual));
-        CheckHr(m_pAllocator->Commit());
-
-        if (props.cBuffers > actual.cBuffers || props.cbBuffer > actual.cbBuffer) {
-            return E_FAIL;
-        }
-
-        CheckHr(SetMediaType(cmt));
-        CheckHr(_filter.UpdateOutputFormat());
-
-        return S_OK;
     }
 
     return __super::ReceiveConnection(pConnector, pmt);
@@ -75,6 +71,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAll
     ASSERT(m_pAllocator != nullptr);
     *ppAllocator = m_pAllocator;
     m_pAllocator->AddRef();
+
     return S_OK;
 }
 

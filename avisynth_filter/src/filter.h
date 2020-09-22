@@ -78,7 +78,7 @@ private:
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
 
-    auto UpdateOutputFormat() -> HRESULT;
+    auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto TraverseFiltersInGraph() -> void;
