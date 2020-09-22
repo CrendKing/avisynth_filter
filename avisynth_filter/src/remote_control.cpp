@@ -66,7 +66,7 @@ auto RemoteControl::Run() -> void {
 
 	MSG msg;
 	BOOL msgRet;
-	while ((msgRet = GetMessage(&msg, _hWnd, 0, 0)) != 0) {
+	while ((msgRet = GetMessage(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
 			Log("Remote control message loop error: %5i", GetLastError());
 			break;

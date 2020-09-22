@@ -277,7 +277,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         Reset(true);
         _reloadAvsSource = false;
 
+        m_csReceive.Unlock();
         hr = UpdateOutputFormat();
+        m_csReceive.Lock();
 
         if (FAILED(hr)) {
             return AbortPlayback(hr);

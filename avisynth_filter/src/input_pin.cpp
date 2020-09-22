@@ -18,7 +18,7 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
 
 /**
  * overridden to return our custom CAviSynthFilterAllocator instead of CMemAllocator,
- * which allocates media sample with IMedaSideData attached
+ * which allocates media sample with IMediaSideData attached
  */
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(IMemAllocator **ppAllocator) -> HRESULT {
     CheckPointer(ppAllocator, E_POINTER);

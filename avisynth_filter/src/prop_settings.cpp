@@ -94,7 +94,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
             if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
-                ShellExecute(hwnd, L"edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+                ShellExecute(hwnd, L"edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
                 _settings->ReloadAvsSource();
             } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
