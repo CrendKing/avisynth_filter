@@ -4,6 +4,7 @@
 #include "format.h"
 #include "logging.h"
 #include "media_sample.h"
+#include "util.h"
 
 
 namespace AvsFilter {
@@ -235,6 +236,8 @@ auto FrameHandler::Reset() -> void {
 auto FrameHandler::ProcessInputSamples() -> void {
     Log("Start input sample worker thread %6i", std::this_thread::get_id());
 
+    SetThreadName(-1, "CAviSynthFilter Input Worker");
+
     while (!_stopWorkerThreads) {
         if (_isFlushing) {
             Log("Input sample worker thread %6i arrive at barrier", std::this_thread::get_id());
@@ -340,6 +343,8 @@ auto FrameHandler::ProcessInputSamples() -> void {
 
 auto FrameHandler::ProcessOutputSamples() -> void {
     Log("Start output sample worker thread %6i", std::this_thread::get_id());
+
+    SetThreadName(-1, "CAviSynthFilter Output Worker");
 
     while (!_stopWorkerThreads) {
         if (_isFlushing) {
