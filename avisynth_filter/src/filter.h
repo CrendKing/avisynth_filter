@@ -50,6 +50,7 @@ public:
     auto STDMETHODCALLTYPE ReloadAvsSource() -> void override;
     auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
     auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
+    auto STDMETHODCALLTYPE GetAvsVersionString() -> const char * override;
 
     // IAvsFilterStatus
     auto STDMETHODCALLTYPE GetInputBufferSize() const -> int override;
@@ -88,7 +89,6 @@ private:
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> bool;
     auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
-    auto StopAviSynthScript() -> void;
     auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
@@ -110,7 +110,10 @@ private:
     std::vector<DefinitionPair> _compatibleDefinitions;
 
     IScriptEnvironment2 *_avsEnv;
+    bool _avsEnvAtLeastV8;
+    PClip _avsSourceClip;
     PClip _avsScriptClip;
+    const char *_avsVersionString;
 
     bool _reloadAvsSource;
     VideoInfo _avsSourceVideoInfo;

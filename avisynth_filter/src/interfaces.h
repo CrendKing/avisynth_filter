@@ -18,6 +18,8 @@ DECLARE_INTERFACE_(IAvsFilterSettings, IUnknown) {
 
     virtual auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD = 0;
     virtual auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void = 0;
+
+    virtual auto STDMETHODCALLTYPE GetAvsVersionString() -> const char * = 0;
 };
 
 DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {

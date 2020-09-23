@@ -68,7 +68,6 @@ static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 2;
  * Default to 25 FPS in such cases.
  */
 static constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME     = 400000;
-static constexpr char *EVAL_FILENAME                           = "avisynth_filter_script";
 static constexpr int STATUS_PAGE_TIMER_INTERVAL_MS             = 1000;
 static constexpr wchar_t *UNAVAILABLE_SOURCE_PATH              = L"N/A";
 

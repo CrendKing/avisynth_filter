@@ -10,7 +10,7 @@ SourceClip::SourceClip(FrameHandler &frameHandler, const VideoInfo &videoInfo)
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    return _frameHandler.GetSourceFrame(frameNb);
+    return _frameHandler.GetSourceFrame(frameNb, env);
 }
 
 auto SourceClip::GetParity(int frameNb) -> bool {

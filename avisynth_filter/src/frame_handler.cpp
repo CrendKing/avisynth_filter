@@ -62,7 +62,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> void {
     _newSourceFrameCv.notify_one();
 }
 
-auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
+auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb);
     _addInputSampleCv.notify_one();
 
@@ -84,7 +84,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
 
     if (_isFlushing) {
         Log("Drain for frame: %6i", frameNb);
-        return _sourceFrames.crbegin()->second.avsFrame;
+        return env->NewVideoFrame(_filter._inputFormat.videoInfo);
     }
 
     Log("Get source frame: frameNb %6i Input queue size %2u Front %6i Back %6i",
@@ -106,8 +106,6 @@ auto FrameHandler::BeginFlush() -> void {
 }
 
 auto FrameHandler::EndFlush() -> void {
-    _filter.StopAviSynthScript();
-
     if (_stopWorkerThreads) {
         Log("Frame handler end flush after stop threads");
 

@@ -5,7 +5,7 @@
 namespace AvsFilter {
 
 auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> void {
-    const size_t repLen = strlen(rep);
+    const size_t repLen = strlen(target);
     size_t index = 0;
 
     while (true) {

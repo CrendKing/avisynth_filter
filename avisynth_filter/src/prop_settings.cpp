@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "prop_settings.h"
 #include "constants.h"
+#include "util.h"
 #include "version.h"
 
 
@@ -42,7 +43,9 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
         }
     }
 
-    const std::wstring title = std::wstring(L"<a>") + Widen(FILTER_NAME_BASE) + L" v" + Widen(FILTER_VERSION_STRING) + L"</a>";
+    const std::wstring title = std::wstring(L"<a>") + Widen(FILTER_NAME_BASE) +
+        L" v" + Widen(FILTER_VERSION_STRING) +
+        L"</a> on " + ConvertUtf8ToWide(_settings->GetAvsVersionString());
     SetDlgItemText(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page

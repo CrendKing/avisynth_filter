@@ -15,7 +15,7 @@ public:
     ~FrameHandler();
 
     auto AddInputSample(IMediaSample *inSample) -> void;
-    auto GetSourceFrame(int frameNb) -> PVideoFrame;
+    auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
 
     auto BeginFlush() -> void;
     auto EndFlush() -> void;
