@@ -39,7 +39,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _avsScriptVideoInfo()
     , _sourceAvgFrameRate(0)
     , _sourceAvgFrameTime(0)
-    , _frameTimeScaling(0)
+    , _scriptAvgFrameTime(0)
     , _inputFormat()
     , _outputFormat()
     , _confirmNewOutputFormat(false) {
@@ -719,28 +719,28 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
     _avsError.clear();
 
     AVSValue invokeResult;
-    if (_effectiveAvsFile.empty()) {
-        if (_remoteControl == nullptr) {
-            return false;
-        }
 
-        invokeResult = _avsSourceClip;
-    } else {
+    if (!_effectiveAvsFile.empty()) {
         const std::string utf8File = ConvertWideToUtf8(_effectiveAvsFile);
         const AVSValue args[2] = { utf8File.c_str(), true };
         const char *const argNames[2] = { nullptr, "utf8" };
 
         try {
             invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
-
-            if (!invokeResult.Defined() && m_State == State_Stopped && _remoteControl == nullptr) {
-                return false;
-            }
-            if (!invokeResult.IsClip()) {
-                _avsError = "Error: Script does not return a clip.";
-            }
         } catch (AvisynthError &err) {
             _avsError = err.msg;
+        }
+    }
+
+    if (_avsError.empty()) {
+        if (!invokeResult.Defined()) {
+            if (m_State == State_Stopped && _remoteControl == nullptr) {
+                return false;
+            }
+
+            invokeResult = _avsSourceClip;
+        } else if (!invokeResult.IsClip()) {
+            _avsError = "Error: Script does not return a clip.";
         }
     }
 
@@ -758,7 +758,7 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
     _avsScriptVideoInfo = _avsScriptClip->GetVideoInfo();
     _sourceAvgFrameRate = static_cast<int>(llMulDiv(_avsSourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _avsScriptVideoInfo.fps_denominator, 0));
     _sourceAvgFrameTime = llMulDiv(_avsSourceVideoInfo.fps_denominator, UNITS, _avsSourceVideoInfo.fps_numerator, 0);
-    _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
+    _scriptAvgFrameTime = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
 
     return true;
 }

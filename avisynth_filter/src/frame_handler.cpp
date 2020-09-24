@@ -9,8 +9,6 @@
 
 namespace AvsFilter {
 
-#define ContinueHr(expr) { if (FAILED(expr)) { continue; } }
-
 FrameHandler::FrameHandler(CAviSynthFilter &filter)
     : _filter(filter)
     , _inputFlushBarrier(g_config.GetInputThreads())
@@ -142,10 +140,6 @@ auto FrameHandler::Flush() -> void {
     _outputFrames.clear();
     outLock.unlock();
 
-    if (_stopWorkerThreads) {
-        _filter.DeleteAviSynth();
-    }
-
     Reset();
 
     _inputFlushBarrier.Unlock();
@@ -235,7 +229,7 @@ auto FrameHandler::Reset() -> void {
 auto FrameHandler::ProcessInputSamples() -> void {
     g_config.Log("Start input sample worker thread %6i", std::this_thread::get_id());
 
-    SetThreadName(-1, "CAviSynthFilter Input Worker");
+    SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Input Worker");
 
     while (!_stopWorkerThreads) {
         if (_isFlushing) {
@@ -275,28 +269,29 @@ auto FrameHandler::ProcessInputSamples() -> void {
         RefreshInputFrameRates(currSrcFrameInfo.frameNb, currSrcFrameInfo.startTime);
 
         BYTE *sampleBuffer;
-        ContinueHr(currSrcFrameInfo.sample->GetPointer(&sampleBuffer));
-        currSrcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputFormat, sampleBuffer, _filter._avsEnv);
+        if (SUCCEEDED(currSrcFrameInfo.sample->GetPointer(&sampleBuffer))) {
+            currSrcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputFormat, sampleBuffer, _filter._avsEnv);
 
-        IMediaSideData *inSampleSideData;
+            IMediaSideData *inSampleSideData;
 
-        if (SUCCEEDED(currSrcFrameInfo.sample->QueryInterface(&inSampleSideData))) {
-            currSrcFrameInfo.hdrSideData.Read(inSampleSideData);
-            inSampleSideData->Release();
+            if (SUCCEEDED(currSrcFrameInfo.sample->QueryInterface(&inSampleSideData))) {
+                currSrcFrameInfo.hdrSideData.Read(inSampleSideData);
+                inSampleSideData->Release();
 
-            if (auto hdr = currSrcFrameInfo.hdrSideData.GetHDRData()) {
-                _filter._inputFormat.hdrType = 1;
+                if (auto hdr = currSrcFrameInfo.hdrSideData.GetHDRData()) {
+                    _filter._inputFormat.hdrType = 1;
 
-                if (auto hdrCll = currSrcFrameInfo.hdrSideData.GetContentLightLevelData()) {
-                    _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*hdrCll)->MaxCLL;
-                } else {
-                    _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*hdr)->max_display_mastering_luminance);
+                    if (auto hdrCll = currSrcFrameInfo.hdrSideData.GetContentLightLevelData()) {
+                        _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*hdrCll)->MaxCLL;
+                    } else {
+                        _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*hdr)->max_display_mastering_luminance);
+                    }
                 }
             }
-        }
 
-        currSrcFrameInfo.sample->Release();
-        currSrcFrameInfo.sample = nullptr;
+            currSrcFrameInfo.sample->Release();
+            currSrcFrameInfo.sample = nullptr;
+        }
 
         g_config.Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
             _processInputFrameNb, currSrcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
@@ -308,7 +303,8 @@ auto FrameHandler::ProcessInputSamples() -> void {
              */
 
             SourceFrameInfo &preSrcFrameInfo = iter->second;
-            const REFERENCE_TIME prevSrcFrameTime = static_cast<REFERENCE_TIME>((currSrcFrameInfo.startTime - preSrcFrameInfo.startTime) * _filter._frameTimeScaling);
+            const REFERENCE_TIME prevSrcFrameTime = currSrcFrameInfo.startTime - preSrcFrameInfo.startTime;
+            const REFERENCE_TIME outputFrameTime = llMulDiv(prevSrcFrameTime, _filter._scriptAvgFrameTime, _filter._sourceAvgFrameTime, 0);
 
             if (_nextOutputFrameStartTime < preSrcFrameInfo.startTime) {
                 _nextOutputFrameStartTime = preSrcFrameInfo.startTime;
@@ -318,7 +314,7 @@ auto FrameHandler::ProcessInputSamples() -> void {
 
             while (currSrcFrameInfo.startTime > _nextOutputFrameStartTime) {
                 const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
-                const REFERENCE_TIME outStopTime = outStartTime + prevSrcFrameTime;
+                const REFERENCE_TIME outStopTime = outStartTime + outputFrameTime;
                 _nextOutputFrameStartTime = outStopTime;
 
                 g_config.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli", _nextOutputFrameNb, preSrcFrameInfo.frameNb, outStartTime, outStopTime);
@@ -343,7 +339,7 @@ auto FrameHandler::ProcessInputSamples() -> void {
 auto FrameHandler::ProcessOutputSamples() -> void {
     g_config.Log("Start output sample worker thread %6i", std::this_thread::get_id());
 
-    SetThreadName(-1, "CAviSynthFilter Output Worker");
+    SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Output Worker");
 
     while (!_stopWorkerThreads) {
         if (_isFlushing) {
@@ -375,29 +371,31 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         RefreshOutputFrameRates(outFrameInfo.frameNb, outFrameInfo.startTime);
 
         PVideoFrame scriptFrame;
+        IMediaSample *outSample = nullptr;
+
         try {
             scriptFrame = _filter._avsScriptClip->GetFrame(outFrameInfo.frameNb, _filter._avsEnv);
         } catch (AvisynthError) {
-            g_config.Log("AviSynth GetFrame() exception");
-            continue;
+            goto END_OF_DELIVERY;
         }
 
-        IMediaSample *outSample;
-        ContinueHr(_filter.InitializeOutputSample(nullptr, &outSample));
+        if (FAILED(_filter.InitializeOutputSample(nullptr, &outSample))) {
+            goto END_OF_DELIVERY;
+        }
 
         if (FAILED(outSample->SetTime(&outFrameInfo.startTime, &outFrameInfo.stopTime))) {
-            outSample->Release();
-            continue;
-        }
-
-        if (_filter._confirmNewOutputFormat) {
-            outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
-            _filter._confirmNewOutputFormat = false;
+            goto END_OF_DELIVERY;
         }
 
         BYTE *outBuffer;
-        outSample->GetPointer(&outBuffer);
+        if (FAILED(outSample->GetPointer(&outBuffer))) {
+            goto END_OF_DELIVERY;
+        }
         Format::WriteSample(_filter._outputFormat, scriptFrame, outBuffer, _filter._avsEnv);
+
+        if (_filter._confirmNewOutputFormat && SUCCEEDED(outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType()))) {
+            _filter._confirmNewOutputFormat = false;
+        }
 
         IMediaSideData *outSampleSideData;
         if (SUCCEEDED(outSample->QueryInterface(&outSampleSideData))) {
@@ -405,25 +403,33 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             outSampleSideData->Release();
         }
 
-        std::unique_lock<std::mutex> delLock(_deliveryQueueMutex);
+        {
+            // some renderer requires samples to be delivered in order
+            // so we need to synchronize the output threads
 
-        while (!_isFlushing && outFrameInfo.frameNb != _deliveryFrameNb) {
-            _deliveryCv.wait(delLock);
+            std::unique_lock<std::mutex> delLock(_deliveryQueueMutex);
+
+            while (!_isFlushing && outFrameInfo.frameNb != _deliveryFrameNb) {
+                _deliveryCv.wait(delLock);
+            }
+
+            if (_isFlushing) {
+                outSample->Release();
+                continue;
+            }
+
+            _filter.m_pOutput->Deliver(outSample);
+
+            g_config.Log("Delivered frame %6i", outFrameInfo.frameNb);
         }
 
-        if (_isFlushing) {
+END_OF_DELIVERY:
+        if (outSample != nullptr) {
             outSample->Release();
-            continue;
         }
 
-        ContinueHr(_filter.m_pOutput->Deliver(outSample));
-        outSample->Release();
         _deliveryFrameNb += 1;
-
-        delLock.unlock();
         _deliveryCv.notify_all();
-
-        g_config.Log("Delivered frame %6i", outFrameInfo.frameNb);
 
         GarbageCollect(srcFrameNb);
     }

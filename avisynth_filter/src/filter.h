@@ -108,7 +108,7 @@ private:
     VideoInfo _avsScriptVideoInfo;
     int _sourceAvgFrameRate;
     REFERENCE_TIME _sourceAvgFrameTime;
-    double _frameTimeScaling;
+    REFERENCE_TIME _scriptAvgFrameTime;
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
