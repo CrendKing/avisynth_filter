@@ -34,7 +34,6 @@ public:
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
     auto Receive(IMediaSample *pSample) -> HRESULT override;
-    auto BeginFlush() -> HRESULT override;
     auto EndFlush() -> HRESULT override;
 
     // ISpecifyPropertyPages

@@ -17,8 +17,7 @@ public:
     auto AddInputSample(IMediaSample *inSample) -> void;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
 
-    auto BeginFlush() -> void;
-    auto EndFlush() -> void;
+    auto Flush() -> void;
 
     auto StartWorkerThreads() -> void;
     auto StopWorkerThreads() -> void;

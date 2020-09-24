@@ -20,10 +20,9 @@ FrameHandler::FrameHandler(CAviSynthFilter &filter)
 }
 
 FrameHandler::~FrameHandler() {
-    // not all upstreams call BeginFlush/EndFlush at the end of stream, we need to always cleanup
+    // not all upstreams call EndFlush at the end of stream, we need to always cleanup
 
-    BeginFlush();
-    EndFlush();
+    Flush();
 }
 
 auto FrameHandler::AddInputSample(IMediaSample *inSample) -> void {
@@ -94,8 +93,8 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     return iter->second.avsFrame;
 }
 
-auto FrameHandler::BeginFlush() -> void {
-    g_config.Log("Frame handler begin flush");
+auto FrameHandler::Flush() -> void {
+    g_config.Log("Frame handler flush");
 
     _isFlushing = true;
 
@@ -104,9 +103,7 @@ auto FrameHandler::BeginFlush() -> void {
     _sourceFrameAvailCv.notify_all();
     _outputFramesCv.notify_all();
     _deliveryCv.notify_all();
-}
 
-auto FrameHandler::EndFlush() -> void {
     _filter.StopAviSynthScript();
 
     if (_stopWorkerThreads) {
