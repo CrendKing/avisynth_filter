@@ -69,7 +69,7 @@ auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> IPin * {
         if (dir == PINDIR_OUTPUT) {
             AM_MEDIA_TYPE mediaType;
             if (SUCCEEDED(pPin->ConnectionMediaType(&mediaType))) {
-                const bool found = mediaType.majortype == MEDIATYPE_Video;
+                const bool found = (mediaType.majortype == MEDIATYPE_Video || mediaType.majortype == MEDIATYPE_Stream);
                 FreeMediaType(mediaType);
 
                 if (found) {

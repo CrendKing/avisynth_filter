@@ -569,7 +569,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
             if (!FAILED(filter->QueryInterface(&source))) {
                 LPOLESTR filename;
                 if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
-                    Log("Source path: '%ls'", filename);
+                    Log("Source path: %S", filename);
                     _videoSourcePath = std::wstring(filename);
                 }
                 source->Release();
@@ -590,12 +590,12 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
     }
 
     while (true) {
-        FILTER_INFO    filterInfo;
+        FILTER_INFO filterInfo;
         if (SUCCEEDED(filter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
 
             _videoFilterNames.push_back(filterInfo.achName);
-            Log("Visiting filter: '%ls'", filterInfo.achName);
+            Log("Visiting filter: %S", filterInfo.achName);
         }
 
         IPin *outputPin = FindFirstVideoOutputPin(filter);
@@ -632,6 +632,11 @@ auto CAviSynthFilter::LoadSettings() -> void * {
     if (_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0) {
         _remoteControl = new RemoteControl(this, this);
     }
+
+    Log("Configured script file: %S", avsFile.c_str());
+    Log("Configured input formats: %i", _inputFormatBits);
+    Log("Configured input threads: %i", _inputThreads);
+    Log("Configured output threads: %i", _outputThreads);
 
     return nullptr;
 }

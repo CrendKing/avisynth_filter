@@ -4,6 +4,7 @@
 #pragma warning(push)
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS 26812)
 
+#include <clocale>
 #include <deque>
 #include <map>
 #include <mutex>

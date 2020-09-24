@@ -1,4 +1,5 @@
 #include "pch.h"
+
 #include "constants.h"
 #include "filter.h"
 #include "format.h"
@@ -68,6 +69,7 @@ static void FillPinTypes() {
 static FILE *g_logFile = nullptr;
 static DWORD g_logStartTime;
 static std::mutex g_logMutex;
+static char *g_loc = setlocale(LC_CTYPE, ".utf8");
 #endif
 
 auto AvsFilter::Log(const char *format, ...) -> void {
