@@ -82,6 +82,7 @@ private:
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> bool;
     auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
+    auto StopAviSynthScript() -> void;
     auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;

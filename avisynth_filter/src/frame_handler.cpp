@@ -107,6 +107,8 @@ auto FrameHandler::BeginFlush() -> void {
 }
 
 auto FrameHandler::EndFlush() -> void {
+    _filter.StopAviSynthScript();
+
     if (_stopWorkerThreads) {
         g_config.Log("Frame handler end flush after stop threads");
 

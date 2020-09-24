@@ -738,11 +738,6 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
         const char *const argNames[2] = { nullptr, "utf8" };
 
         try {
-            if (!_avsEnvAtLeastV8 && _avsScriptClip != nullptr) {
-                // delete the associated prefetcher for avs+ < v8, which does not support multiple prefetchers
-                _avsScriptClip = nullptr;
-            }
-            
             invokeResult = _avsEnv->Invoke("Import", AVSValue(args, 2), argNames);
 
             if (!invokeResult.Defined() && m_State == State_Stopped && _remoteControl == nullptr) {
@@ -773,6 +768,13 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
     _frameTimeScaling = static_cast<double>(llMulDiv(_avsSourceVideoInfo.fps_numerator, _avsScriptVideoInfo.fps_denominator, _avsSourceVideoInfo.fps_denominator, 0)) / _avsScriptVideoInfo.fps_numerator;
 
     return true;
+}
+
+auto CAviSynthFilter::StopAviSynthScript() -> void {
+    if (!_avsEnvAtLeastV8 && _avsScriptClip != nullptr) {
+        // delete the associated prefetcher for avs+ < v8, which does not support multiple prefetchers
+        _avsScriptClip = nullptr;
+    }
 }
 
 auto CAviSynthFilter::DeleteAviSynth() -> void {
