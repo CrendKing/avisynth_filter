@@ -105,6 +105,7 @@ private:
 
     FrameHandler _frameHandler;
 
+    bool _disconnectFilter;
     std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;

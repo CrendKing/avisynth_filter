@@ -29,6 +29,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _remoteControl(nullptr)
     , _settingsLoader(LoadSettings())
     , _frameHandler(*this)
+    , _disconnectFilter(false)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
     , _avsEnv(nullptr)
@@ -95,64 +96,64 @@ auto CAviSynthFilter::GetPin(int n) -> CBasePin * {
 }
 
 auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT {
-    HRESULT ret = S_OK;
     HRESULT hr;
 
-    if (!CreateAviSynth()) {
-        return E_FAIL;
-    }
-
-    if (direction == PINDIR_INPUT) {
-        IEnumMediaTypes *enumTypes;
-        CheckHr(pPin->EnumMediaTypes(&enumTypes));
-
-        AM_MEDIA_TYPE *nextType;
-        while (true) {
-            hr = enumTypes->Next(1, &nextType, nullptr);
-            if (hr == S_OK) {
-                const auto inputDefinition = GetInputDefinition(nextType);
-
-                // for each group of formats with the same avs type, only add the first one that upstream supports.
-                // this one will be the preferred media type for potential pin reconnection
-                if (inputDefinition && IsInputUniqueByAvsType(*inputDefinition)) {
-                    // invoke AviSynth script with each supported input definition, and observe the output avs type
-                    if (!ReloadAviSynthScript(*nextType)) {
-                        Log("Disconnect due to AvsFilterDisconnect()");
-
-                        DeleteMediaType(nextType);
-                        ret = VFW_E_NO_TYPES;
-                        break;
-                    }
-
-                    _acceptableInputTypes[*inputDefinition] = nextType;
-                    Log("Add acceptable input definition: %2i", *inputDefinition);
-
-                    // all media types that share the same avs type are acceptable for output pin connection
-                    for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
-                        if (_acceptableOutputTypes[outputDefinition] == nullptr) {
-                            AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
-                            _acceptableOutputTypes[outputDefinition] = outputType;
-                            Log("Add acceptable output definition: %2i", outputDefinition);
-
-                            _compatibleDefinitions.emplace_back(DefinitionPair { *inputDefinition, outputDefinition });
-                            Log("Add compatible definitions: input %2i output %2i", *inputDefinition, outputDefinition);
-                        }
-                    }
-                } else {
-                    DeleteMediaType(nextType);
-                }
-            } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
-                CheckHr(enumTypes->Reset());
-                DeletePinTypes();
-            } else {
-                break;
-            }
+    if (!_disconnectFilter) {
+        if (!CreateAviSynth()) {
+            return E_FAIL;
         }
 
-        enumTypes->Release();
+        if (direction == PINDIR_INPUT) {
+            IEnumMediaTypes *enumTypes;
+            CheckHr(pPin->EnumMediaTypes(&enumTypes));
+
+            AM_MEDIA_TYPE *nextType;
+            while (true) {
+                hr = enumTypes->Next(1, &nextType, nullptr);
+                if (hr == S_OK) {
+                    const auto inputDefinition = GetInputDefinition(nextType);
+
+                    // for each group of formats with the same avs type, only add the first one that upstream supports.
+                    // this one will be the preferred media type for potential pin reconnection
+                    if (inputDefinition && IsInputUniqueByAvsType(*inputDefinition)) {
+                        // invoke AviSynth script with each supported input definition, and observe the output avs type
+                        if (!ReloadAviSynthScript(*nextType)) {
+                            Log("Disconnect due to AvsFilterDisconnect()");
+                            DeleteMediaType(nextType);
+                            _disconnectFilter = true;
+                            break;
+                        }
+
+                        _acceptableInputTypes[*inputDefinition] = nextType;
+                        Log("Add acceptable input definition: %2i", *inputDefinition);
+
+                        // all media types that share the same avs type are acceptable for output pin connection
+                        for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
+                            if (_acceptableOutputTypes[outputDefinition] == nullptr) {
+                                AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
+                                _acceptableOutputTypes[outputDefinition] = outputType;
+                                Log("Add acceptable output definition: %2i", outputDefinition);
+
+                                _compatibleDefinitions.emplace_back(DefinitionPair { *inputDefinition, outputDefinition });
+                                Log("Add compatible definitions: input %2i output %2i", *inputDefinition, outputDefinition);
+                            }
+                        }
+                    } else {
+                        DeleteMediaType(nextType);
+                    }
+                } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
+                    CheckHr(enumTypes->Reset());
+                    DeletePinTypes();
+                } else {
+                    break;
+                }
+            }
+
+            enumTypes->Release();
+        }
     }
 
-    return ret;
+    return _disconnectFilter ? VFW_E_TYPE_NOT_ACCEPTED : S_OK;
 }
 
 auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
@@ -418,11 +419,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetInputFormats(DWORD formatBits) -> voi
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsVersionString() -> const char * {
-    if (_avsVersionString == nullptr) {
-        return "unknown AviSynth version";
-    } else {
-        return _avsVersionString;
-    }
+    return _avsVersionString == nullptr ? "unknown AviSynth version" : _avsVersionString;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetInputBufferSize() const -> int {
