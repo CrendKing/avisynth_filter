@@ -3,7 +3,6 @@
 #include "pch.h"
 #include "format.h"
 #include "interfaces.h"
-#include "registry.h"
 #include "remote_control.h"
 #include "frame_handler.h"
 
@@ -42,14 +41,9 @@ public:
     auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;
 
     // IAvsFilterSettings
-    auto STDMETHODCALLTYPE SaveSettings() const -> void override;
-    auto STDMETHODCALLTYPE GetPrefAvsFile() const -> std::wstring override;
-    auto STDMETHODCALLTYPE SetPrefAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE GetEffectiveAvsFile() const -> std::wstring override;
     auto STDMETHODCALLTYPE SetEffectiveAvsFile(const std::wstring &avsFile) -> void override;
     auto STDMETHODCALLTYPE ReloadAvsSource() -> void override;
-    auto STDMETHODCALLTYPE GetInputFormats() const -> DWORD override;
-    auto STDMETHODCALLTYPE SetInputFormats(DWORD formatBits) -> void override;
     auto STDMETHODCALLTYPE GetAvsVersionString() -> const char * override;
 
     // IAvsFilterStatus
@@ -83,7 +77,6 @@ private:
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto TraverseFiltersInGraph() -> void;
-    auto LoadSettings() -> void *;
     auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
@@ -94,14 +87,8 @@ private:
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
-    Registry _registry;
-    std::wstring _prefAvsFile;
     std::wstring _effectiveAvsFile;
-    DWORD _inputFormatBits;
-    int _inputThreads;
-    int _outputThreads;
     RemoteControl *_remoteControl;
-    void *_settingsLoader;
 
     FrameHandler _frameHandler;
 

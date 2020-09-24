@@ -1,11 +1,11 @@
 #include "pch.h"
 
+#include "config.h"
 #include "constants.h"
 #include "filter.h"
 #include "format.h"
 #include "prop_settings.h"
 #include "prop_status.h"
-#include "logging.h"
 
 
 #ifdef _DEBUG
@@ -62,32 +62,9 @@ static void FillPinTypes() {
     PIN_REG[1].lpMediaType = g_PinTypes.data();
 }
 
-//#define LOGGING
+AvsFilter::Config AvsFilter::g_config;
+
 //#define MINIDUMP
-
-#ifdef LOGGING
-static FILE *g_logFile = nullptr;
-static DWORD g_logStartTime;
-static std::mutex g_logMutex;
-static char *g_loc = setlocale(LC_CTYPE, ".utf8");
-#endif
-
-auto AvsFilter::Log(const char *format, ...) -> void {
-#ifdef LOGGING
-    std::unique_lock<std::mutex> srcLock(g_logMutex);
-
-    fprintf_s(g_logFile, "T %6i @ %8i: ", GetCurrentThreadId(), timeGetTime() - g_logStartTime);
-
-    va_list args;
-    va_start(args, format);
-    vfprintf_s(g_logFile, format, args);
-    va_end(args);
-
-    fputc('\n', g_logFile);
-
-    fflush(g_logFile);
-#endif
-}
 
 #ifdef MINIDUMP
 #include <client/windows/handler/exception_handler.h>
@@ -99,11 +76,6 @@ static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
     if (bLoading == TRUE) {
         FillPinTypes();
 
-#ifdef LOGGING
-        g_logFile = _fsopen("C:\\avisynth_filter.log", "w", _SH_DENYNO);
-        g_logStartTime = timeGetTime();
-#endif // LOGGING
-
 #ifdef MINIDUMP
         g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, static_cast<HANDLE>(nullptr), nullptr);
 #endif // MINIDUMP
@@ -111,12 +83,6 @@ static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
 #ifdef MINIDUMP
         delete g_exHandler;
 #endif // MINIDUMP
-
-#ifdef LOGGING
-        if (g_logFile != nullptr) {
-            fclose(g_logFile);
-        }
-#endif
     }
 }
 

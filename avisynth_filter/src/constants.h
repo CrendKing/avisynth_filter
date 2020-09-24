@@ -81,6 +81,7 @@ static constexpr int NUM_FRAMES_FOR_INFINITE_STREAM            = 10810800;
 
 static constexpr wchar_t *REGISTRY_KEY_NAME                    = L"Software\\AviSynthFilter";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_AVS_FILE         = L"AvsFile";
+static constexpr wchar_t *REGISTRY_VALUE_NAME_LOG_FILE         = L"LogFile";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS          = L"Formats";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_INPUT_THREADS    = L"InputThreads";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_OUTPUT_THREADS   = L"OutputThreads";

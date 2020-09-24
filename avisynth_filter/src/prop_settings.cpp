@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "prop_settings.h"
+#include "config.h"
 #include "constants.h"
 #include "util.h"
 #include "version.h"
@@ -28,15 +29,16 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    _avsFile = _settings->GetPrefAvsFile();
-    _avsFileManagedByRC = _avsFile != _settings->GetEffectiveAvsFile();
+    _configAvsFile = g_config.GetAvsFile();
+    _avsFileManagedByRC = _configAvsFile != _settings->GetEffectiveAvsFile();
     if (_avsFileManagedByRC) {
+        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), FALSE);
         ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
     }
 
-    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _avsFile.c_str());
+    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsFile.c_str());
 
-    const DWORD formatBits = _settings->GetInputFormats();
+    const DWORD formatBits = g_config.GetInputFormatBits();
     for (int i = 0; i < sizeof(formatBits) * 8; ++i) {
         if ((formatBits & (1 << i)) != 0) {
             CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_NV12 + i, 1);
@@ -55,7 +57,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
-    _settings->SetPrefAvsFile(_avsFile);
+    g_config.SetAvsFile(_configAvsFile);
 
     DWORD formatBits = 0;
     for (int i = IDC_INPUT_FORMAT_NV12; i < IDC_INPUT_FORMAT_END; ++i) {
@@ -63,16 +65,16 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
             formatBits |= 1 << (i - IDC_INPUT_FORMAT_NV12);
         }
     }
-    _settings->SetInputFormats(formatBits);
+    g_config.SetInputFormatBits(formatBits);
 
-    _settings->SaveSettings();
+    g_config.Save();
 
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
-        MessageBox(m_hwnd, L"AviSynth source file is currently managed by remote control. Your change is saved but not used.",
+        MessageBox(m_hwnd, L"AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
                    FILTER_NAME_WIDE, MB_OK | MB_ICONINFORMATION);
     } else {
-        _settings->SetEffectiveAvsFile(_avsFile);
+        _settings->SetEffectiveAvsFile(_configAvsFile);
         _settings->ReloadAvsSource();
     }
 
@@ -88,16 +90,16 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
                 const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
 
-                if (newValue != _avsFile) {
-                    _avsFile = newValue;
+                if (newValue != _configAvsFile) {
+                    _configAvsFile = newValue;
                     SetDirty();
                 }
 
                 return 0;
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
-            if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_avsFile.empty()) {
-                ShellExecute(hwnd, L"edit", _avsFile.c_str(), nullptr, nullptr, SW_SHOW);
+            if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_configAvsFile.empty()) {
+                ShellExecute(hwnd, L"edit", _configAvsFile.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
                 _settings->ReloadAvsSource();
             } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {

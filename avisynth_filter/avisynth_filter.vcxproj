@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\allocator.h" />
+    <ClInclude Include="src\config.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\filter.h" />
     <ClInclude Include="src\format.h" />
@@ -27,7 +28,6 @@
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\input_pin.h" />
     <ClInclude Include="src\interfaces.h" />
-    <ClInclude Include="src\logging.h" />
     <ClInclude Include="src\media_sample.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\prop_settings.h" />
@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\allocator.cpp" />
+    <ClCompile Include="src\config.cpp" />
     <ClCompile Include="src\filter.cpp" />
     <ClCompile Include="src\format.cpp" />
     <ClCompile Include="src\barrier.cpp" />

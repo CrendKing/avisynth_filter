@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "filter.h"
 #include "api.h"
+#include "config.h"
 #include "constants.h"
 #include "input_pin.h"
-#include "logging.h"
 #include "source_clip.h"
 #include "util.h"
 
@@ -23,11 +23,8 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
-    , _inputFormatBits(0)
-    , _inputThreads(DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT)
-    , _outputThreads(DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT)
-    , _remoteControl(nullptr)
-    , _settingsLoader(LoadSettings())
+    , _effectiveAvsFile(g_config.GetAvsFile())
+    , _remoteControl(g_config.IsRemoteControlEnabled() ? new RemoteControl(this, this) : nullptr)
     , _frameHandler(*this)
     , _disconnectFilter(false)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
@@ -46,7 +43,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _inputFormat()
     , _outputFormat()
     , _confirmNewOutputFormat(false) {
-    Log("CAviSynthFilter::CAviSynthFilter()");
+    g_config.Log("CAviSynthFilter::CAviSynthFilter()");
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
@@ -118,24 +115,24 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     if (inputDefinition && IsInputUniqueByAvsType(*inputDefinition)) {
                         // invoke AviSynth script with each supported input definition, and observe the output avs type
                         if (!ReloadAviSynthScript(*nextType)) {
-                            Log("Disconnect due to AvsFilterDisconnect()");
+                            g_config.Log("Disconnect due to AvsFilterDisconnect()");
                             DeleteMediaType(nextType);
                             _disconnectFilter = true;
                             break;
                         }
 
                         _acceptableInputTypes[*inputDefinition] = nextType;
-                        Log("Add acceptable input definition: %2i", *inputDefinition);
+                        g_config.Log("Add acceptable input definition: %2i", *inputDefinition);
 
                         // all media types that share the same avs type are acceptable for output pin connection
                         for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
                             if (_acceptableOutputTypes[outputDefinition] == nullptr) {
                                 AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
                                 _acceptableOutputTypes[outputDefinition] = outputType;
-                                Log("Add acceptable output definition: %2i", outputDefinition);
+                                g_config.Log("Add acceptable output definition: %2i", outputDefinition);
 
                                 _compatibleDefinitions.emplace_back(DefinitionPair { *inputDefinition, outputDefinition });
-                                Log("Add compatible definitions: input %2i output %2i", *inputDefinition, outputDefinition);
+                                g_config.Log("Add compatible definitions: input %2i output %2i", *inputDefinition, outputDefinition);
                             }
                         }
                     } else {
@@ -163,7 +160,7 @@ auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
 
-    Log("Accept input definition: %2i", *definition);
+    g_config.Log("Accept input definition: %2i", *definition);
 
     return S_OK;
 }
@@ -184,7 +181,7 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
     const int definition = _compatibleDefinitions[iPosition].output;
     *pMediaType = *_acceptableOutputTypes[definition];
 
-    Log("Offer output definition: %2i", definition);
+    g_config.Log("Offer output definition: %2i", definition);
 
     return S_OK;
 }
@@ -196,7 +193,7 @@ auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *m
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
 
-    Log("Accept transform: out %2i", *outputDefinition);
+    g_config.Log("Accept transform: out %2i", *outputDefinition);
 
     return S_OK;
 }
@@ -204,7 +201,7 @@ auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *m
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
     HRESULT hr;
 
-    pProperties->cBuffers = max(_outputThreads, pProperties->cBuffers);
+    pProperties->cBuffers = max(g_config.GetOutputThreads(), pProperties->cBuffers);
 
     BITMAPINFOHEADER *bih = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
     pProperties->cbBuffer = max(static_cast<long>(bih->biSizeImage), pProperties->cbBuffer);
@@ -249,25 +246,25 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 
     if (const auto inputDefiniton = Format::LookupMediaSubtype(m_pInput->CurrentMediaType().subtype)) {
         if (!m_pOutput->IsConnected()) {
-            Log("Connected input pin with definition: %2i", *inputDefiniton);
+            g_config.Log("Connected input pin with definition: %2i", *inputDefiniton);
         } else if (const auto outputDefinition = MediaTypeToDefinition(&m_pOutput->CurrentMediaType())) {
             if (const auto compatibleInput = FindCompatibleInputByOutput(*outputDefinition)) {
                 if (*inputDefiniton != *compatibleInput) {
-                    Log("Reconnect with types: old in %2i new in %2i out %2i", *inputDefiniton, *compatibleInput, *outputDefinition);
+                    g_config.Log("Reconnect with types: old in %2i new in %2i out %2i", *inputDefiniton, *compatibleInput, *outputDefinition);
                     CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[*compatibleInput]));
                 } else {
-                    Log("Connected with types: in %2i out %2i", *inputDefiniton, *outputDefinition);
+                    g_config.Log("Connected with types: in %2i out %2i", *inputDefiniton, *outputDefinition);
                 }
             } else {
-                Log("Unexpected lookup result for compatible definition");
+                g_config.Log("Unexpected lookup result for compatible definition");
                 return E_UNEXPECTED;
             }
         } else {
-            Log("Unexpected lookup result for output definition");
+            g_config.Log("Unexpected lookup result for output definition");
             return E_UNEXPECTED;
         }
     } else {
-        Log("Unexpected lookup result for input definition");
+        g_config.Log("Unexpected lookup result for input definition");
         return E_UNEXPECTED;
     }
 
@@ -385,19 +382,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> H
     return S_OK;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::SaveSettings() const -> void {
-    _registry.WriteString(REGISTRY_VALUE_NAME_AVS_FILE, _prefAvsFile);
-    _registry.WriteNumber(REGISTRY_VALUE_NAME_FORMATS, _inputFormatBits);
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetPrefAvsFile() const -> std::wstring {
-    return _prefAvsFile;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::SetPrefAvsFile(const std::wstring &avsFile) -> void {
-    _prefAvsFile = avsFile;
-}
-
 auto STDMETHODCALLTYPE CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
     return _effectiveAvsFile;
 }
@@ -408,14 +392,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::SetEffectiveAvsFile(const std::wstring &
 
 auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsSource() -> void {
     _reloadAvsSource = true;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormats() const -> DWORD {
-    return _inputFormatBits;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::SetInputFormats(DWORD formatBits) -> void {
-    _inputFormatBits = formatBits;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsVersionString() -> const char * {
@@ -524,7 +500,7 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 
     _inputFormat = Format::GetVideoFormat(inputMediaType);
 
-    Log("Update output format using input format: definition %i, width %5i, height %5i, codec %s",
+    g_config.Log("Update output format using input format: definition %i, width %5i, height %5i, codec %s",
         _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
     AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &inputMediaType);
@@ -543,7 +519,7 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT {
     _outputFormat = Format::GetVideoFormat(*pmtOut);
 
-    Log("New output format: definition %i, width %5i, height %5i, codec %s",
+    g_config.Log("New output format: definition %i, width %5i, height %5i, codec %s",
         _outputFormat.definition, _outputFormat.bmi.biWidth, _outputFormat.bmi.biHeight, _outputFormat.GetCodecName().c_str());
 
     return S_OK;
@@ -566,7 +542,6 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
             if (!FAILED(filter->QueryInterface(&source))) {
                 LPOLESTR filename;
                 if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
-                    Log("Source path: %S", filename);
                     _videoSourcePath = std::wstring(filename);
                 }
                 source->Release();
@@ -592,7 +567,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
             QueryFilterInfoReleaseGraph(filterInfo);
 
             _videoFilterNames.push_back(filterInfo.achName);
-            Log("Visiting filter: %S", filterInfo.achName);
+            g_config.Log("Visiting filter: %S", filterInfo.achName);
         }
 
         IPin *outputPin = FindFirstVideoOutputPin(filter);
@@ -617,34 +592,13 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
     }
 }
 
-auto CAviSynthFilter::LoadSettings() -> void * {
-    const std::wstring avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
-    SetPrefAvsFile(avsFile);
-    SetEffectiveAvsFile(avsFile);
-
-    _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
-    _inputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_INPUT_THREADS, DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT);
-    _outputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
-
-    if (_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0) {
-        _remoteControl = new RemoteControl(this, this);
-    }
-
-    Log("Configured script file: %S", avsFile.c_str());
-    Log("Configured input formats: %i", _inputFormatBits);
-    Log("Configured input threads: %i", _inputThreads);
-    Log("Configured output threads: %i", _outputThreads);
-
-    return nullptr;
-}
-
 auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int> {
     if (const auto inputDefinition = MediaTypeToDefinition(mediaType)) {
-        if ((_inputFormatBits & (1 << *inputDefinition)) != 0) {
+        if ((g_config.GetInputFormatBits() & (1 << *inputDefinition)) != 0) {
             return inputDefinition;
         }
 
-        Log("Reject input definition due to settings: %2i", *inputDefinition);
+        g_config.Log("Reject input definition due to settings: %2i", *inputDefinition);
     }
 
     return std::nullopt;
@@ -723,7 +677,7 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
     if (_avsEnv == nullptr) {
         _avsEnv = CreateScriptEnvironment2();
         if (_avsEnv == nullptr) {
-            Log("CreateScriptEnvironment2 FAILED!");
+            g_config.Log("CreateScriptEnvironment2 FAILED!");
             return false;
         }
 
@@ -747,6 +701,8 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
  * Create new AviSynth script clip with specified media type.
  */
 auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool {
+    g_config.Log("ReloadAviSynthScript");
+
     _avsSourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
 
     /*
