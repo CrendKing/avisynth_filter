@@ -76,11 +76,7 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
 
         SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, inputFrameRateStr.append(" -> ").append(outputFrameRateStr).c_str());
         SetDlgItemTextA(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
-        SetDlgItemTextA(hwnd, IDC_TEXT_WORKER_THREAD_COUNT_VALUE,
-                        std::to_string(_status->GetInputWorkerThreadCount())
-                        .append(" / ")
-                        .append(std::to_string(_status->GetOutputWorkerThreadCount()))
-                        .c_str());
+        SetDlgItemTextA(hwnd, IDC_TEXT_WORKER_THREAD_COUNT_VALUE, std::to_string(_status->GetOutputWorkerThreadCount()).c_str());
 
         if (!_isSourcePathSet) {
             std::wstring videoSourcePath = _status->GetVideoSourcePath();

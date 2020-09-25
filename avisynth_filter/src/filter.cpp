@@ -201,7 +201,7 @@ auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *m
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
     HRESULT hr;
 
-    pProperties->cBuffers = max(g_config.GetOutputThreads(), pProperties->cBuffers);
+    pProperties->cBuffers = max(g_config.GetOutputThreads() + 1, pProperties->cBuffers);
 
     BITMAPINFOHEADER *bih = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
     pProperties->cbBuffer = max(static_cast<long>(bih->biSizeImage), pProperties->cbBuffer);
@@ -330,7 +330,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     }
 
     if (SUCCEEDED(hr)) {
-        _frameHandler.AddInputSample(pSample);
+        hr = _frameHandler.AddInputSample(pSample);
 
         if (m_nWaitForKey) {
             m_nWaitForKey--;
@@ -339,10 +339,17 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
             m_nWaitForKey = 0;
         }
 
-        if (m_nWaitForKey && !m_bQualityChanged) {
+        if (m_nWaitForKey) {
+            hr = S_FALSE;
+        }
+    }
+
+    if (S_FALSE == hr) {
+        if (!m_bQualityChanged) {
             m_bQualityChanged = TRUE;
             NotifyEvent(EC_QUALITY_CHANGE, 0, 0);
         }
+        return NOERROR;
     }
 
     return S_OK;
@@ -419,10 +426,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentOutputFrameRate() const -> int
     return _frameHandler.GetCurrentOutputFrameRate();
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputWorkerThreadCount() const -> int {
-    return _frameHandler.GetInputWorkerThreadCount();
-}
-
 auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputWorkerThreadCount() const -> int {
     return _frameHandler.GetOutputWorkerThreadCount();
 }
@@ -480,6 +483,18 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
     }
 
     return Format::LookupMediaSubtype(mediaType->subtype);
+}
+
+auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int> {
+    if (const auto inputDefinition = MediaTypeToDefinition(mediaType)) {
+        if ((g_config.GetInputFormatBits() & (1 << *inputDefinition)) != 0) {
+            return inputDefinition;
+        }
+
+        g_config.Log("Reject input definition due to settings: %2i", *inputDefinition);
+    }
+
+    return std::nullopt;
 }
 
 /**
@@ -583,18 +598,6 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
         nextInputPin->Release();
         outputPin->Release();
     }
-}
-
-auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int> {
-    if (const auto inputDefinition = MediaTypeToDefinition(mediaType)) {
-        if ((g_config.GetInputFormatBits() & (1 << *inputDefinition)) != 0) {
-            return inputDefinition;
-        }
-
-        g_config.Log("Reject input definition due to settings: %2i", *inputDefinition);
-    }
-
-    return std::nullopt;
 }
 
 /**

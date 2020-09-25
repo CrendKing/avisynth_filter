@@ -6,12 +6,12 @@
 
 #include <clocale>
 #include <deque>
-#include <map>
 #include <mutex>
 #include <numeric>
 #include <optional>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #define WIN32_LEAN_AND_MEAN

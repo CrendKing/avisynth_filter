@@ -10,7 +10,6 @@ Config::Config()
     : _logFile(nullptr) {
     _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
     _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
-    _inputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_INPUT_THREADS, DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT);
     _outputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0;
 
@@ -27,7 +26,6 @@ Config::Config()
 
         Log("Configured script file: %S", _avsFile.c_str());
         Log("Configured input formats: %i", _inputFormatBits);
-        Log("Configured input threads: %i", _inputThreads);
         Log("Configured output threads: %i", _outputThreads);
 
         wchar_t processPath[MAX_PATH];
@@ -81,10 +79,6 @@ auto Config::GetInputFormatBits() const -> DWORD {
 
 auto Config::SetInputFormatBits(DWORD formatBits) -> void {
     _inputFormatBits = formatBits;
-}
-
-auto Config::GetInputThreads() const-> int {
-    return _inputThreads;
 }
 
 auto Config::GetOutputThreads() const -> int {

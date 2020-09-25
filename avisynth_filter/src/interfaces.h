@@ -23,7 +23,6 @@ DECLARE_INTERFACE_(IAvsFilterStatus, IUnknown) {
     virtual auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int = 0;
-    virtual auto STDMETHODCALLTYPE GetInputWorkerThreadCount() const -> int = 0;
     virtual auto STDMETHODCALLTYPE GetOutputWorkerThreadCount() const -> int = 0;
 
     virtual auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring = 0;

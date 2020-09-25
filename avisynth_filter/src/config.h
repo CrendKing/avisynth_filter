@@ -18,7 +18,6 @@ public:
     auto SetAvsFile(const std::wstring &avsFile) -> void;
     auto GetInputFormatBits() const -> DWORD;
     auto SetInputFormatBits(DWORD formatBits) -> void;
-    auto GetInputThreads() const-> int;
     auto GetOutputThreads() const -> int;
     auto IsRemoteControlEnabled() const -> bool;
 
@@ -26,7 +25,6 @@ private:
     Registry _registry;
     std::wstring _avsFile;
     DWORD _inputFormatBits;
-    int _inputThreads;
     int _outputThreads;
     bool _isRemoteControlEnabled;
 

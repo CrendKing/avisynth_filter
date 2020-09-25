@@ -53,7 +53,6 @@ public:
     auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int override;
     auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int override;
     auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int override;
-    auto STDMETHODCALLTYPE GetInputWorkerThreadCount() const -> int override;
     auto STDMETHODCALLTYPE GetOutputWorkerThreadCount() const -> int override;
 
     auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring override;
@@ -71,12 +70,12 @@ private:
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
+    static auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
 
     auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto TraverseFiltersInGraph() -> void;
-    auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) const -> std::optional<int>;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
     auto CreateAviSynth() -> bool;

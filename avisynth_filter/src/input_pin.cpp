@@ -32,7 +32,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
             CheckHr(m_pAllocator->Decommit());
             CheckHr(m_pAllocator->GetProperties(&props));
 
-            props.cBuffers = max(g_config.GetOutputThreads(), props.cBuffers);
+            props.cBuffers = max(g_config.GetOutputThreads() + 1, props.cBuffers);
 
             const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*pmt);
             props.cbBuffer = bih->biSizeImage;
@@ -77,7 +77,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAll
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocatorRequirements(__out ALLOCATOR_PROPERTIES *pProps) -> HRESULT {
-    pProps->cBuffers = g_config.GetInputThreads();
+    pProps->cBuffers = 1;
 
     return S_OK;
 }

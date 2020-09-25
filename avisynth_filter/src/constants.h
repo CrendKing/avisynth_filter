@@ -60,8 +60,7 @@ static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 #define SETTINGS_WIDE                     Widen(SETTINGS_FULL)
 #define STATUS_WIDE                       Widen(STATUS_FULL)
 
-static constexpr int DEFAULT_INPUT_SAMPLE_WORKER_THREAD_COUNT  = 2;
-static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 2;
+static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 1;
 
 /*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
@@ -83,7 +82,6 @@ static constexpr wchar_t *REGISTRY_KEY_NAME                    = L"Software\\Avi
 static constexpr wchar_t *REGISTRY_VALUE_NAME_AVS_FILE         = L"AvsFile";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_LOG_FILE         = L"LogFile";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_FORMATS          = L"Formats";
-static constexpr wchar_t *REGISTRY_VALUE_NAME_INPUT_THREADS    = L"InputThreads";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_OUTPUT_THREADS   = L"OutputThreads";
 static constexpr wchar_t *REGISTRY_VALUE_NAME_REMOTE_CONTROL   = L"RemoteControl";
 

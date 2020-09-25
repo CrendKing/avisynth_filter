@@ -3,17 +3,15 @@
 #include "config.h"
 #include "filter.h"
 #include "format.h"
-#include "media_sample.h"
-#include "util.h"
 
 
 namespace AvsFilter {
 
 FrameHandler::FrameHandler(CAviSynthFilter &filter)
     : _filter(filter)
-    , _inputFlushBarrier(g_config.GetInputThreads())
-    , _outputFlushBarrier(g_config.GetOutputThreads())
-    , _stopWorkerThreads(true) {
+    , _flushBarrier(g_config.GetOutputThreads())
+    , _stopThreads(true)
+    , _isFlushing(false) {
     Reset();
 }
 
@@ -23,14 +21,10 @@ FrameHandler::~FrameHandler() {
     Flush();
 }
 
-auto FrameHandler::AddInputSample(IMediaSample *inSample) -> void {
+auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
 
-    while (true) {
-        if (_isFlushing || _stopWorkerThreads) {
-            break;
-        }
-
+    while (!_isFlushing && !_stopThreads) {
         // need at least 2 source frames for stop time calculation
         if (_sourceFrames.size() <= 1) {
             break;
@@ -45,19 +39,88 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> void {
         _addInputSampleCv.wait(srcLock);
     }
 
-    if (_isFlushing || _stopWorkerThreads) {
-        return;
+    if (_isFlushing || _stopThreads) {
+        return S_OK;
     }
 
-    inSample->AddRef();
-    _sourceFrames.emplace(_nextSourceFrameNb, SourceFrameInfo { _nextSourceFrameNb, inSample });
+    SourceFrameInfo srcFrameInfo { _nextSourceFrameNb };
 
+    REFERENCE_TIME inSampleStopTime = 0;
+    if (inSample->GetTime(&srcFrameInfo.startTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
+        // for samples without start time, always treat as fixed frame rate
+        srcFrameInfo.startTime = _nextSourceFrameNb * _filter._sourceAvgFrameTime;
+    }
+
+    RefreshInputFrameRates(srcFrameInfo);
+
+    BYTE *sampleBuffer;
+    const HRESULT hr = inSample->GetPointer(&sampleBuffer);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    srcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputFormat, sampleBuffer, _filter._avsEnv);
+
+    IMediaSideData *inSampleSideData;
+    if (SUCCEEDED(inSample->QueryInterface(&inSampleSideData))) {
+        srcFrameInfo.hdrSideData.Read(inSampleSideData);
+        inSampleSideData->Release();
+
+        if (auto hdr = srcFrameInfo.hdrSideData.GetHDRData()) {
+            _filter._inputFormat.hdrType = 1;
+
+            if (auto hdrCll = srcFrameInfo.hdrSideData.GetContentLightLevelData()) {
+                _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*hdrCll)->MaxCLL;
+            } else {
+                _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*hdr)->max_display_mastering_luminance);
+            }
+        }
+    }
+
+    g_config.Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
+                 _nextSourceFrameNb, srcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
+
+    std::unordered_map<int, SourceFrameInfo>::iterator iter;
+    if ((iter = _sourceFrames.find(_nextSourceFrameNb - 1)) != _sourceFrames.cend()) {
+        /*
+         * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
+         * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
+         */
+
+        SourceFrameInfo &preSrcFrameInfo = iter->second;
+        const REFERENCE_TIME outputFrameTime = llMulDiv(srcFrameInfo.startTime - preSrcFrameInfo.startTime, _filter._scriptAvgFrameTime, _filter._sourceAvgFrameTime, 0);
+
+        if (_nextOutputFrameStartTime < preSrcFrameInfo.startTime) {
+            _nextOutputFrameStartTime = preSrcFrameInfo.startTime;
+        }
+
+        {
+            std::unique_lock<std::mutex> outLock(_outputFramesMutex);
+
+            while (srcFrameInfo.startTime > _nextOutputFrameStartTime) {
+                const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
+                const REFERENCE_TIME outStopTime = outStartTime + outputFrameTime;
+                _nextOutputFrameStartTime = outStopTime;
+
+                g_config.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli", _nextOutputFrameNb, preSrcFrameInfo.frameNb, outStartTime, outStopTime);
+
+                _outputFrames.emplace_back(OutputFrameInfo { _nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfo });
+                _nextOutputFrameNb += 1;
+                preSrcFrameInfo.refCount += 1;
+            }
+        }
+
+        _outputFramesCv.notify_one();
+    }
+
+    _sourceFrames.emplace(_nextSourceFrameNb, srcFrameInfo);
     g_config.Log("Add input sample %6i", _nextSourceFrameNb);
-
     _nextSourceFrameNb += 1;
 
     srcLock.unlock();
     _newSourceFrameCv.notify_one();
+
+    return S_OK;
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
@@ -66,84 +129,73 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 
     std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
 
-    std::map<int, SourceFrameInfo>::const_iterator iter;
-    while (true) {
-        if (_isFlushing) {
-            break;
-        }
-
+    std::unordered_map<int, SourceFrameInfo>::const_iterator iter;
+    while (!_isFlushing) {
         iter = _sourceFrames.find(frameNb);
-        if (iter != _sourceFrames.cend() && iter->second.avsFrame != nullptr) {
+        if (iter != _sourceFrames.cend()) {
             break;
         }
 
-        _sourceFrameAvailCv.wait(srcLock);
+        _newSourceFrameCv.wait(srcLock);
     }
 
-    if (_isFlushing) {
-        g_config.Log("Drain for frame: %6i", frameNb);
+    if (_isFlushing || iter->second.avsFrame == nullptr) {
+        if (_isFlushing) {
+            g_config.Log("Drain for frame %6i", frameNb);
+        } else {
+            g_config.Log("Bad frame %6i", frameNb);
+        }
+
         return env->NewVideoFrame(_filter._inputFormat.videoInfo);
     }
 
-    g_config.Log("Get source frame: frameNb %6i Input queue size %2u Front %6i Back %6i",
-        frameNb, _sourceFrames.size(), _sourceFrames.empty() ? -1 : _sourceFrames.cbegin()->first, _sourceFrames.empty() ? -1 : _sourceFrames.crbegin()->first);
+    g_config.Log("Get source frame: frameNb %6i Input queue size %2u", frameNb, _sourceFrames.size());
 
     return iter->second.avsFrame;
 }
 
 auto FrameHandler::Flush() -> void {
-    g_config.Log("Frame handler flush");
+    g_config.Log("Frame handler begin flush");
 
     _isFlushing = true;
-
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
-    _sourceFrameAvailCv.notify_all();
     _outputFramesCv.notify_all();
     _deliveryCv.notify_all();
 
     _filter.StopAviSynthScript();
 
-    if (_stopWorkerThreads) {
+    if (_stopThreads) {
         g_config.Log("Frame handler end flush after stop threads");
 
-        for (std::thread &t : _inputWorkerThreads) {
-            t.join();
+        for (std::thread &t : _outputThreads) {
+            if (t.joinable()) {
+                t.join();
+            }
         }
-        _inputWorkerThreads.clear();
-
-        for (std::thread &t : _outputWorkerThreads) {
-            t.join();
-        }
-        _outputWorkerThreads.clear();
+        _outputThreads.clear();
     } else {
         g_config.Log("Frame handler wait for barriers");
 
-        _inputFlushBarrier.Wait();
-        _outputFlushBarrier.Wait();
+        _flushBarrier.Wait();
     }
 
-    g_config.Log("Frame handler done synchronization");
-
-    std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
-
-    for (auto &[frameNb, srcFrame]: _sourceFrames) {
-        if (srcFrame.sample != nullptr) {
-            srcFrame.sample->Release();
-        }
+    {
+        std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+        _sourceFrames.clear();
     }
-    _sourceFrames.clear();
 
-    srcLock.unlock();
-
-    std::unique_lock<std::mutex> outLock(_outputFramesMutex);
-    _outputFrames.clear();
-    outLock.unlock();
+    {
+        std::unique_lock<std::mutex> outLock(_outputFramesMutex);
+        _outputFrames.clear();
+    }
 
     Reset();
+    _isFlushing = false;
 
-    _inputFlushBarrier.Unlock();
-    _outputFlushBarrier.Unlock();
+    _flushBarrier.Unlock();
+
+    g_config.Log("Frame handler end flush");
 }
 
 auto FrameHandler::GetInputBufferSize() const -> int {
@@ -153,7 +205,7 @@ auto FrameHandler::GetInputBufferSize() const -> int {
 }
 
 auto FrameHandler::GetOutputBufferSize() const -> int {
-    const std::unique_lock<std::mutex> srcLock(_outputFramesMutex);
+    const std::unique_lock<std::mutex> outLock(_outputFramesMutex);
 
     return static_cast<int>(_outputFrames.size());
 }
@@ -167,7 +219,7 @@ auto FrameHandler::GetOutputFrameNb() const -> int {
 }
 
 auto FrameHandler::GetDeliveryFrameNb() const -> int {
-    return _deliveryFrameNb;
+    return _nextDeliverFrameNb;
 }
 
 auto FrameHandler::GetCurrentInputFrameRate() const -> int {
@@ -178,34 +230,22 @@ auto FrameHandler::GetCurrentOutputFrameRate() const -> int {
     return _currentOutputFrameRate;
 }
 
-auto FrameHandler::GetInputWorkerThreadCount() const -> int {
-    return static_cast<int>(_inputWorkerThreads.size());
-}
-
 auto FrameHandler::GetOutputWorkerThreadCount() const -> int {
-    return static_cast<int>(_outputWorkerThreads.size());
+    return static_cast<int>(_outputThreads.size());
 }
 
 auto FrameHandler::StartWorkerThreads() -> void {
-    ASSERT(_inputWorkerThreads.empty());
-    ASSERT(_outputWorkerThreads.empty());
-
-    _stopWorkerThreads = false;
-
-    for (int i = 0; i < g_config.GetInputThreads(); ++i) {
-        _inputWorkerThreads.emplace_back(&FrameHandler::ProcessInputSamples, this);
-    }
+    ASSERT(_outputThreads.empty());
+    
+    _stopThreads = false;
 
     for (int i = 0; i < g_config.GetOutputThreads(); ++i) {
-        _outputWorkerThreads.emplace_back(&FrameHandler::ProcessOutputSamples, this);
+        _outputThreads.emplace_back(&FrameHandler::ProcessOutputSamples, this);
     }
-
-    _filter.CreateAviSynth();
 }
 
 auto FrameHandler::StopWorkerThreads() -> void {
-    _stopWorkerThreads = true;
-
+    _stopThreads = true;
     _addInputSampleCv.notify_all();
 }
 
@@ -214,9 +254,8 @@ auto FrameHandler::Reset() -> void {
     _nextSourceFrameNb = 0;
     _processInputFrameNb = 0;
     _nextOutputFrameNb = 0;
-    _deliveryFrameNb = 0;
+    _nextDeliverFrameNb = 0;
     _nextOutputFrameStartTime = 0;
-    _isFlushing = false;
 
     _frameRateCheckpointInputSampleNb = 0;
     _frameRateCheckpointInputSampleStartTime = 0;
@@ -226,126 +265,16 @@ auto FrameHandler::Reset() -> void {
     _currentOutputFrameRate = 0;
 }
 
-auto FrameHandler::ProcessInputSamples() -> void {
-    g_config.Log("Start input sample worker thread %6i", std::this_thread::get_id());
-
-    SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Input Worker");
-
-    while (!_stopWorkerThreads) {
-        if (_isFlushing) {
-            g_config.Log("Input sample worker thread %6i arrive at barrier", std::this_thread::get_id());
-
-            _inputFlushBarrier.Arrive();
-        }
-
-        std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
-
-        std::map<int, SourceFrameInfo>::iterator iter;
-        while (true) {
-            if (_isFlushing) {
-                break;
-            }
-
-            iter = _sourceFrames.find(_processInputFrameNb);
-            if (iter != _sourceFrames.cend()) {
-                break;
-            }
-
-            _newSourceFrameCv.wait(srcLock);
-        }
-
-        if (_isFlushing) {
-            continue;
-        }
-
-        SourceFrameInfo &currSrcFrameInfo = iter->second;
-
-        REFERENCE_TIME inSampleStopTime = 0;
-        if (currSrcFrameInfo.sample->GetTime(&currSrcFrameInfo.startTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
-            // for samples without start time, always treat as fixed frame rate
-            currSrcFrameInfo.startTime = currSrcFrameInfo.frameNb * _filter._sourceAvgFrameTime;
-        }
-
-        RefreshInputFrameRates(currSrcFrameInfo.frameNb, currSrcFrameInfo.startTime);
-
-        BYTE *sampleBuffer;
-        if (SUCCEEDED(currSrcFrameInfo.sample->GetPointer(&sampleBuffer))) {
-            currSrcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputFormat, sampleBuffer, _filter._avsEnv);
-
-            IMediaSideData *inSampleSideData;
-
-            if (SUCCEEDED(currSrcFrameInfo.sample->QueryInterface(&inSampleSideData))) {
-                currSrcFrameInfo.hdrSideData.Read(inSampleSideData);
-                inSampleSideData->Release();
-
-                if (auto hdr = currSrcFrameInfo.hdrSideData.GetHDRData()) {
-                    _filter._inputFormat.hdrType = 1;
-
-                    if (auto hdrCll = currSrcFrameInfo.hdrSideData.GetContentLightLevelData()) {
-                        _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*hdrCll)->MaxCLL;
-                    } else {
-                        _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*hdr)->max_display_mastering_luminance);
-                    }
-                }
-            }
-
-            currSrcFrameInfo.sample->Release();
-            currSrcFrameInfo.sample = nullptr;
-        }
-
-        g_config.Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
-            _processInputFrameNb, currSrcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
-
-        if ((iter = _sourceFrames.find(_processInputFrameNb - 1)) != _sourceFrames.cend()) {
-            /*
-             * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
-             * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
-             */
-
-            SourceFrameInfo &preSrcFrameInfo = iter->second;
-            const REFERENCE_TIME prevSrcFrameTime = currSrcFrameInfo.startTime - preSrcFrameInfo.startTime;
-            const REFERENCE_TIME outputFrameTime = llMulDiv(prevSrcFrameTime, _filter._scriptAvgFrameTime, _filter._sourceAvgFrameTime, 0);
-
-            if (_nextOutputFrameStartTime < preSrcFrameInfo.startTime) {
-                _nextOutputFrameStartTime = preSrcFrameInfo.startTime;
-            }
-
-            std::unique_lock<std::mutex> outLock(_outputFramesMutex);
-
-            while (currSrcFrameInfo.startTime > _nextOutputFrameStartTime) {
-                const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
-                const REFERENCE_TIME outStopTime = outStartTime + outputFrameTime;
-                _nextOutputFrameStartTime = outStopTime;
-
-                g_config.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli", _nextOutputFrameNb, preSrcFrameInfo.frameNb, outStartTime, outStopTime);
-
-                _outputFrames.emplace_back(OutputFrameInfo { _nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfo });
-                _nextOutputFrameNb += 1;
-                preSrcFrameInfo.refCount += 1;
-            }
-
-            outLock.unlock();
-            _outputFramesCv.notify_one();
-        }
-        
-        _processInputFrameNb += 1;
-        srcLock.unlock();
-        _sourceFrameAvailCv.notify_all();
-    }
-
-    g_config.Log("Stop input sample worker thread %6i", std::this_thread::get_id());
-}
-
 auto FrameHandler::ProcessOutputSamples() -> void {
-    g_config.Log("Start output sample worker thread %6i", std::this_thread::get_id());
+    g_config.Log("Start output worker thread");
 
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Output Worker");
 
-    while (!_stopWorkerThreads) {
+    while (!_stopThreads) {
         if (_isFlushing) {
-            g_config.Log("Output sample worker thread %6i arrive at barrier", std::this_thread::get_id());
+            g_config.Log("Output worker thread wait for flush");
 
-            _outputFlushBarrier.Arrive();
+            _flushBarrier.Arrive();
         }
 
         std::unique_lock<std::mutex> outLock(_outputFramesMutex);
@@ -362,36 +291,40 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         _outputFrames.pop_front();
         outLock.unlock();
 
+        RefreshOutputFrameRates(outFrameInfo);
+
         const int srcFrameNb = outFrameInfo.srcFrameInfo->frameNb;
 
         g_config.Log("Start processing output frame %6i at %10lli ~ %10lli frameTime %10lli for source %6i Output queue size %2u Front %6i Back %6i",
-            outFrameInfo.frameNb, outFrameInfo.startTime, outFrameInfo.stopTime, outFrameInfo.stopTime - outFrameInfo.startTime, srcFrameNb,
-            _outputFrames.size(), _outputFrames.empty() ? -1 : _outputFrames.front().frameNb, _outputFrames.empty() ? -1 : _outputFrames.back().frameNb);
+                     outFrameInfo.frameNb, outFrameInfo.startTime, outFrameInfo.stopTime, outFrameInfo.stopTime - outFrameInfo.startTime, srcFrameNb,
+                     _outputFrames.size(), _outputFrames.empty() ? -1 : _outputFrames.front().frameNb, _outputFrames.empty() ? -1 : _outputFrames.back().frameNb);
 
-        RefreshOutputFrameRates(outFrameInfo.frameNb, outFrameInfo.startTime);
+        bool doDelivery = false;
 
-        PVideoFrame scriptFrame;
         IMediaSample *outSample = nullptr;
-
-        try {
-            scriptFrame = _filter._avsScriptClip->GetFrame(outFrameInfo.frameNb, _filter._avsEnv);
-        } catch (AvisynthError) {
-            goto END_OF_DELIVERY;
-        }
-
         if (FAILED(_filter.InitializeOutputSample(nullptr, &outSample))) {
-            goto END_OF_DELIVERY;
+            goto BEGIN_OF_DELIVERY;
         }
 
         if (FAILED(outSample->SetTime(&outFrameInfo.startTime, &outFrameInfo.stopTime))) {
-            goto END_OF_DELIVERY;
+            goto BEGIN_OF_DELIVERY;
         }
 
-        BYTE *outBuffer;
-        if (FAILED(outSample->GetPointer(&outBuffer))) {
-            goto END_OF_DELIVERY;
+        {
+            PVideoFrame scriptFrame;
+
+            try {
+                scriptFrame = _filter._avsScriptClip->GetFrame(outFrameInfo.frameNb, _filter._avsEnv);
+            } catch (AvisynthError) {
+                goto BEGIN_OF_DELIVERY;
+            }
+
+            BYTE *outBuffer;
+            if (FAILED(outSample->GetPointer(&outBuffer))) {
+                goto BEGIN_OF_DELIVERY;
+            }
+            Format::WriteSample(_filter._outputFormat, scriptFrame, outBuffer, _filter._avsEnv);
         }
-        Format::WriteSample(_filter._outputFormat, scriptFrame, outBuffer, _filter._avsEnv);
 
         if (_filter._confirmNewOutputFormat && SUCCEEDED(outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType()))) {
             _filter._confirmNewOutputFormat = false;
@@ -403,38 +336,40 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             outSampleSideData->Release();
         }
 
-        {
-            // some renderer requires samples to be delivered in order
-            // so we need to synchronize the output threads
+        doDelivery = true;
 
-            std::unique_lock<std::mutex> delLock(_deliveryQueueMutex);
+BEGIN_OF_DELIVERY:
+        if (doDelivery) {
+            // most renderers require samples to be delivered in order
+            // so we need to synchronize between the output threads
 
-            while (!_isFlushing && outFrameInfo.frameNb != _deliveryFrameNb) {
+            std::unique_lock<std::mutex> delLock(_deliveryMutex);
+
+            while (!_isFlushing && outFrameInfo.frameNb != _nextDeliverFrameNb) {
                 _deliveryCv.wait(delLock);
             }
 
-            if (_isFlushing) {
-                outSample->Release();
-                continue;
+            if (!_isFlushing) {
+                _filter.m_pOutput->Deliver(outSample);
+
+                g_config.Log("Delivered frame %6i", outFrameInfo.frameNb);
+
+                _nextDeliverFrameNb += 1;
             }
-
-            _filter.m_pOutput->Deliver(outSample);
-
-            g_config.Log("Delivered frame %6i", outFrameInfo.frameNb);
+        } else {
+            __debugbreak();
         }
 
-END_OF_DELIVERY:
+        _deliveryCv.notify_all();
+
         if (outSample != nullptr) {
             outSample->Release();
         }
 
-        _deliveryFrameNb += 1;
-        _deliveryCv.notify_all();
-
         GarbageCollect(srcFrameNb);
     }
 
-    g_config.Log("Stop output sample worker thread %6i", std::this_thread::get_id());
+    g_config.Log("Stop output worker thread");
 }
 
 auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
@@ -449,7 +384,6 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     if (srcFrameIter->second.refCount <= 1) {
         _sourceFrames.erase(srcFrameIter);
         srcLock.unlock();
-        _addInputSampleCv.notify_one();
     } else {
         srcFrameIter->second.refCount -= 1;
     }
@@ -457,9 +391,9 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     g_config.Log("GarbageCollect frame %6i pre refcount %4i post queue size %2u", srcFrameNb, dbgPreRefCount, dbgPreQueueSize);
 }
 
-auto FrameHandler::RefreshInputFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
-                                                  int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
-                                                  int &currentFrameRate) -> void {
+auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
+                                             int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
+                                             int &currentFrameRate) -> void {
     bool reachCheckpoint = checkpointStartTime == 0;
     const REFERENCE_TIME elapsedRefTime = startTime - checkpointStartTime;
 
@@ -474,12 +408,12 @@ auto FrameHandler::RefreshInputFrameRatesTemplate(int sampleNb, REFERENCE_TIME s
     }
 }
 
-auto FrameHandler::RefreshInputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void {
-    RefreshInputFrameRatesTemplate(sampleNb, startTime, _frameRateCheckpointInputSampleNb, _frameRateCheckpointInputSampleStartTime, _currentInputFrameRate);
+auto FrameHandler::RefreshInputFrameRates(const SourceFrameInfo &info) -> void {
+    RefreshFrameRatesTemplate(info.frameNb, info.startTime, _frameRateCheckpointInputSampleNb, _frameRateCheckpointInputSampleStartTime, _currentInputFrameRate);
 }
 
-auto FrameHandler::RefreshOutputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void {
-    RefreshInputFrameRatesTemplate(sampleNb, startTime, _frameRateCheckpointOutputFrameNb, _frameRateCheckpointOutputFrameStartTime, _currentOutputFrameRate);
+auto FrameHandler::RefreshOutputFrameRates(const OutputFrameInfo &info) -> void {
+    RefreshFrameRatesTemplate(info.frameNb, info.startTime, _frameRateCheckpointOutputFrameNb, _frameRateCheckpointOutputFrameStartTime, _currentOutputFrameRate);
 }
 
 }

@@ -14,7 +14,7 @@ public:
     explicit FrameHandler(CAviSynthFilter &filter);
     ~FrameHandler();
 
-    auto AddInputSample(IMediaSample *inSample) -> void;
+    auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
 
     auto Flush() -> void;
@@ -29,13 +29,11 @@ public:
     auto GetDeliveryFrameNb() const -> int;
     auto GetCurrentInputFrameRate() const -> int;
     auto GetCurrentOutputFrameRate() const -> int;
-    auto GetInputWorkerThreadCount() const -> int;
     auto GetOutputWorkerThreadCount() const -> int;
 
 private:
     struct SourceFrameInfo {
         int frameNb;
-        IMediaSample *sample;
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
         HDRSideData hdrSideData;
@@ -49,33 +47,27 @@ private:
         SourceFrameInfo *srcFrameInfo;
     };
 
-    static auto RefreshInputFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
-                                               int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
-                                               int &currentFrameRate) -> void;
+    static auto RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
+                                          int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
+                                          int &currentFrameRate) -> void;
 
     auto Reset() -> void;
-    auto ProcessInputSamples() -> void;
     auto ProcessOutputSamples() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
-    auto RefreshInputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void;
-    auto RefreshOutputFrameRates(int sampleNb, REFERENCE_TIME startTime) -> void;
+    auto RefreshInputFrameRates(const SourceFrameInfo &info) -> void;
+    auto RefreshOutputFrameRates(const OutputFrameInfo &info) -> void;
 
     CAviSynthFilter &_filter;
 
-    std::map<int, SourceFrameInfo> _sourceFrames;
+    std::unordered_map<int, SourceFrameInfo> _sourceFrames;
     std::deque<OutputFrameInfo> _outputFrames;
 
     mutable std::mutex _sourceFramesMutex;
     mutable std::mutex _outputFramesMutex;
-    std::mutex _deliveryQueueMutex;
+    std::mutex _deliveryMutex;
 
     std::condition_variable _addInputSampleCv;
     std::condition_variable _newSourceFrameCv;
-
-    // separate CV from new source CV for more efficient notify_all()
-    // threads only wait on this CV when there is a famine from source filter
-    std::condition_variable _sourceFrameAvailCv;
-
     std::condition_variable _outputFramesCv;
     std::condition_variable _deliveryCv;
 
@@ -83,14 +75,13 @@ private:
     int _nextSourceFrameNb;
     int _processInputFrameNb;
     int _nextOutputFrameNb;
-    int _deliveryFrameNb;
+    int _nextDeliverFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
 
-    std::vector<std::thread> _inputWorkerThreads;
-    Barrier _inputFlushBarrier;
-    std::vector<std::thread> _outputWorkerThreads;
-    Barrier _outputFlushBarrier;
-    bool _stopWorkerThreads;
+    std::vector<std::thread> _outputThreads;
+
+    Barrier _flushBarrier;
+    bool _stopThreads;
     bool _isFlushing;
 
     int _frameRateCheckpointInputSampleNb;
