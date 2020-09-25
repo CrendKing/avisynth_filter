@@ -97,7 +97,6 @@ private:
     std::vector<DefinitionPair> _compatibleDefinitions;
 
     IScriptEnvironment2 *_avsEnv;
-    bool _avsEnvAtLeastV8;
     PClip _avsSourceClip;
     PClip _avsScriptClip;
     const char *_avsVersionString;

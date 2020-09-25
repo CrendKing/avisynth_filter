@@ -30,7 +30,6 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
     , _avsEnv(nullptr)
-    , _avsEnvAtLeastV8(false)
     , _avsSourceClip(nullptr)
     , _avsScriptClip(nullptr)
     , _avsVersionString(nullptr)
@@ -677,13 +676,6 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
             return false;
         }
 
-        try {
-            _avsEnv->CheckVersion(8);
-            _avsEnvAtLeastV8 = true;
-        } catch (const AvisynthError &) {
-            _avsEnvAtLeastV8 = false;
-        }
-
         _avsVersionString = _avsEnv->Invoke("Eval", AVSValue("VersionString()")).AsString();
         _avsSourceClip = new SourceClip(_frameHandler, _avsSourceVideoInfo);
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _avsSourceClip);
@@ -767,16 +759,13 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
 }
 
 auto CAviSynthFilter::StopAviSynthScript() -> void {
-    if (!_avsEnvAtLeastV8 && _avsScriptClip != nullptr) {
-        // delete the associated prefetcher for avs+ < v8, which does not support multiple prefetchers
+    if (_avsScriptClip != nullptr) {
         _avsScriptClip = nullptr;
     }
 }
 
 auto CAviSynthFilter::DeleteAviSynth() -> void {
-    if (_avsScriptClip != nullptr) {
-        _avsScriptClip = nullptr;
-    }
+    StopAviSynthScript();
 
     if (_avsEnv != nullptr) {
         _avsEnv->DeleteScriptEnvironment();

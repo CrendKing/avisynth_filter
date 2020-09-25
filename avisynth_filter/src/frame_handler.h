@@ -73,7 +73,6 @@ private:
 
     int _maxRequestedFrameNb;
     int _nextSourceFrameNb;
-    int _processInputFrameNb;
     int _nextOutputFrameNb;
     int _nextDeliverFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;

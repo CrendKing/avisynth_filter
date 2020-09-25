@@ -124,10 +124,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
+    std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb);
     _addInputSampleCv.notify_one();
-
-    std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
 
     std::unordered_map<int, SourceFrameInfo>::const_iterator iter;
     while (!_isFlushing) {
@@ -252,7 +252,6 @@ auto FrameHandler::StopWorkerThreads() -> void {
 auto FrameHandler::Reset() -> void {
     _maxRequestedFrameNb = 0;
     _nextSourceFrameNb = 0;
-    _processInputFrameNb = 0;
     _nextOutputFrameNb = 0;
     _nextDeliverFrameNb = 0;
     _nextOutputFrameStartTime = 0;
@@ -384,6 +383,7 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     if (srcFrameIter->second.refCount <= 1) {
         _sourceFrames.erase(srcFrameIter);
         srcLock.unlock();
+        _addInputSampleCv.notify_one();
     } else {
         srcFrameIter->second.refCount -= 1;
     }
