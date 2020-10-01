@@ -77,6 +77,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         }
     }
 
+    _sourceFrames.emplace(_nextSourceFrameNb, srcFrameInfo);
+
     g_config.Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
                  _nextSourceFrameNb, srcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
 
@@ -113,12 +115,9 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         _outputFramesCv.notify_one();
     }
 
-    _sourceFrames.emplace(_nextSourceFrameNb, srcFrameInfo);
-    g_config.Log("Add input sample %6i", _nextSourceFrameNb);
     _nextSourceFrameNb += 1;
-
     srcLock.unlock();
-    _newSourceFrameCv.notify_one();
+    _newSourceFrameCv.notify_all();
 
     return S_OK;
 }
@@ -246,6 +245,8 @@ auto FrameHandler::StartWorkerThreads() -> void {
 
 auto FrameHandler::StopWorkerThreads() -> void {
     _stopThreads = true;
+
+    // necessary to unlock output pin's Inactive() in CTransformFilter::Stop()
     _addInputSampleCv.notify_all();
 }
 
@@ -338,11 +339,11 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         doDelivery = true;
 
 BEGIN_OF_DELIVERY:
+        std::unique_lock<std::mutex> delLock(_deliveryMutex);
+
         if (doDelivery) {
             // most renderers require samples to be delivered in order
             // so we need to synchronize between the output threads
-
-            std::unique_lock<std::mutex> delLock(_deliveryMutex);
 
             while (!_isFlushing && outFrameInfo.frameNb != _nextDeliverFrameNb) {
                 _deliveryCv.wait(delLock);
@@ -350,15 +351,12 @@ BEGIN_OF_DELIVERY:
 
             if (!_isFlushing) {
                 _filter.m_pOutput->Deliver(outSample);
-
                 g_config.Log("Delivered frame %6i", outFrameInfo.frameNb);
-
-                _nextDeliverFrameNb += 1;
             }
-        } else {
-            __debugbreak();
         }
 
+        _nextDeliverFrameNb += 1;
+        delLock.unlock();
         _deliveryCv.notify_all();
 
         if (outSample != nullptr) {

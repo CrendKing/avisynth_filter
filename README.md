@@ -6,11 +6,14 @@ This filter exports an "AvsFilterSource()" function to the AviSynth script, whic
 
 If you used ffdshow's AviSynth plugin, you may find this filter similar in many ways. On top of that, this filter is actively adding new features. Support most common input formats such as NV12, YUY2 and P010 etc.
 
-Require CPU with SSSE3 instructions.
+## Requirement
+
+* CPU with SSSE3 instructions.
+* [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5 and above.
 
 ## Install
 
-* Before anything, install [AviSynth+](https://github.com/AviSynth/AviSynthPlus/). Make sure `AviSynth.dll` is either in system directories or at the same directory of this filter.
+* Before anything, install AviSynth+. Make sure `AviSynth.dll` is either in system directories or at the same directory of this filter.
 * Unpack the archive.
 * Run install.bat to register the filter `avisynth_filter.ax`.
 * Enable the filter `AviSynth Filter` in video player.

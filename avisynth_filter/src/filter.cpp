@@ -24,7 +24,6 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
     , _effectiveAvsFile(g_config.GetAvsFile())
-    , _remoteControl(g_config.IsRemoteControlEnabled() ? new RemoteControl(this, this) : nullptr)
     , _frameHandler(*this)
     , _disconnectFilter(false)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
@@ -43,14 +42,13 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _outputFormat()
     , _confirmNewOutputFormat(false) {
     g_config.Log("CAviSynthFilter::CAviSynthFilter()");
+
+    if (g_config.IsRemoteControlEnabled()) {
+        _remoteControl.emplace(*this, *this);
+    }
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
-    if (_remoteControl != nullptr) {
-        delete _remoteControl;
-        _remoteControl = nullptr;
-    }
-
     DeleteAviSynth();
     DeletePinTypes();
 }
@@ -364,18 +362,19 @@ auto CAviSynthFilter::EndFlush() -> HRESULT {
 auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> HRESULT {
     CheckPointer(pPages, E_POINTER);
 
+    CreateAviSynth();
+
     pPages->pElems = static_cast<GUID *>(CoTaskMemAlloc(2 * sizeof(GUID)));
     if (pPages->pElems == nullptr) {
         return E_OUTOFMEMORY;
     }
 
+    pPages->cElems = 1;
     pPages->pElems[0] = CLSID_AvsPropSettings;
-    pPages->pElems[1] = CLSID_AvsPropStatus;
 
-    if (_avsEnv == nullptr) {
-        pPages->cElems = 1;
-    } else {
-        pPages->cElems = 2;
+    if (m_State != State_Stopped) {
+        pPages->cElems += 1;
+        pPages->pElems[1] = CLSID_AvsPropStatus;
     }
 
     return S_OK;
@@ -670,7 +669,8 @@ auto CAviSynthFilter::DeletePinTypes() -> void {
 
 auto CAviSynthFilter::CreateAviSynth() -> bool {
     if (_avsEnv == nullptr) {
-        _avsEnv = CreateScriptEnvironment2();
+        // interface version 7 = AviSynth+ 3.5
+        _avsEnv = CreateScriptEnvironment2(7);
         if (_avsEnv == nullptr) {
             g_config.Log("CreateScriptEnvironment2 FAILED!");
             return false;
@@ -729,7 +729,7 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
 
     if (_avsError.empty()) {
         if (!invokeResult.Defined()) {
-            if (m_State == State_Stopped && _remoteControl == nullptr) {
+            if (m_State == State_Stopped && !_remoteControl) {
                 return false;
             }
 

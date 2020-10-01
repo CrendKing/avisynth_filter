@@ -53,7 +53,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
 
 /**
  * overridden to return our custom CAviSynthFilterAllocator instead of CMemAllocator,
- * which allocates media sample with IMedaSideData attached
+ * which allocates media sample with IMediaSideData attached
  */
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAllocator **ppAllocator) -> HRESULT {
     CheckPointer(ppAllocator, E_POINTER);

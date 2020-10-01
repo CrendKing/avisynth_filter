@@ -8,7 +8,7 @@
 
 namespace AvsFilter {
 
-RemoteControl::RemoteControl(IAvsFilterStatus *status, IAvsFilterSettings *settings)
+RemoteControl::RemoteControl(const IAvsFilterStatus &status, IAvsFilterSettings &settings)
     : _hWnd(nullptr)
     , _status(status)
     , _settings(settings) {
@@ -111,45 +111,45 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return API_VERSION;
 
     case API_MSG_GET_VIDEO_FILTERS:
-        SendString(hSenderWindow, copyData->dwData, JoinStrings(_status->GetVideoFilterNames(), API_CSV_DELIMITER));
+        SendString(hSenderWindow, copyData->dwData, JoinStrings(_status.GetVideoFilterNames(), API_CSV_DELIMITER));
         return TRUE;
 
     case API_MSG_GET_INPUT_WIDTH:
-        return _status->GetInputMediaInfo().videoInfo.width;
+        return _status.GetInputMediaInfo().videoInfo.width;
 
     case API_MSG_GET_INPUT_HEIGHT:
-        return _status->GetInputMediaInfo().videoInfo.height;
+        return _status.GetInputMediaInfo().videoInfo.height;
 
     case API_MSG_GET_INPUT_PAR:
-        return _status->GetInputMediaInfo().pixelAspectRatio;
+        return _status.GetInputMediaInfo().pixelAspectRatio;
 
     case API_MSG_GET_CURRENT_INPUT_FPS:
-        return _status->GetCurrentInputFrameRate();
+        return _status.GetCurrentInputFrameRate();
 
     case API_MSG_GET_INPUT_SOURCE_PATH:
-        SendString(hSenderWindow, copyData->dwData, _status->GetVideoSourcePath());
+        SendString(hSenderWindow, copyData->dwData, _status.GetVideoSourcePath());
         return TRUE;
 
     case API_MSG_GET_INPUT_CODEC:
-        return _status->GetInputMediaInfo().GetCodecFourCC();
+        return _status.GetInputMediaInfo().GetCodecFourCC();
 
     case API_MSG_GET_INPUT_HDR_TYPE:
-        return _status->GetInputMediaInfo().hdrType;
+        return _status.GetInputMediaInfo().hdrType;
 
     case API_MSG_GET_INPUT_HDR_LUMINANCE:
-        return _status->GetInputMediaInfo().hdrLuminance;
+        return _status.GetInputMediaInfo().hdrLuminance;
 
     case API_MSG_GET_SOURCE_AVG_FPS:
-        return _status->GetSourceAvgFrameRate();
+        return _status.GetSourceAvgFrameRate();
 
     case API_MSG_GET_CURRENT_OUTPUT_FPS:
-        return _status->GetCurrentOutputFrameRate();
+        return _status.GetCurrentOutputFrameRate();
 
     case API_MSG_GET_AVS_STATE:
-        return static_cast<LRESULT>(_status->GetAvsState());
+        return static_cast<LRESULT>(_status.GetAvsState());
 
     case API_MSG_GET_AVS_ERROR:
-        if (auto avsError = _status->GetAvsError()) {
+        if (auto avsError = _status.GetAvsError()) {
             SendString(hSenderWindow, copyData->dwData, *avsError);
             return TRUE;
         } else {
@@ -157,7 +157,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         }
 
     case API_MSG_GET_AVS_SOURCE_FILE: {
-        const std::wstring effectiveAvsFile = _settings->GetEffectiveAvsFile();
+        const std::wstring effectiveAvsFile = _settings.GetEffectiveAvsFile();
         if (effectiveAvsFile.empty()) {
             return FALSE;
         }
@@ -168,8 +168,8 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
 
     case API_MSG_SET_AVS_SOURCE_FILE: {
         const std::wstring newAvsFile = ConvertUtf8ToWide(std::string(static_cast<const char *>(copyData->lpData), copyData->cbData));
-        _settings->SetEffectiveAvsFile(newAvsFile);
-        _settings->ReloadAvsSource();
+        _settings.SetEffectiveAvsFile(newAvsFile);
+        _settings.ReloadAvsSource();
         return TRUE;
     }
 

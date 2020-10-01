@@ -78,9 +78,7 @@ static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
 
 #ifdef MINIDUMP
         g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, static_cast<HANDLE>(nullptr), nullptr);
-#endif // MINIDUMP
     } else {
-#ifdef MINIDUMP
         delete g_exHandler;
 #endif // MINIDUMP
     }

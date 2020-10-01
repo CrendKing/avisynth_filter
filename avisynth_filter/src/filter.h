@@ -87,7 +87,7 @@ private:
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
     std::wstring _effectiveAvsFile;
-    RemoteControl *_remoteControl;
+    std::optional<RemoteControl> _remoteControl;
 
     FrameHandler _frameHandler;
 

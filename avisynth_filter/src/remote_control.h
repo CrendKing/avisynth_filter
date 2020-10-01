@@ -8,7 +8,7 @@ namespace AvsFilter {
 
 class RemoteControl {
 public:
-    RemoteControl(IAvsFilterStatus *status, IAvsFilterSettings *settings);
+    RemoteControl(const IAvsFilterStatus &status, IAvsFilterSettings &settings);
     virtual ~RemoteControl();
 
     auto Start() -> void;
@@ -24,8 +24,8 @@ private:
     std::thread _msgThread;
     HWND _hWnd;
 
-    IAvsFilterStatus *_status;
-    IAvsFilterSettings *_settings;
+    const IAvsFilterStatus &_status;
+    IAvsFilterSettings &_settings;
 };
 
 }
