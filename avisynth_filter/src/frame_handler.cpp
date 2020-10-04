@@ -22,7 +22,7 @@ FrameHandler::~FrameHandler() {
 }
 
 auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
-    std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+    std::unique_lock srcLock(_sourceFramesMutex);
 
     _addInputSampleCv.wait(srcLock, [this]() {
         if (_isFlushing ||_stopThreads) {
@@ -101,7 +101,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         }
 
         {
-            std::unique_lock<std::mutex> outLock(_outputFramesMutex);
+            std::unique_lock outLock(_outputFramesMutex);
 
             while (srcFrameInfo.startTime > _nextOutputFrameStartTime) {
                 const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
@@ -127,7 +127,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+    std::shared_lock srcLock(_sourceFramesMutex);
 
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb);
     _addInputSampleCv.notify_one();
@@ -184,12 +184,12 @@ auto FrameHandler::Flush() -> void {
     }
 
     {
-        std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+        std::unique_lock srcLock(_sourceFramesMutex);
         _sourceFrames.clear();
     }
 
     {
-        std::unique_lock<std::mutex> outLock(_outputFramesMutex);
+        std::unique_lock outLock(_outputFramesMutex);
         _outputFrames.clear();
     }
 
@@ -202,13 +202,13 @@ auto FrameHandler::Flush() -> void {
 }
 
 auto FrameHandler::GetInputBufferSize() const -> int {
-    const std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+    const std::shared_lock srcLock(_sourceFramesMutex);
 
     return static_cast<int>(_sourceFrames.size());
 }
 
 auto FrameHandler::GetOutputBufferSize() const -> int {
-    const std::unique_lock<std::mutex> outLock(_outputFramesMutex);
+    const std::shared_lock outLock(_outputFramesMutex);
 
     return static_cast<int>(_outputFrames.size());
 }
@@ -281,7 +281,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             _flushBarrier.Arrive();
         }
 
-        std::unique_lock<std::mutex> outLock(_outputFramesMutex);
+        std::unique_lock outLock(_outputFramesMutex);
 
         _outputFramesCv.wait(outLock, [this]() {
             return _isFlushing || !_outputFrames.empty();
@@ -343,7 +343,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         doDelivery = true;
 
 BEGIN_OF_DELIVERY:
-        std::unique_lock<std::mutex> delLock(_deliveryMutex);
+        std::unique_lock delLock(_deliveryMutex);
 
         if (doDelivery) {
             // most renderers require samples to be delivered in order
@@ -374,7 +374,7 @@ BEGIN_OF_DELIVERY:
 }
 
 auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
-    std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
+    std::unique_lock srcLock(_sourceFramesMutex);
 
     auto srcFrameIter = _sourceFrames.find(srcFrameNb);
     ASSERT(srcFrameIter != _sourceFrames.end());

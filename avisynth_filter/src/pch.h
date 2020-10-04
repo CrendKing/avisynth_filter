@@ -5,10 +5,11 @@
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS 26812)
 
 #include <clocale>
+#include <condition_variable>
 #include <deque>
-#include <mutex>
 #include <numeric>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>

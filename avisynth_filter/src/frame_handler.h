@@ -62,13 +62,13 @@ private:
     std::unordered_map<int, SourceFrameInfo> _sourceFrames;
     std::deque<OutputFrameInfo> _outputFrames;
 
-    mutable std::mutex _sourceFramesMutex;
-    mutable std::mutex _outputFramesMutex;
+    mutable std::shared_mutex _sourceFramesMutex;
+    mutable std::shared_mutex _outputFramesMutex;
     std::mutex _deliveryMutex;
 
-    std::condition_variable _addInputSampleCv;
-    std::condition_variable _newSourceFrameCv;
-    std::condition_variable _outputFramesCv;
+    std::condition_variable_any _addInputSampleCv;
+    std::condition_variable_any _newSourceFrameCv;
+    std::condition_variable_any _outputFramesCv;
     std::condition_variable _deliveryCv;
 
     int _maxRequestedFrameNb;

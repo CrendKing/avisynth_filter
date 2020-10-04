@@ -10,7 +10,7 @@ Barrier::Barrier(int count)
 }
 
 auto Barrier::Arrive() -> void {
-    std::unique_lock<std::mutex> lock(_mutex);
+    std::unique_lock lock(_mutex);
 
     _currentCount -= 1;
     _waitCv.notify_one();
@@ -18,7 +18,7 @@ auto Barrier::Arrive() -> void {
 }
 
 auto Barrier::Wait() -> void {
-    std::unique_lock<std::mutex> lock(_mutex);
+    std::shared_lock lock(_mutex);
 
     while (_currentCount > 0) {
         _waitCv.wait(lock);
@@ -26,7 +26,7 @@ auto Barrier::Wait() -> void {
 }
 
 auto Barrier::Unlock() -> void {
-    const std::unique_lock<std::mutex> lock(_mutex);
+    const std::unique_lock lock(_mutex);
 
     _arriveCv.notify_all();
     _currentCount = _initialCount;

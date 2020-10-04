@@ -16,9 +16,9 @@ public:
 private:
     int _initialCount;
     int _currentCount;
-    std::mutex _mutex;
-    std::condition_variable _arriveCv;
-    std::condition_variable _waitCv;
+    std::shared_mutex _mutex;
+    std::condition_variable_any _arriveCv;
+    std::condition_variable_any _waitCv;
 };
 
 }

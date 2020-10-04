@@ -51,7 +51,7 @@ auto Config::Log(const char *format, ...) -> void {
         return;
     }
 
-    std::unique_lock<std::mutex> srcLock(_logMutex);
+    std::unique_lock srcLock(_logMutex);
 
     fprintf_s(_logFile, "T %6i @ %8i: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
 
