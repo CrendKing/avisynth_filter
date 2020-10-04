@@ -24,20 +24,24 @@ FrameHandler::~FrameHandler() {
 auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     std::unique_lock<std::mutex> srcLock(_sourceFramesMutex);
 
-    while (!_isFlushing && !_stopThreads) {
+    _addInputSampleCv.wait(srcLock, [this]() {
+        if (_isFlushing ||_stopThreads) {
+            return true;
+        }
+
         // need at least 2 source frames for stop time calculation
         if (_sourceFrames.size() <= 1) {
-            break;
+            return true;
         }
 
         // block upstream for flooding in samples until AviSynth actually requests them
         // +1 for headroom to avoid GetSourceFrame() being blocked
         if (_nextSourceFrameNb <= _maxRequestedFrameNb + 1) {
-            break;
+            return true;
         }
 
-        _addInputSampleCv.wait(srcLock);
-    }
+        return false;
+    });
 
     if (_isFlushing || _stopThreads) {
         return S_OK;
@@ -129,14 +133,14 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     _addInputSampleCv.notify_one();
 
     std::unordered_map<int, SourceFrameInfo>::const_iterator iter;
-    while (!_isFlushing) {
-        iter = _sourceFrames.find(frameNb);
-        if (iter != _sourceFrames.cend()) {
-            break;
+    _newSourceFrameCv.wait(srcLock, [this, &iter, frameNb]() {
+        if (_isFlushing) {
+            return true;
         }
 
-        _newSourceFrameCv.wait(srcLock);
-    }
+        iter = _sourceFrames.find(frameNb);
+        return iter != _sourceFrames.cend();
+    });
 
     if (_isFlushing || iter->second.avsFrame == nullptr) {
         if (_isFlushing) {
@@ -279,9 +283,9 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
         std::unique_lock<std::mutex> outLock(_outputFramesMutex);
 
-        while (!_isFlushing && _outputFrames.empty()) {
-            _outputFramesCv.wait(outLock);
-        }
+        _outputFramesCv.wait(outLock, [this]() {
+            return _isFlushing || !_outputFrames.empty();
+        });
 
         if (_isFlushing) {
             continue;
@@ -345,9 +349,9 @@ BEGIN_OF_DELIVERY:
             // most renderers require samples to be delivered in order
             // so we need to synchronize between the output threads
 
-            while (!_isFlushing && outFrameInfo.frameNb != _nextDeliverFrameNb) {
-                _deliveryCv.wait(delLock);
-            }
+            _deliveryCv.wait(delLock, [this, &outFrameInfo]() {
+                return _isFlushing || outFrameInfo.frameNb == _nextDeliverFrameNb;
+            });
 
             if (!_isFlushing) {
                 _filter.m_pOutput->Deliver(outSample);
