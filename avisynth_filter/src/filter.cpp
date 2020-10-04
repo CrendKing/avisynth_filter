@@ -23,28 +23,28 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
+    , frameHandler(*this)
     , _effectiveAvsFile(g_config.GetAvsFile())
-    , _frameHandler(*this)
     , _disconnectFilter(false)
     , _acceptableInputTypes(Format::DEFINITIONS.size())
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
-    , _avsEnv(nullptr)
-    , _avsSourceClip(nullptr)
-    , _avsScriptClip(nullptr)
-    , _avsVersionString(nullptr)
-    , _reloadAvsSource(false)
-    , _avsSourceVideoInfo()
-    , _avsScriptVideoInfo()
-    , _sourceAvgFrameRate(0)
-    , _sourceAvgFrameTime(0)
-    , _scriptAvgFrameTime(0)
     , _inputFormat()
     , _outputFormat()
-    , _confirmNewOutputFormat(false) {
+    , _confirmNewOutputFormat(false)
+    , _avsEnv(nullptr)
+    , _avsVersionString(nullptr)
+    , _avsSourceClip(nullptr)
+    , _avsScriptClip(nullptr)
+    , _avsSourceVideoInfo()
+    , _avsScriptVideoInfo()
+    , _sourceAvgFrameTime(0)
+    , _scriptAvgFrameTime(0)
+    , _sourceAvgFrameRate(0)
+    , _reloadAvsSource(false) {
     g_config.Log("CAviSynthFilter::CAviSynthFilter()");
 
     if (g_config.IsRemoteControlEnabled()) {
-        _remoteControl.emplace(*this, *this);
+        _remoteControl.emplace(*this);
     }
 }
 
@@ -56,14 +56,11 @@ CAviSynthFilter::~CAviSynthFilter() {
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
     CheckPointer(ppv, E_POINTER);
 
+    if (riid == IID_IAvsFilter) {
+        return GetInterface(reinterpret_cast<IUnknown *>(this), ppv);
+    }
     if (riid == IID_ISpecifyPropertyPages) {
         return GetInterface(static_cast<ISpecifyPropertyPages *>(this), ppv);
-    }
-    if (riid == IID_IAvsFilterSettings) {
-        return GetInterface(static_cast<IAvsFilterSettings *>(this), ppv);
-    }
-    if (riid == IID_IAvsFilterStatus) {
-        return GetInterface(static_cast<IAvsFilterStatus *>(this), ppv);
     }
 
     return __super::NonDelegatingQueryInterface(riid, ppv);
@@ -283,7 +280,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
             m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
         }
 
-        _frameHandler.Flush();
+        frameHandler.Flush();
         ReloadAviSynthScript(m_pInput->CurrentMediaType());
         _reloadAvsSource = false;
 
@@ -327,7 +324,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     }
 
     if (SUCCEEDED(hr)) {
-        hr = _frameHandler.AddInputSample(pSample);
+        hr = frameHandler.AddInputSample(pSample);
 
         if (m_nWaitForKey) {
             m_nWaitForKey--;
@@ -353,7 +350,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 }
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
-    _frameHandler.Flush();
+    frameHandler.Flush();
     ReloadAviSynthScript(m_pInput->CurrentMediaType());
 
     return __super::EndFlush();
@@ -380,72 +377,41 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> H
     return S_OK;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
-    return _effectiveAvsFile;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::SetEffectiveAvsFile(const std::wstring &avsFile) -> void {
-    _effectiveAvsFile = avsFile;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsSource() -> void {
-    _reloadAvsSource = true;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsVersionString() -> const char * {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsVersionString() const -> const char * {
     return _avsVersionString == nullptr ? "unknown AviSynth version" : _avsVersionString;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputBufferSize() const -> int {
-    return _frameHandler.GetInputBufferSize();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputBufferSize() const -> int {
-    return _frameHandler.GetOutputBufferSize();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetSourceSampleNumber() const -> int {
-    return _frameHandler.GetSourceFrameNb();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputSampleNumber() const -> int {
-    return _frameHandler.GetOutputFrameNb();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetDeliveryFrameNumber() const -> int {
-    return _frameHandler.GetDeliveryFrameNb();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentInputFrameRate() const -> int {
-    return _frameHandler.GetCurrentInputFrameRate();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetCurrentOutputFrameRate() const -> int {
-    return _frameHandler.GetCurrentOutputFrameRate();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputWorkerThreadCount() const -> int {
-    return _frameHandler.GetOutputWorkerThreadCount();
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
-    return _videoSourcePath;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputMediaInfo() const -> Format::VideoFormat {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormat() const->Format::VideoFormat {
     return _inputFormat;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
-    return _videoFilterNames;
+auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputFormat() const->Format::VideoFormat {
+    return _outputFormat;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
+    return _effectiveAvsFile;
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::GetSourceAvgFrameRate() const -> int {
     return _sourceAvgFrameRate;
 }
 
+auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile(const std::wstring &avsFile) -> void {
+    _effectiveAvsFile = avsFile;
+    _reloadAvsSource = true;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
+    return _videoSourcePath;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
+    return _videoFilterNames;
+}
+
 auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsState() const -> AvsState {
-    if (!_avsScriptClip) {
+    if (m_State == State_Stopped || !_avsScriptClip) {
         return AvsState::Stopped;
     }
 
@@ -460,7 +426,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsState() const -> AvsState {
     return AvsState::Paused;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const -> std::optional<std::string> {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const->std::optional<std::string> {
     if (_avsError.empty()) {
         return std::nullopt;
     }
@@ -677,7 +643,7 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
         }
 
         _avsVersionString = _avsEnv->Invoke("Eval", AVSValue("VersionString()")).AsString();
-        _avsSourceClip = new SourceClip(_frameHandler, _avsSourceVideoInfo);
+        _avsSourceClip = new SourceClip(frameHandler, _avsSourceVideoInfo);
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _avsSourceClip);
         _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
     }

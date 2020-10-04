@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pch.h"
-#include "interfaces.h"
+#include "filter.h"
 
 
 namespace AvsFilter {
@@ -19,7 +19,7 @@ private:
 
     auto SetDirty() -> void;
 
-    IAvsFilterSettings *_settings;
+    CAviSynthFilter *_filter;
     std::wstring _configAvsFile;
     bool _avsFileManagedByRC;
 };

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "prop_settings.h"
+#include "api.h"
 #include "config.h"
 #include "constants.h"
 #include "util.h"
@@ -10,19 +11,19 @@ namespace AvsFilter {
 
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
-    , _settings(nullptr)
+    , _filter(nullptr)
     , _avsFileManagedByRC(false) {
 }
 
 auto CAvsFilterPropSettings::OnConnect(IUnknown *pUnk) -> HRESULT {
     CheckPointer(pUnk, E_POINTER);
-    return pUnk->QueryInterface(IID_IAvsFilterSettings, reinterpret_cast<void **>(&_settings));
+    return pUnk->QueryInterface(IID_IAvsFilter, reinterpret_cast<void **>(&_filter));
 }
 
 auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
-    if (_settings != nullptr) {
-        _settings->Release();
-        _settings = nullptr;
+    if (_filter != nullptr) {
+        _filter->Release();
+        _filter = nullptr;
     }
 
     return S_OK;
@@ -30,24 +31,25 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
     _configAvsFile = g_config.GetAvsFile();
-    _avsFileManagedByRC = _configAvsFile != _settings->GetEffectiveAvsFile();
+    _avsFileManagedByRC = _configAvsFile != _filter->GetEffectiveAvsFile();
     if (_avsFileManagedByRC) {
-        EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), FALSE);
         ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
     }
 
     SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsFile.c_str());
 
+    EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
+
     const DWORD formatBits = g_config.GetInputFormatBits();
-    for (int i = 0; i < sizeof(formatBits) * 8; ++i) {
+    for (int i = 0; i < IDC_INPUT_FORMAT_END - IDC_INPUT_FORMAT_START; ++i) {
         if ((formatBits & (1 << i)) != 0) {
-            CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_NV12 + i, 1);
+            CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_START + 1 + i, 1);
         }
     }
 
     const std::wstring title = std::wstring(L"<a>") + Widen(FILTER_NAME_BASE) +
         L" v" + Widen(FILTER_VERSION_STRING) +
-        L"</a> with " + ConvertUtf8ToWide(_settings->GetAvsVersionString());
+        L"</a> with " + ConvertUtf8ToWide(_filter->GetAvsVersionString());
     SetDlgItemText(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
@@ -60,9 +62,9 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     g_config.SetAvsFile(_configAvsFile);
 
     DWORD formatBits = 0;
-    for (int i = IDC_INPUT_FORMAT_NV12; i < IDC_INPUT_FORMAT_END; ++i) {
-        if (IsDlgButtonChecked(m_Dlg, i) == BST_CHECKED) {
-            formatBits |= 1 << (i - IDC_INPUT_FORMAT_NV12);
+    for (int i = 0; i < IDC_INPUT_FORMAT_END - IDC_INPUT_FORMAT_START; ++i) {
+        if (IsDlgButtonChecked(m_Dlg, IDC_INPUT_FORMAT_START + 1 + i) == BST_CHECKED) {
+            formatBits |= 1 << i;
         }
     }
     g_config.SetInputFormatBits(formatBits);
@@ -73,9 +75,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
         // TODO: put message in string table when going multi-language
         MessageBox(m_hwnd, L"AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
                    FILTER_NAME_WIDE, MB_OK | MB_ICONINFORMATION);
-    } else {
-        _settings->SetEffectiveAvsFile(_configAvsFile);
-        _settings->ReloadAvsSource();
+    } else if (!_configAvsFile.empty()) {
+        _filter->ReloadAvsFile(_configAvsFile);
     }
 
     return S_OK;
@@ -85,7 +86,9 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
     switch (uMsg) {
     case WM_COMMAND:
         if (HIWORD(wParam) == EN_CHANGE) {
-            if (LOWORD(wParam) == IDC_EDIT_AVS_FILE) {
+            const WORD eventTarget = LOWORD(wParam);
+
+            if (eventTarget == IDC_EDIT_AVS_FILE) {
                 wchar_t buf[STR_MAX_LENGTH];
                 GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
                 const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
@@ -98,11 +101,13 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 return 0;
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
-            if (LOWORD(wParam) == IDC_BUTTON_EDIT && !_configAvsFile.empty()) {
+            const WORD eventTarget = LOWORD(wParam);
+
+            if (eventTarget == IDC_BUTTON_EDIT && !_configAvsFile.empty()) {
                 ShellExecute(hwnd, L"edit", _configAvsFile.c_str(), nullptr, nullptr, SW_SHOW);
-            } else if (LOWORD(wParam) == IDC_BUTTON_RELOAD) {
-                _settings->ReloadAvsSource();
-            } else if (LOWORD(wParam) == IDC_BUTTON_BROWSE) {
+            } else if (eventTarget == IDC_BUTTON_RELOAD) {
+                _filter->ReloadAvsFile(_filter->GetEffectiveAvsFile());
+            } else if (eventTarget == IDC_BUTTON_BROWSE) {
                 wchar_t szFile[MAX_PATH] {};
 
                 OPENFILENAME ofn {};
@@ -114,10 +119,12 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
 
                 if (GetOpenFileName(&ofn) == TRUE) {
                     SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
+                    SetDirty();
                 }
+            } else if (eventTarget > IDC_INPUT_FORMAT_START && eventTarget < IDC_INPUT_FORMAT_END) {
+                SetDirty();
             }
 
-            SetDirty();
             return 0;
         }
         break;

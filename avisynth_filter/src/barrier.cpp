@@ -13,23 +13,30 @@ auto Barrier::Arrive() -> void {
     std::unique_lock lock(_mutex);
 
     _currentCount -= 1;
-    _waitCv.notify_one();
-    _arriveCv.wait(lock);
+    if (_currentCount <= 0) {
+        _waitCv.notify_all();
+    }
+
+    _arriveCv.wait(lock, [this]() {
+        return _currentCount == _initialCount;
+    });
 }
 
 auto Barrier::Wait() -> void {
     std::shared_lock lock(_mutex);
 
-    while (_currentCount > 0) {
-        _waitCv.wait(lock);
-    }
+    _waitCv.wait(lock, [this]() {
+        return _currentCount <= 0;
+    });
 }
 
 auto Barrier::Unlock() -> void {
-    const std::unique_lock lock(_mutex);
+    {
+        const std::unique_lock lock(_mutex);
+        _currentCount = _initialCount;
+    }
 
     _arriveCv.notify_all();
-    _currentCount = _initialCount;
 }
 
 }

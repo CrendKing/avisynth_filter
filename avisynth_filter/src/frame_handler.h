@@ -12,7 +12,7 @@ class CAviSynthFilter;
 class FrameHandler {
 public:
     explicit FrameHandler(CAviSynthFilter &filter);
-    ~FrameHandler();
+    virtual ~FrameHandler();
 
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;

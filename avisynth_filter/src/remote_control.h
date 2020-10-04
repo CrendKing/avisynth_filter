@@ -1,14 +1,15 @@
 #pragma once
 
 #include "pch.h"
-#include "interfaces.h"
 
 
 namespace AvsFilter {
 
+class CAviSynthFilter;
+
 class RemoteControl {
 public:
-    RemoteControl(const IAvsFilterStatus &status, IAvsFilterSettings &settings);
+    explicit RemoteControl(CAviSynthFilter &filter);
     virtual ~RemoteControl();
 
     auto Start() -> void;
@@ -24,8 +25,7 @@ private:
     std::thread _msgThread;
     HWND _hWnd;
 
-    const IAvsFilterStatus &_status;
-    IAvsFilterSettings &_settings;
+    CAviSynthFilter &_filter;
 };
 
 }

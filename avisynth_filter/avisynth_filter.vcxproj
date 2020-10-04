@@ -27,7 +27,6 @@
     <ClInclude Include="src\barrier.h" />
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\input_pin.h" />
-    <ClInclude Include="src\interfaces.h" />
     <ClInclude Include="src\media_sample.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\prop_settings.h" />

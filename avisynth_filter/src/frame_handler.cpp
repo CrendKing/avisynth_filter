@@ -25,7 +25,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     std::unique_lock srcLock(_sourceFramesMutex);
 
     _addInputSampleCv.wait(srcLock, [this]() {
-        if (_isFlushing ||_stopThreads) {
+        if (_isFlushing || _stopThreads) {
             return true;
         }
 
@@ -169,7 +169,7 @@ auto FrameHandler::Flush() -> void {
     _filter.StopAviSynthScript();
 
     if (_stopThreads) {
-        g_config.Log("Frame handler end flush after stop threads");
+        g_config.Log("Frame handler cleanup after stop threads");
 
         for (std::thread &t : _outputThreads) {
             if (t.joinable()) {

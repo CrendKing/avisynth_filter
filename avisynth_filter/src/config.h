@@ -9,7 +9,7 @@ namespace AvsFilter {
 class Config {
 public:
     Config();
-    ~Config();
+    virtual ~Config();
 
     auto Save() const -> void;
     auto Log(const char *format, ...) -> void;

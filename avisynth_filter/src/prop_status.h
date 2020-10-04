@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pch.h"
-#include "interfaces.h"
+#include "filter.h"
 
 
 namespace AvsFilter {
@@ -17,7 +17,7 @@ private:
     auto OnApplyChanges() -> HRESULT override;
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;
 
-    IAvsFilterStatus *_status;
+    CAviSynthFilter *_filter;
     bool _isSourcePathSet;
 };
 

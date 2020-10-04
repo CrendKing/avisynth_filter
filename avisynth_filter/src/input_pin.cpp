@@ -94,7 +94,7 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
-    _filter._frameHandler.StartWorkerThreads();
+    _filter.frameHandler.StartWorkerThreads();
     _filter._reloadAvsSource = true;
 
     return __super::Active();
@@ -103,7 +103,7 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
 auto CAviSynthFilterInputPin::Inactive() -> HRESULT {
     const CAutoLock lock(m_pLock);
 
-    _filter._frameHandler.StopWorkerThreads();
+    _filter.frameHandler.StopWorkerThreads();
 
     return __super::Inactive();
 }

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "pch.h"
+#include "api.h"
 #include "format.h"
-#include "interfaces.h"
 #include "remote_control.h"
 #include "frame_handler.h"
 
@@ -11,9 +11,7 @@ namespace AvsFilter {
 
 class CAviSynthFilter
     : public CVideoTransformFilter
-    , public ISpecifyPropertyPages
-    , public IAvsFilterSettings
-    , public IAvsFilterStatus {
+    , public ISpecifyPropertyPages {
     friend class CAviSynthFilterInputPin;
     friend class FrameHandler;
 
@@ -39,30 +37,19 @@ public:
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;
 
-    // IAvsFilterSettings
-    auto STDMETHODCALLTYPE GetEffectiveAvsFile() const -> std::wstring override;
-    auto STDMETHODCALLTYPE SetEffectiveAvsFile(const std::wstring &avsFile) -> void override;
-    auto STDMETHODCALLTYPE ReloadAvsSource() -> void override;
-    auto STDMETHODCALLTYPE GetAvsVersionString() -> const char * override;
+    auto STDMETHODCALLTYPE GetAvsVersionString() const -> const char *;
+    auto STDMETHODCALLTYPE GetInputFormat() const -> Format::VideoFormat;
+    auto STDMETHODCALLTYPE GetOutputFormat() const -> Format::VideoFormat;
+    auto STDMETHODCALLTYPE GetEffectiveAvsFile() const -> std::wstring;
+    auto STDMETHODCALLTYPE GetSourceAvgFrameRate() const -> int;
+    auto STDMETHODCALLTYPE ReloadAvsFile(const std::wstring &avsFile) -> void;
+    auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring;
+    auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring>;
+    auto STDMETHODCALLTYPE GetAvsState() const -> AvsState;
+    auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string>;
 
-    // IAvsFilterStatus
-    auto STDMETHODCALLTYPE GetInputBufferSize() const -> int override;
-    auto STDMETHODCALLTYPE GetOutputBufferSize() const -> int override;
-    auto STDMETHODCALLTYPE GetSourceSampleNumber() const -> int override;
-    auto STDMETHODCALLTYPE GetOutputSampleNumber() const -> int override;
-    auto STDMETHODCALLTYPE GetDeliveryFrameNumber() const -> int override;
-    auto STDMETHODCALLTYPE GetCurrentInputFrameRate() const -> int override;
-    auto STDMETHODCALLTYPE GetCurrentOutputFrameRate() const -> int override;
-    auto STDMETHODCALLTYPE GetOutputWorkerThreadCount() const -> int override;
-
-    auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring override;
-    auto STDMETHODCALLTYPE GetInputMediaInfo() const -> Format::VideoFormat override;
-
-    auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring> override;
-    auto STDMETHODCALLTYPE GetSourceAvgFrameRate() const -> int override;
-    auto STDMETHODCALLTYPE GetAvsState() const -> AvsState override;
-    auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string> override;
-
+    FrameHandler frameHandler;
+    
 private:
     struct DefinitionPair {
         int input;
@@ -86,31 +73,29 @@ private:
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
-    std::wstring _effectiveAvsFile;
     std::optional<RemoteControl> _remoteControl;
-
-    FrameHandler _frameHandler;
 
     bool _disconnectFilter;
     std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
     std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;
 
-    IScriptEnvironment2 *_avsEnv;
-    PClip _avsSourceClip;
-    PClip _avsScriptClip;
-    const char *_avsVersionString;
-
-    bool _reloadAvsSource;
-    VideoInfo _avsSourceVideoInfo;
-    VideoInfo _avsScriptVideoInfo;
-    int _sourceAvgFrameRate;
-    REFERENCE_TIME _sourceAvgFrameTime;
-    REFERENCE_TIME _scriptAvgFrameTime;
-
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
     bool _confirmNewOutputFormat;
+    
+    std::wstring _effectiveAvsFile;
+    IScriptEnvironment2 *_avsEnv;
+    const char *_avsVersionString;
+    PClip _avsSourceClip;
+    PClip _avsScriptClip;
+    VideoInfo _avsSourceVideoInfo;
+    VideoInfo _avsScriptVideoInfo;
+    REFERENCE_TIME _sourceAvgFrameTime;
+    REFERENCE_TIME _scriptAvgFrameTime;
+    int _sourceAvgFrameRate;
+
+    bool _reloadAvsSource;
 
     std::wstring _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;
