@@ -166,8 +166,6 @@ auto FrameHandler::Flush() -> void {
     _outputFramesCv.notify_all();
     _deliveryCv.notify_all();
 
-    _filter.StopAviSynthScript();
-
     if (_stopThreads) {
         g_config.Log("Frame handler cleanup after stop threads");
 
@@ -182,6 +180,16 @@ auto FrameHandler::Flush() -> void {
 
         _flushBarrier.Wait();
     }
+
+    /*
+     * The reason to stop avs script AFTER threads are paused is because otherwise some cached frames
+     * might already be released while the threads are trying to get frame.
+     *
+     * The concern could be that prefetcher threads be stuck at trying to get frame but since threads
+     * are paused, no new frame is allowed to be add in AddInputSample(). To unstuck, GetSourceFrame()
+     * just returns a empty new frame during flush.
+     */
+    _filter.StopAviSynthScript();
 
     {
         std::unique_lock srcLock(_sourceFramesMutex);
