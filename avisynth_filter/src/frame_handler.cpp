@@ -313,8 +313,10 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
         bool doDelivery = false;
 
-        IMediaSample *outSample = nullptr;
+        IMediaSample *outSample;
         if (FAILED(_filter.InitializeOutputSample(nullptr, &outSample))) {
+            // reset it to nullptr here in case the function change it to some random invalid address
+            outSample = nullptr;
             goto BEGIN_OF_DELIVERY;
         }
 
