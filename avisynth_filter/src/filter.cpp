@@ -6,6 +6,7 @@
 #include "input_pin.h"
 #include "source_clip.h"
 #include "util.h"
+#include "version.h"
 
 
 namespace AvsFilter {
@@ -643,6 +644,9 @@ auto CAviSynthFilter::CreateAviSynth() -> bool {
         }
 
         _avsVersionString = _avsEnv->Invoke("Eval", AVSValue("VersionString()")).AsString();
+        g_config.Log("Filter version: %s", FILTER_VERSION_STRING);
+        g_config.Log("AviSynth version: %s", GetAvsVersionString());
+
         _avsSourceClip = new SourceClip(frameHandler, _avsSourceVideoInfo);
         _avsEnv->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _avsSourceClip);
         _avsEnv->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
