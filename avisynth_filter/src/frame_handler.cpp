@@ -280,7 +280,9 @@ auto FrameHandler::Reset() -> void {
 auto FrameHandler::ProcessOutputSamples() -> void {
     g_config.Log("Start output worker thread");
 
+#ifdef _DEBUG
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Output Worker");
+#endif
 
     while (!_stopThreads) {
         if (_isFlushing) {
