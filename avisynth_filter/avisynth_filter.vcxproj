@@ -20,12 +20,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\allocator.h" />
-    <ClInclude Include="src\config.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\filter.h" />
     <ClInclude Include="src\format.h" />
     <ClInclude Include="src\barrier.h" />
     <ClInclude Include="src\frame_handler.h" />
+    <ClInclude Include="src\environment.h" />
     <ClInclude Include="src\input_pin.h" />
     <ClInclude Include="src\media_sample.h" />
     <ClInclude Include="src\pch.h" />
@@ -42,11 +42,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\allocator.cpp" />
-    <ClCompile Include="src\config.cpp" />
     <ClCompile Include="src\filter.cpp" />
     <ClCompile Include="src\format.cpp" />
     <ClCompile Include="src\barrier.cpp" />
     <ClCompile Include="src\frame_handler.cpp" />
+    <ClCompile Include="src\environment.cpp" />
     <ClCompile Include="src\input_pin.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\media_sample.cpp" />

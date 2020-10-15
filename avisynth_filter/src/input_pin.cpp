@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "input_pin.h"
-#include "config.h"
 #include "allocator.h"
+#include "environment.h"
 #include "format.h"
 
 
@@ -32,7 +32,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
             CheckHr(m_pAllocator->Decommit());
             CheckHr(m_pAllocator->GetProperties(&props));
 
-            props.cBuffers = max(g_config.GetOutputThreads() + 1, props.cBuffers);
+            props.cBuffers = max(g_env.GetOutputThreads() + 1, props.cBuffers);
 
             const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*pmt);
             props.cbBuffer = bih->biSizeImage;

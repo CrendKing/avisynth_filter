@@ -13,7 +13,7 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
 
 ## Install
 
-* Before anything, install AviSynth+. Make sure `AviSynth.dll` is either in system directories or at the same directory of this filter.
+* Before anything, install AviSynth+. Make sure `AviSynth.dll` is reachable either in the directory of the video player, system directories or directories from the `PATH` environment variable.
 * Unpack the archive.
 * Run install.bat to register the filter `avisynth_filter.ax`.
 * Enable the filter `AviSynth Filter` in video player.

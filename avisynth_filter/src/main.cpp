@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "config.h"
 #include "constants.h"
 #include "filter.h"
 #include "format.h"
+#include "environment.h"
 #include "prop_settings.h"
 #include "prop_status.h"
 
@@ -15,7 +15,19 @@
 #endif
 #pragma comment(lib, "winmm.lib")
 
-#pragma comment(lib, "AviSynth.lib")
+template <typename T>
+static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+    if (std::is_same_v<T, AvsFilter::CAviSynthFilter> && !AvsFilter::g_env.Initialize(phr)) {
+        return nullptr;
+    }
+        
+    CUnknown *newInstance = new T(pUnk, phr);
+    if (newInstance == nullptr) {
+        *phr = E_OUTOFMEMORY;
+    }
+
+    return newInstance;
+}
 
 static REGFILTERPINS PIN_REG[] = {
     { nullptr               // pin name (obsolete)
@@ -25,8 +37,8 @@ static REGFILTERPINS PIN_REG[] = {
     , FALSE                 // Does the filter create multiple instances?
     , &CLSID_NULL           // filter CLSID the pin connects to (obsolete)
     , nullptr               // pin name the pin connects to (obsolete)
-    , 0                     // pin media type count (to be filled in FillPinTypes())
-    , nullptr },            // pin media types (to be filled in FillPinTypes())
+    , 0                     // pin media type count (to be filled in InitRoutine())
+    , nullptr },            // pin media types (to be filled in InitRoutine())
 
     { nullptr               // pin name (obsolete)
     , FALSE                 // is pin rendered?
@@ -35,8 +47,8 @@ static REGFILTERPINS PIN_REG[] = {
     , FALSE                 // Does the filter create multiple instances?
     , &CLSID_NULL           // filter CLSID the pin connects to (obsolete)
     , nullptr               // pin name the pin connects to (obsolete)
-    , 0                     // pin media type count (to be filled in FillPinTypes())
-    , nullptr },            // pin media types (to be filled in FillPinTypes())
+    , 0                     // pin media type count (to be filled in InitRoutine())
+    , nullptr },            // pin media types (to be filled in InitRoutine())
 };
 
 static constexpr ULONG PIN_COUNT = sizeof(PIN_REG) / sizeof(PIN_REG[0]);
@@ -49,21 +61,6 @@ static constexpr AMOVIESETUP_FILTER FILTER_REG = {
     PIN_REG                            // pin information
 };
 
-static std::vector<REGPINTYPES> g_PinTypes;
-
-static void FillPinTypes() {
-    for (const AvsFilter::Format::Definition &info : AvsFilter::Format::DEFINITIONS) {
-        g_PinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
-    }
-
-    PIN_REG[0].nMediaTypes = static_cast<UINT>(g_PinTypes.size());
-    PIN_REG[0].lpMediaType = g_PinTypes.data();
-    PIN_REG[1].nMediaTypes = static_cast<UINT>(g_PinTypes.size());
-    PIN_REG[1].lpMediaType = g_PinTypes.data();
-}
-
-AvsFilter::Config AvsFilter::g_config;
-
 //#define MINIDUMP
 
 #ifdef MINIDUMP
@@ -74,7 +71,16 @@ static google_breakpad::ExceptionHandler *g_exHandler;
 
 static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
     if (bLoading == TRUE) {
-        FillPinTypes();
+        static std::vector<REGPINTYPES> pinTypes;
+
+        for (const AvsFilter::Format::Definition &info : AvsFilter::Format::DEFINITIONS) {
+            pinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
+        }
+
+        PIN_REG[0].nMediaTypes = static_cast<UINT>(pinTypes.size());
+        PIN_REG[0].lpMediaType = pinTypes.data();
+        PIN_REG[1].nMediaTypes = static_cast<UINT>(pinTypes.size());
+        PIN_REG[1].lpMediaType = pinTypes.data();
 
 #ifdef MINIDUMP
         g_exHandler = new google_breakpad::ExceptionHandler(L".", nullptr, nullptr, nullptr, google_breakpad::ExceptionHandler::HANDLER_EXCEPTION, MiniDumpWithIndirectlyReferencedMemory, static_cast<HANDLE>(nullptr), nullptr);
@@ -85,17 +91,6 @@ static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
         delete g_exHandler;
 #endif // MINIDUMP
     }
-}
-
-template <typename T>
-static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    CUnknown *newInstance = new T(pUnk, phr);
-
-    if (newInstance == nullptr) {
-        *phr = E_OUTOFMEMORY;
-    }
-
-    return newInstance;
 }
 
 CFactoryTemplate g_Templates[] = {
@@ -127,7 +122,7 @@ STDAPI DllUnregisterServer() {
     return AMovieDllRegisterServer2(FALSE);
 }
 
-extern "C" DECLSPEC_NOINLINE BOOL WINAPI DllEntryPoint(HINSTANCE hInstance, ULONG ulReason, LPVOID pv);
+extern "C" DECLSPEC_NOINLINE BOOL WINAPI DllEntryPoint(HINSTANCE hInstance, ULONG ulReason, __inout_opt LPVOID pv);
 
 auto APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) -> BOOL {
     return DllEntryPoint(hModule, ul_reason_for_call, lpReserved);

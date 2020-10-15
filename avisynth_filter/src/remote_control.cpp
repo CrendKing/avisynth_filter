@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "remote_control.h"
 #include "api.h"
-#include "config.h"
 #include "constants.h"
+#include "environment.h"
 #include "filter.h"
 #include "util.h"
 
@@ -62,13 +62,13 @@ auto RemoteControl::Run() -> void {
 	}
 	SetWindowLongPtr(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	g_config.Log("Remote control started");
+	g_env.Log("Remote control started");
 
 	MSG msg;
 	BOOL msgRet;
 	while ((msgRet = GetMessage(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
-			g_config.Log("Remote control message loop error: %5i", GetLastError());
+			g_env.Log("Remote control message loop error: %5i", GetLastError());
 			break;
 		} else {
 			TranslateMessage(&msg);
@@ -79,7 +79,7 @@ auto RemoteControl::Run() -> void {
 	DestroyWindow(_hWnd);
 	UnregisterClass(API_CLASS_NAME, wc.hInstance);
 
-	g_config.Log("Remote control stopped");
+	g_env.Log("Remote control stopped");
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {

@@ -31,7 +31,6 @@
 #include <dvdmedia.h>
 
 // AviSynth
-#define AVS_LINKAGE_DLLIMPORT
 #include <avisynth.h>
 
 #pragma warning(pop)

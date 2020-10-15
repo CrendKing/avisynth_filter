@@ -3,8 +3,8 @@
 #include "pch.h"
 #include "api.h"
 #include "format.h"
-#include "remote_control.h"
 #include "frame_handler.h"
+#include "remote_control.h"
 
 
 namespace AvsFilter {
@@ -22,6 +22,7 @@ public:
     DECLARE_IUNKNOWN
 
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT override;
+    auto STDMETHODCALLTYPE NonDelegatingRelease() -> ULONG override;
 
     // CVideoTransformFilter
     auto GetPin(int n) -> CBasePin * override;
@@ -65,10 +66,9 @@ private:
     auto TraverseFiltersInGraph() -> void;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto DeletePinTypes() -> void;
-    auto CreateAviSynth() -> bool;
+    auto InitAviSynth() -> bool;
     auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
     auto StopAviSynthScript() -> void;
-    auto DeleteAviSynth() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
@@ -85,7 +85,6 @@ private:
     bool _confirmNewOutputFormat;
     
     std::wstring _effectiveAvsFile;
-    IScriptEnvironment2 *_avsEnv;
     const char *_avsVersionString;
     PClip _avsSourceClip;
     PClip _avsScriptClip;

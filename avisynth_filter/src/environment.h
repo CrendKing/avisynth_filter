@@ -6,22 +6,32 @@
 
 namespace AvsFilter {
 
-class Config {
+class Environment {
 public:
-    Config();
-    virtual ~Config();
+    Environment();
 
-    auto Save() const -> void;
+    auto Initialize(HRESULT *phr) -> bool;
+    auto Release() -> void;
+
+    auto SaveConfig() const -> void;
     auto Log(const char *format, ...) -> void;
 
+    auto GetAvsEnv() const -> IScriptEnvironment2 *;
     auto GetAvsFile() const -> const std::wstring &;
     auto SetAvsFile(const std::wstring &avsFile) -> void;
-    auto GetInputFormatBits() const -> DWORD;
+    auto GetInputFormatBits() const->DWORD;
     auto SetInputFormatBits(DWORD formatBits) -> void;
     auto GetOutputThreads() const -> int;
     auto IsRemoteControlEnabled() const -> bool;
 
 private:
+    auto ShowFatalError(const wchar_t *errorMessage, HRESULT *phr) -> void;
+
+    int _refcount;
+
+    HMODULE _avsModule;
+    IScriptEnvironment2 *_avsEnv;
+
     Registry _registry;
     std::wstring _avsFile;
     DWORD _inputFormatBits;
@@ -33,6 +43,6 @@ private:
     std::mutex _logMutex;
 };
 
-extern Config g_config;
+extern Environment g_env;
 
 }
