@@ -31,7 +31,7 @@ auto Environment::Initialize(HRESULT *phr) -> bool {
         CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
         We don't use any new feature from IScriptEnvironment2 anyway.
         */
-        typedef IScriptEnvironment2 *(AVSC_CC *CreateScriptEnvironment_Func)(int version);
+        typedef IScriptEnvironment *(AVSC_CC *CreateScriptEnvironment_Func)(int version);
         const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
         if (CreateScriptEnvironment == nullptr) {
             ShowFatalError(L"Unable to locate CreateScriptEnvironment()", phr);
@@ -90,9 +90,9 @@ auto Environment::Release() -> void {
 }
 
 auto Environment::ShowFatalError(const wchar_t *errorMessage, HRESULT *phr) -> void {
+    *phr = E_FAIL;
     Log("%S", errorMessage);
     MessageBox(nullptr, errorMessage, FILTER_NAME_WIDE, MB_ICONERROR);
-    *phr = E_FAIL;
     FreeLibrary(_avsModule);
 }
 
@@ -106,7 +106,7 @@ auto Environment::Log(const char *format, ...) -> void {
         return;
     }
 
-    std::unique_lock srcLock(_logMutex);
+    std::unique_lock lock(_logMutex);
 
     fprintf_s(_logFile, "T %6i @ %8i: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
 

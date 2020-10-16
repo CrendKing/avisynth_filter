@@ -69,7 +69,7 @@ static constexpr AMOVIESETUP_FILTER FILTER_REG = {
 static google_breakpad::ExceptionHandler *g_exHandler;
 #endif
 
-static void CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) {
+static auto CALLBACK InitRoutine(BOOL bLoading, const CLSID *rclsid) -> void {
     if (bLoading == TRUE) {
         static std::vector<REGPINTYPES> pinTypes;
 
