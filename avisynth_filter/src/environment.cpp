@@ -25,17 +25,23 @@ auto Environment::Initialize(HRESULT *phr) -> bool {
             return false;
         }
 
-        typedef IScriptEnvironment2 *(AVSC_CC *CreateScriptEnvironment2_Func)(int version);
-        const CreateScriptEnvironment2_Func CreateScriptEnvironment2 = reinterpret_cast<CreateScriptEnvironment2_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment2"));
-        if (CreateScriptEnvironment2 == nullptr) {
-            ShowFatalError(L"Unable to locate CreateScriptEnvironment2()", phr);
+        /*
+        use CreateScriptEnvironment() instead of CreateScriptEnvironment2().
+        CreateScriptEnvironment() is exported from their .def file, which guarantees a stable exported name.
+        CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
+        We don't use any new feature from IScriptEnvironment2 anyway.
+        */
+        typedef IScriptEnvironment2 *(AVSC_CC *CreateScriptEnvironment_Func)(int version);
+        const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
+        if (CreateScriptEnvironment == nullptr) {
+            ShowFatalError(L"Unable to locate CreateScriptEnvironment()", phr);
             return false;
         }
 
         // interface version 7 = AviSynth+ 3.5
-        _avsEnv = CreateScriptEnvironment2(7);
+        _avsEnv = CreateScriptEnvironment(7);
         if (_avsEnv == nullptr) {
-            ShowFatalError(L"CreateScriptEnvironment2() returns nullptr", phr);
+            ShowFatalError(L"CreateScriptEnvironment() returns nullptr", phr);
             return false;
         }
 
@@ -114,7 +120,7 @@ auto Environment::Log(const char *format, ...) -> void {
     fflush(_logFile);
 }
 
-auto Environment::GetAvsEnv() const -> IScriptEnvironment2 * {
+auto Environment::GetAvsEnv() const -> IScriptEnvironment * {
     return _avsEnv;
 }
 

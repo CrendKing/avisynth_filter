@@ -16,7 +16,7 @@ public:
     auto SaveConfig() const -> void;
     auto Log(const char *format, ...) -> void;
 
-    auto GetAvsEnv() const -> IScriptEnvironment2 *;
+    auto GetAvsEnv() const -> IScriptEnvironment *;
     auto GetAvsFile() const -> const std::wstring &;
     auto SetAvsFile(const std::wstring &avsFile) -> void;
     auto GetInputFormatBits() const->DWORD;
@@ -30,7 +30,7 @@ private:
     int _refcount;
 
     HMODULE _avsModule;
-    IScriptEnvironment2 *_avsEnv;
+    IScriptEnvironment *_avsEnv;
 
     Registry _registry;
     std::wstring _avsFile;
