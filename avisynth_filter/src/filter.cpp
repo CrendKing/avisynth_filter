@@ -9,11 +9,7 @@
 #include "version.h"
 
 
-const AVS_Linkage *AVS_linkage = nullptr;
-
 namespace AvsFilter {
-
-Environment g_env;
 
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
