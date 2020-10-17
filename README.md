@@ -9,7 +9,7 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
 ## Requirement
 
 * CPU with SSSE3 instructions.
-* [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5 and above.
+* [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above.
 
 ## Install
 
