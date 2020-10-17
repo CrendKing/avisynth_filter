@@ -260,5 +260,6 @@ paket-files/
 __pycache__/
 *.pyc
 
+/dep_*/
 release.bat
 *.zip
