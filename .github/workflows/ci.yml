@@ -1,0 +1,20 @@
+name: CI
+
+on:
+    workflow_dispatch
+
+jobs:
+    build:
+        runs-on: windows-latest
+
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: setup-msbuild
+              uses: microsoft/setup-msbuild@v1
+
+            - name: build
+              shell: cmd
+              run: |
+                  set PATH="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE";%PATH%
+                  build.bat
