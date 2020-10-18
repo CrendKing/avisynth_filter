@@ -13,9 +13,6 @@ if not exist dep_directshow (
     rmdir /s /q checkout_directshow
 
     devenv.exe /Upgrade dep_directshow\baseclasses.sln
-
-    MSBuild.exe -property:Configuration=Release;Platform=x64 -maxCpuCount -nologo dep_directshow\baseclasses.sln
-    MSBuild.exe -property:Configuration=Release;Platform=Win32 -maxCpuCount -nologo dep_directshow\baseclasses.sln
 )
 
 if not exist dep_avisynth_plus (
@@ -31,5 +28,12 @@ if not exist dep_avisynth_plus (
     rmdir /s /q checkout_avisynth_plus
 )
 
-MSBuild.exe -p:Configuration=Release;Platform=x64;ForceImportAfterCppProps="%~dp0build.props" -maxCpuCount -nologo avisynth_filter\avisynth_filter.sln
-MSBuild.exe -p:Configuration=Release;Platform=x86;ForceImportAfterCppProps="%~dp0build.props" -maxCpuCount -nologo avisynth_filter\avisynth_filter.sln
+set ds_platform=%1
+set filter_platform=%1
+
+if "%ds_platform%" == "x86" (
+    set ds_platform=Win32
+)
+
+MSBuild.exe -property:Configuration=Release;Platform=%ds_platform% -maxCpuCount -nologo dep_directshow\baseclasses.sln
+MSBuild.exe -property:Configuration=Release;Platform=%filter_platform%;ForceImportAfterCppProps="%~dp0build.props" -maxCpuCount -nologo avisynth_filter.sln

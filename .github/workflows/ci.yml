@@ -5,7 +5,13 @@ on:
 
 jobs:
     build:
+        name: ${{ matrix.config.platform }}
         runs-on: windows-latest
+        strategy:
+            matrix:
+                config:
+                - {platform: "x64"}
+                - {platform: "x86"}
 
         steps:
             - uses: actions/checkout@v2
@@ -17,4 +23,4 @@ jobs:
               shell: cmd
               run: |
                   set PATH="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE";%PATH%
-                  build.bat
+                  build.bat ${{ matrix.config.platform }}
