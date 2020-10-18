@@ -1,9 +1,9 @@
 #include "pch.h"
 
 #include "constants.h"
+#include "environment.h"
 #include "filter.h"
 #include "format.h"
-#include "environment.h"
 #include "prop_settings.h"
 #include "prop_status.h"
 
@@ -53,12 +53,12 @@ static auto RegisterFilter() -> HRESULT {
         { 0                                   // no flag for input pin
         , 1                                   // number of instance
         , static_cast<UINT>(pinTypes.size())  // number of media types
-        , pinTypes.data() }                   // media types
-    ,
+        , pinTypes.data() },                  // media types
+
         { REG_PINFLAG_B_OUTPUT                // output pin
         , 1                                   // number of instance
         , static_cast<UINT>(pinTypes.size())  // number of media types
-        , pinTypes.data() }                   // media types
+        , pinTypes.data() },                  // media types
     };
 
     REGFILTER2 regFilter = {

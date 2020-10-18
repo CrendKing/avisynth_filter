@@ -24,7 +24,7 @@ auto Registry::ReadString(const wchar_t *valueName) const -> std::wstring {
 
         const LSTATUS registryStatus = RegGetValue(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer, &bufferSize);
         if (registryStatus == ERROR_SUCCESS) {
-            ret = std::wstring(buffer, bufferSize / 2).c_str();
+            ret.assign(buffer, bufferSize / sizeof(wchar_t) - 1);
         }
     }
 
