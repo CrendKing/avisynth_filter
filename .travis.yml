@@ -1,4 +1,0 @@
-language: cpp
-os: windows
-script:
-  - cmd.exe /C build.bat
