@@ -115,7 +115,10 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 if (hr == S_OK) {
                     // for each group of formats with the same avs type, only add the first one that upstream supports.
                     // this one will be the preferred media type for potential pin reconnection
-                    if (const std::optional<int> optInputDefinition = GetInputDefinition(nextType) && IsInputUniqueByAvsType(*optInputDefinition)) {
+
+                    const std::optional<int> optInputDefinition = GetInputDefinition(nextType);
+
+                    if (optInputDefinition && IsInputUniqueByAvsType(*optInputDefinition)) {
                         const int inputDefinition = *optInputDefinition;
 
                         // invoke AviSynth script with each supported input definition, and observe the output avs type
@@ -159,7 +162,9 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
 }
 
 auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    if (std::optional<int> optInputDefinition = GetInputDefinition(mtIn) && _acceptableInputTypes[*optInputDefinition] != nullptr) {
+    const std::optional<int> optInputDefinition = GetInputDefinition(mtIn);
+
+    if (optInputDefinition && _acceptableInputTypes[*optInputDefinition] != nullptr) {
         g_env.Log("Accept input definition: %2i", *optInputDefinition);
         return S_OK;
     }
@@ -189,7 +194,9 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
 }
 
 auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    if (const std::optional<int> optOutputDefinition = MediaTypeToDefinition(mtOut) && _acceptableOutputTypes[*optOutputDefinition] == nullptr) {
+    const std::optional<int> optOutputDefinition = MediaTypeToDefinition(mtOut);
+
+    if (optOutputDefinition && _acceptableOutputTypes[*optOutputDefinition] != nullptr) {
         g_env.Log("Accept transform: out %2i", *optOutputDefinition);
         return S_OK;
     }
@@ -463,7 +470,7 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
 auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int> {
     if (const std::optional<int> optInputDefinition = MediaTypeToDefinition(mediaType)) {
         if ((g_env.GetInputFormatBits() & (1 << *optInputDefinition)) != 0) {
-            return *optInputDefinition;
+            return optInputDefinition;
         }
 
         g_env.Log("Reject input definition due to settings: %2i", *optInputDefinition);
