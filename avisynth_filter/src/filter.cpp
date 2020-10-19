@@ -113,11 +113,11 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
             while (true) {
                 hr = enumTypes->Next(1, &nextType, nullptr);
                 if (hr == S_OK) {
-                    const auto inputDefinition = GetInputDefinition(nextType);
-
                     // for each group of formats with the same avs type, only add the first one that upstream supports.
                     // this one will be the preferred media type for potential pin reconnection
-                    if (inputDefinition && IsInputUniqueByAvsType(*inputDefinition)) {
+                    if (const std::optional<int> optInputDefinition = GetInputDefinition(nextType) && IsInputUniqueByAvsType(*optInputDefinition)) {
+                        const int inputDefinition = *optInputDefinition;
+
                         // invoke AviSynth script with each supported input definition, and observe the output avs type
                         if (!ReloadAviSynthScript(*nextType)) {
                             g_env.Log("Disconnect due to AvsFilterDisconnect()");
@@ -126,8 +126,8 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                             break;
                         }
 
-                        _acceptableInputTypes[*inputDefinition] = nextType;
-                        g_env.Log("Add acceptable input definition: %2i", *inputDefinition);
+                        _acceptableInputTypes[inputDefinition] = nextType;
+                        g_env.Log("Add acceptable input definition: %2i", inputDefinition);
 
                         // all media types that share the same avs type are acceptable for output pin connection
                         for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
@@ -136,8 +136,8 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                                 _acceptableOutputTypes[outputDefinition] = outputType;
                                 g_env.Log("Add acceptable output definition: %2i", outputDefinition);
 
-                                _compatibleDefinitions.emplace_back(DefinitionPair { *inputDefinition, outputDefinition });
-                                g_env.Log("Add compatible definitions: input %2i output %2i", *inputDefinition, outputDefinition);
+                                _compatibleDefinitions.emplace_back(DefinitionPair { inputDefinition, outputDefinition });
+                                g_env.Log("Add compatible definitions: input %2i output %2i", inputDefinition, outputDefinition);
                             }
                         }
                     } else {
@@ -159,15 +159,12 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
 }
 
 auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    const auto definition = GetInputDefinition(mtIn);
-
-    if (!definition || _acceptableInputTypes[*definition] == nullptr) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
+    if (std::optional<int> optInputDefinition = GetInputDefinition(mtIn) && _acceptableInputTypes[*optInputDefinition] != nullptr) {
+        g_env.Log("Accept input definition: %2i", *optInputDefinition);
+        return S_OK;
     }
 
-    g_env.Log("Accept input definition: %2i", *definition);
-
-    return S_OK;
+    return VFW_E_TYPE_NOT_ACCEPTED;
 }
 
 auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT {
@@ -192,15 +189,12 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
 }
 
 auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    const auto outputDefinition = MediaTypeToDefinition(mtOut);
-
-    if (!outputDefinition || _acceptableOutputTypes[*outputDefinition] == nullptr) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
+    if (const std::optional<int> optOutputDefinition = MediaTypeToDefinition(mtOut) && _acceptableOutputTypes[*optOutputDefinition] == nullptr) {
+        g_env.Log("Accept transform: out %2i", *optOutputDefinition);
+        return S_OK;
     }
 
-    g_env.Log("Accept transform: out %2i", *outputDefinition);
-
-    return S_OK;
+    return VFW_E_TYPE_NOT_ACCEPTED;
 }
 
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
@@ -249,16 +243,22 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
         return E_UNEXPECTED;
     }
 
-    if (const auto inputDefiniton = Format::LookupMediaSubtype(m_pInput->CurrentMediaType().subtype)) {
+    if (const std::optional<int> optInputDefiniton = Format::LookupMediaSubtype(m_pInput->CurrentMediaType().subtype)) {
+        const int inputDefiniton = *optInputDefiniton;
+
         if (!m_pOutput->IsConnected()) {
-            g_env.Log("Connected input pin with definition: %2i", *inputDefiniton);
-        } else if (const auto outputDefinition = MediaTypeToDefinition(&m_pOutput->CurrentMediaType())) {
-            if (const auto compatibleInput = FindCompatibleInputByOutput(*outputDefinition)) {
-                if (*inputDefiniton != *compatibleInput) {
-                    g_env.Log("Reconnect with types: old in %2i new in %2i out %2i", *inputDefiniton, *compatibleInput, *outputDefinition);
-                    CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[*compatibleInput]));
+            g_env.Log("Connected input pin with definition: %2i", inputDefiniton);
+        } else if (const std::optional<int> optOutputDefinition = MediaTypeToDefinition(&m_pOutput->CurrentMediaType())) {
+            const int outputDefinition = *optOutputDefinition;
+
+            if (const std::optional<int> optCompatibleInput = FindCompatibleInputByOutput(outputDefinition)) {
+                const int compatibleInput = *optCompatibleInput;
+
+                if (inputDefiniton != compatibleInput) {
+                    g_env.Log("Reconnect with types: old in %2i new in %2i out %2i", inputDefiniton, compatibleInput, outputDefinition);
+                    CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[compatibleInput]));
                 } else {
-                    g_env.Log("Connected with types: in %2i out %2i", *inputDefiniton, *outputDefinition);
+                    g_env.Log("Connected with types: in %2i out %2i", inputDefiniton, outputDefinition);
                 }
             } else {
                 g_env.Log("Unexpected lookup result for compatible definition");
@@ -437,7 +437,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsState() const -> AvsState {
     return AvsState::Paused;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const->std::optional<std::string> {
+auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const -> std::optional<std::string> {
     if (_avsError.empty()) {
         return std::nullopt;
     }
@@ -461,12 +461,12 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
 }
 
 auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int> {
-    if (const auto inputDefinition = MediaTypeToDefinition(mediaType)) {
-        if ((g_env.GetInputFormatBits() & (1 << *inputDefinition)) != 0) {
-            return inputDefinition;
+    if (const std::optional<int> optInputDefinition = MediaTypeToDefinition(mediaType)) {
+        if ((g_env.GetInputFormatBits() & (1 << *optInputDefinition)) != 0) {
+            return *optInputDefinition;
         }
 
-        g_env.Log("Reject input definition due to settings: %2i", *inputDefinition);
+        g_env.Log("Reject input definition due to settings: %2i", *optInputDefinition);
     }
 
     return std::nullopt;

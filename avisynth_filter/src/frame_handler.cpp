@@ -70,13 +70,13 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         srcFrameInfo.hdrSideData.Read(inSampleSideData);
         inSampleSideData->Release();
 
-        if (auto hdr = srcFrameInfo.hdrSideData.GetHDRData()) {
+        if (const std::optional<const BYTE *> optHdr = srcFrameInfo.hdrSideData.GetHDRData()) {
             _filter._inputFormat.hdrType = 1;
 
-            if (auto hdrCll = srcFrameInfo.hdrSideData.GetContentLightLevelData()) {
-                _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*hdrCll)->MaxCLL;
+            if (const std::optional<const BYTE *> optHdrCll = srcFrameInfo.hdrSideData.GetContentLightLevelData()) {
+                _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*optHdrCll)->MaxCLL;
             } else {
-                _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*hdr)->max_display_mastering_luminance);
+                _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
             }
         }
     }
@@ -152,7 +152,7 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
         return env->NewVideoFrame(_filter._inputFormat.videoInfo);
     }
 
-    g_env.Log("Get source frame: frameNb %6i Input queue size %2u", frameNb, _sourceFrames.size());
+    g_env.Log("Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
 
     return iter->second.avsFrame;
 }
@@ -309,7 +309,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
         const int srcFrameNb = outFrameInfo.srcFrameInfo->frameNb;
 
-        g_env.Log("Start processing output frame %6i at %10lli ~ %10lli frameTime %10lli for source %6i Output queue size %2u Front %6i Back %6i",
+        g_env.Log("Start processing output frame %6i at %10lli ~ %10lli frameTime %10lli for source %6i Output queue size %2zu Front %6i Back %6i",
                      outFrameInfo.frameNb, outFrameInfo.startTime, outFrameInfo.stopTime, outFrameInfo.stopTime - outFrameInfo.startTime, srcFrameNb,
                      _outputFrames.size(), _outputFrames.empty() ? -1 : _outputFrames.front().frameNb, _outputFrames.empty() ? -1 : _outputFrames.back().frameNb);
 
@@ -388,7 +388,7 @@ BEGIN_OF_DELIVERY:
 auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     std::unique_lock srcLock(_sourceFramesMutex);
 
-    auto srcFrameIter = _sourceFrames.find(srcFrameNb);
+    const auto srcFrameIter = _sourceFrames.find(srcFrameNb);
     ASSERT(srcFrameIter != _sourceFrames.end());
 
     const int dbgPreRefCount = srcFrameIter->second.refCount;

@@ -149,8 +149,8 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return static_cast<LRESULT>(_filter.GetAvsState());
 
     case API_MSG_GET_AVS_ERROR:
-        if (auto avsError = _filter.GetAvsError()) {
-            SendString(hSenderWindow, copyData->dwData, *avsError);
+        if (const std::optional<std::string> optAvsError = _filter.GetAvsError()) {
+            SendString(hSenderWindow, copyData->dwData, *optAvsError);
             return TRUE;
         } else {
             return FALSE;
