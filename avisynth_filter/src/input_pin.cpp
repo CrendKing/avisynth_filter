@@ -94,8 +94,8 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
+    _filter.ReloadAviSynthScript(_filter.m_pInput->CurrentMediaType());
     _filter.frameHandler.StartWorkerThreads();
-    _filter._reloadAvsSource = true;
 
     return __super::Active();
 }
