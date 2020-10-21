@@ -2,6 +2,7 @@
 #include "environment.h"
 #include "constants.h"
 #include "format.h"
+#include "util.h"
 
 
 namespace AvsFilter {
@@ -60,13 +61,13 @@ auto Environment::Initialize(HRESULT *phr) -> bool {
 
                 setlocale(LC_CTYPE, ".utf8");
 
-                Log("Configured script file: %S", _avsFile.c_str());
+                Log("Configured script file: %S", ExtractBasename(_avsFile.c_str()).c_str());
                 Log("Configured input formats: %lu", _inputFormatBits);
                 Log("Configured output threads: %i", _outputThreads);
 
                 wchar_t processPath[MAX_PATH];
                 if (GetModuleFileName(nullptr, processPath, MAX_PATH) != 0) {
-                    Log("Loading process: %S", processPath);
+                    Log("Loading process: %S", ExtractBasename(processPath).c_str());
                 }
             }
         }

@@ -86,4 +86,17 @@ auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> IPin * {
     return nullptr;
 }
 
+auto ExtractBasename(const wchar_t *path) -> std::wstring {
+    std::wstring ret;
+
+    wchar_t filename[_MAX_FNAME];
+    wchar_t ext[_MAX_EXT];
+    if (_wsplitpath_s(path, nullptr, 0, nullptr, 0, filename, _MAX_FNAME, ext, _MAX_EXT) == 0) {
+        ret = filename;
+        ret += ext;
+    }
+
+    return ret;
+}
+
 }
