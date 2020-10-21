@@ -68,7 +68,7 @@ auto RemoteControl::Run() -> void {
 	BOOL msgRet;
 	while ((msgRet = GetMessage(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
-			g_env.Log("Remote control message loop error: %5i", GetLastError());
+			g_env.Log("Remote control message loop error: %5lu", GetLastError());
 			break;
 		} else {
 			TranslateMessage(&msg);

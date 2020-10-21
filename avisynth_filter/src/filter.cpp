@@ -490,7 +490,7 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 
     _inputFormat = Format::GetVideoFormat(inputMediaType);
 
-    g_env.Log("Update output format using input format: definition %i, width %5i, height %5i, codec %s",
+    g_env.Log("Update output format using input format: definition %i, width %5li, height %5li, codec %s",
         _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
     AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &inputMediaType);
@@ -509,7 +509,7 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT {
     _outputFormat = Format::GetVideoFormat(*pmtOut);
 
-    g_env.Log("New output format: definition %i, width %5i, height %5i, codec %s",
+    g_env.Log("New output format: definition %i, width %5li, height %5li, codec %s",
         _outputFormat.definition, _outputFormat.bmi.biWidth, _outputFormat.bmi.biHeight, _outputFormat.GetCodecName().c_str());
 
     return S_OK;

@@ -61,7 +61,7 @@ auto Environment::Initialize(HRESULT *phr) -> bool {
                 setlocale(LC_CTYPE, ".utf8");
 
                 Log("Configured script file: %S", _avsFile.c_str());
-                Log("Configured input formats: %i", _inputFormatBits);
+                Log("Configured input formats: %lu", _inputFormatBits);
                 Log("Configured output threads: %i", _outputThreads);
 
                 wchar_t processPath[MAX_PATH];
@@ -108,7 +108,7 @@ auto Environment::Log(const char *format, ...) -> void {
 
     std::unique_lock lock(_logMutex);
 
-    fprintf_s(_logFile, "T %6i @ %8i: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
+    fprintf_s(_logFile, "T %6lu @ %8lu: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
 
     va_list args;
     va_start(args, format);
