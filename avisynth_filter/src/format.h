@@ -55,8 +55,67 @@ public:
     static const std::vector<Definition> DEFINITIONS;
 
 private:
-    static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void;
-    static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, int bytesPerComponent) -> void;
+    template <typename Component>
+    static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void {
+        const int iterations = rowSize / sizeof(__m128i);
+        const int remainderStart = iterations * sizeof(__m128i);
+
+        for (int y = 0; y < height; ++y) {
+            const __m128i *src_128 = reinterpret_cast<const __m128i *>(src);
+            __int64 *dst1_64 = reinterpret_cast<__int64 *>(dst1);
+            __int64 *dst2_64 = reinterpret_cast<__int64 *>(dst2);
+
+            for (int i = 0; i < iterations; ++i) {
+                const __m128i n = *src_128++;
+                _mm_storeu_si64(dst1_64++, _mm_shuffle_epi8(n, mask1));
+                _mm_storeu_si64(dst2_64++, _mm_shuffle_epi8(n, mask2));
+            }
+
+            // copy remaining unaligned bytes (rowSize % sizeof(__m128i) != 0)
+            for (int i = remainderStart; i < rowSize; i += 2 * sizeof(Component)) {
+                *reinterpret_cast<Component *>(dst1 + i / 2) = *reinterpret_cast<const Component *>(src + i + 0);
+                *reinterpret_cast<Component *>(dst2 + i / 2) = *reinterpret_cast<const Component *>(src + i + sizeof(Component));
+            }
+
+            src += srcStride;
+            dst1 += dstStride;
+            dst2 += dstStride;
+        }
+    }
+
+    template <typename Component>
+    static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+        const int iterations = rowSize / sizeof(__m128i);
+        const int remainderStart = iterations * sizeof(__m128i);
+
+        for (int y = 0; y < height; ++y) {
+            const __m128i *src1_128 = reinterpret_cast<const __m128i *>(src1);
+            const __m128i *src2_128 = reinterpret_cast<const __m128i *>(src2);
+            __m128i *dst_128 = reinterpret_cast<__m128i *>(dst);
+
+            for (int i = 0; i < iterations; ++i) {
+                const __m128i s1 = *src1_128++;
+                const __m128i s2 = *src2_128++;
+
+                if constexpr (sizeof(Component) == 1) {
+                    *dst_128++ = _mm_unpacklo_epi8(s1, s2);
+                    *dst_128++ = _mm_unpackhi_epi8(s1, s2);
+                } else {
+                    *dst_128++ = _mm_unpacklo_epi16(s1, s2);
+                    *dst_128++ = _mm_unpackhi_epi16(s1, s2);
+                }
+            }
+
+            for (int i = remainderStart; i < rowSize; i += sizeof(Component)) {
+                *reinterpret_cast<Component *>(dst + static_cast<size_t>(i) * 2 + 0) = *reinterpret_cast<const Component *>(src1 + i);
+                *reinterpret_cast<Component *>(dst + static_cast<size_t>(i) * 2 + sizeof(Component)) = *reinterpret_cast<const Component *>(src2 + i);
+            }
+
+            src1 += srcStride;
+            src2 += srcStride;
+            dst += dstStride;
+        }
+    }
 };
 
 }

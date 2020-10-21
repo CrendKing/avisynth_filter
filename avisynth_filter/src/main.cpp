@@ -55,8 +55,10 @@ static constexpr AMOVIESETUP_FILTER FILTER_REG = {
 
 template <typename T>
 static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    if (std::is_same_v<T, CAviSynthFilter> && !g_env.Initialize(phr)) {
-        return nullptr;
+    if constexpr (std::is_same_v<T, CAviSynthFilter>) {
+        if (!g_env.Initialize(phr)) {
+            return nullptr;
+        }
     }
 
     CUnknown *newInstance = new T(pUnk, phr);

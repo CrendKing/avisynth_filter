@@ -193,8 +193,11 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
                 mask2 = DEINTERLEAVE_MASK_16_BIT_2;
             }
 
-            Deinterleave(srcUVStart, srcStride, dstSlices[1], dstSlices[2], dstStrides[1],
-                         rowSize, height / 2, mask1, mask2);
+            if (format.videoInfo.ComponentSize() == 1) {
+                Deinterleave<uint8_t>(srcUVStart, srcStride, dstSlices[1], dstSlices[2], dstStrides[1], rowSize, height / 2, mask1, mask2);
+            } else {
+                Deinterleave<uint16_t>(srcUVStart, srcStride, dstSlices[1], dstSlices[2], dstStrides[1], rowSize, height / 2, mask1, mask2);
+            }
         }
     }
 }
@@ -239,74 +242,12 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
         } else {
             BYTE *dstUVStart = dstBuffer + dstDefaultPlaneSize;
 
-            Interleave(srcSlices[1], srcSlices[2], srcStrides[1],
-                       dstUVStart, dstStride, rowSize / 2, height / 2, format.videoInfo.ComponentSize());
-        }
-    }
-}
-
-auto Format::Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void {
-    const int iterations = rowSize / sizeof(__m128i);
-    const int remainderStart = iterations * sizeof(__m128i);
-
-    for (int y = 0; y < height; ++y) {
-        const __m128i *src_128 = reinterpret_cast<const __m128i *>(src);
-        __int64 *dst1_64 = reinterpret_cast<__int64 *>(dst1);
-        __int64 *dst2_64 = reinterpret_cast<__int64 *>(dst2);
-
-        for (int i = 0; i < iterations; ++i) {
-            const __m128i n = *src_128++;
-            _mm_storeu_si64(dst1_64++, _mm_shuffle_epi8(n, mask1));
-            _mm_storeu_si64(dst2_64++, _mm_shuffle_epi8(n, mask2));
-        }
-
-        // copy remaining unaligned bytes (rowSize % sizeof(__m128i) != 0)
-        for (int i = remainderStart; i < rowSize; i += 2) {
-            dst1[i / 2] = src[i + 0];
-            dst2[i / 2] = src[i + 1];
-        }
-
-        src += srcStride;
-        dst1 += dstStride;
-        dst2 += dstStride;
-    }
-}
-
-auto Format::Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height, int bytesPerComponent) -> void {
-    const int iterations = rowSize / sizeof(__m128i);
-    const int remainderStart = iterations * sizeof(__m128i);
-
-    for (int y = 0; y < height; ++y) {
-        const __m128i *src1_128 = reinterpret_cast<const __m128i *>(src1);
-        const __m128i *src2_128 = reinterpret_cast<const __m128i *>(src2);
-        __m128i *dst_128 = reinterpret_cast<__m128i *>(dst);
-
-        for (int i = 0; i < iterations; ++i) {
-            const __m128i s1 = *src1_128++;
-            const __m128i s2 = *src2_128++;
-
-            if (bytesPerComponent == 1) {
-                *dst_128++ = _mm_unpacklo_epi8(s1, s2);
-                *dst_128++ = _mm_unpackhi_epi8(s1, s2);
+            if (format.videoInfo.ComponentSize() == 1) {
+                Interleave<uint8_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstStride, rowSize / 2, height / 2);
             } else {
-                *dst_128++ = _mm_unpacklo_epi16(s1, s2);
-                *dst_128++ = _mm_unpackhi_epi16(s1, s2);
+                Interleave<uint16_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstStride, rowSize / 2, height / 2);
             }
         }
-
-        for (int i = remainderStart; i < rowSize; ++i) {
-            if (bytesPerComponent == 1) {
-                *reinterpret_cast<uint8_t *>(dst + static_cast<size_t>(i) * 2 + 0) = *reinterpret_cast<const uint8_t *>(src1 + i);
-                *reinterpret_cast<uint8_t *>(dst + static_cast<size_t>(i) * 2 + sizeof(uint8_t)) = *reinterpret_cast<const uint8_t *>(src2 + i);
-            } else {
-                *reinterpret_cast<uint16_t *>(dst + static_cast<size_t>(i) * 2 + 0) = *reinterpret_cast<const uint16_t *>(src1 + i);
-                *reinterpret_cast<uint16_t *>(dst + static_cast<size_t>(i) * 2 + sizeof(uint16_t)) = *reinterpret_cast<const uint16_t *>(src2 + i);
-            }
-        }
-
-        src1 += srcStride;
-        src2 += srcStride;
-        dst += dstStride;
     }
 }
 
