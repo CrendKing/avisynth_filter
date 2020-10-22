@@ -65,18 +65,19 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
     srcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputFormat, sampleBuffer, g_env.GetAvsEnv());
 
-    IMediaSideData *inSampleSideData;
-    if (SUCCEEDED(inSample->QueryInterface(&inSampleSideData))) {
-        srcFrameInfo.hdrSideData.Read(inSampleSideData);
-        inSampleSideData->Release();
+    {
+        const ATL::CComQIPtr<IMediaSideData> inSampleSideData(inSample);
+        if (inSampleSideData != nullptr) {
+            srcFrameInfo.hdrSideData.Read(inSampleSideData);
 
-        if (const std::optional<const BYTE *> optHdr = srcFrameInfo.hdrSideData.GetHDRData()) {
-            _filter._inputFormat.hdrType = 1;
+            if (const std::optional<const BYTE *> optHdr = srcFrameInfo.hdrSideData.GetHDRData()) {
+                _filter._inputFormat.hdrType = 1;
 
-            if (const std::optional<const BYTE *> optHdrCll = srcFrameInfo.hdrSideData.GetContentLightLevelData()) {
-                _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*optHdrCll)->MaxCLL;
-            } else {
-                _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
+                if (const std::optional<const BYTE *> optHdrCll = srcFrameInfo.hdrSideData.GetContentLightLevelData()) {
+                    _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*optHdrCll)->MaxCLL;
+                } else {
+                    _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
+                }
             }
         }
     }
@@ -314,8 +315,8 @@ auto FrameHandler::ProcessOutputSamples() -> void {
                      _outputFrames.size(), _outputFrames.empty() ? -1 : _outputFrames.front().frameNb, _outputFrames.empty() ? -1 : _outputFrames.back().frameNb);
 
         bool doDelivery = false;
+        ATL::CComPtr<IMediaSample> outSample;
 
-        IMediaSample *outSample;
         if (FAILED(_filter.InitializeOutputSample(nullptr, &outSample))) {
             // reset it to nullptr here in case the function change it to some random invalid address
             outSample = nullptr;
@@ -328,7 +329,6 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
         {
             PVideoFrame scriptFrame;
-
             try {
                 scriptFrame = _filter._avsScriptClip->GetFrame(outFrameInfo.frameNb, g_env.GetAvsEnv());
             } catch (AvisynthError) {
@@ -346,10 +346,11 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             _filter._confirmNewOutputFormat = false;
         }
 
-        IMediaSideData *outSampleSideData;
-        if (SUCCEEDED(outSample->QueryInterface(&outSampleSideData))) {
-            outFrameInfo.srcFrameInfo->hdrSideData.Write(outSampleSideData);
-            outSampleSideData->Release();
+        {
+            const ATL::CComQIPtr<IMediaSideData> outSampleSideData(outSample);
+            if (outSampleSideData != nullptr) {
+                outFrameInfo.srcFrameInfo->hdrSideData.Write(outSampleSideData);
+            }
         }
 
         doDelivery = true;
@@ -374,10 +375,6 @@ BEGIN_OF_DELIVERY:
         _nextDeliverFrameNb += 1;
         delLock.unlock();
         _deliveryCv.notify_all();
-
-        if (outSample != nullptr) {
-            outSample->Release();
-        }
 
         GarbageCollect(srcFrameNb);
     }

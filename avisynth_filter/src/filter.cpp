@@ -70,7 +70,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingRelease() -> ULONG {
     const ULONG ret = __super::NonDelegatingRelease();
 
     if (ret == 0) {
-        g_env.Release();
+        g_env.Destroy();
     }
 
     return ret;
@@ -106,7 +106,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
         }
 
         if (direction == PINDIR_INPUT) {
-            IEnumMediaTypes *enumTypes;
+            ATL::CComPtr<IEnumMediaTypes> enumTypes;
             CheckHr(pPin->EnumMediaTypes(&enumTypes));
 
             AM_MEDIA_TYPE *nextType;
@@ -153,8 +153,6 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     break;
                 }
             }
-
-            enumTypes->Release();
         }
     }
 
@@ -286,7 +284,6 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     HRESULT hr;
     AM_MEDIA_TYPE *pmtOut, *pmt;
-    IMediaSample *pOutSample;
 
     pSample->GetMediaType(&pmt);
     const bool inputFormatChanged = (pmt != nullptr && pmt->pbFormat != nullptr);
@@ -316,10 +313,11 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         }
     }
 
+    IMediaSample *pOutSample;
     CheckHr(m_pOutput->GetDeliveryBuffer(&pOutSample, nullptr, nullptr, 0));
-
     pOutSample->GetMediaType(&pmtOut);
     pOutSample->Release();
+
     if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         StopStreaming();
         m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(pmtOut));
@@ -519,66 +517,62 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
     _videoSourcePath.clear();
     _videoFilterNames.clear();
 
-    IEnumFilters *filters;
-    if (FAILED(m_pGraph->EnumFilters(&filters))) {
+    ATL::CComPtr<IEnumFilters> enumFilters;
+    if (FAILED(m_pGraph->EnumFilters(&enumFilters))) {
         return;
     }
 
-    IBaseFilter *filter;
+    IBaseFilter *currFilter;
     while (true) {
-        const HRESULT hr = filters->Next(1, &filter, nullptr);
+        const HRESULT hr = enumFilters->Next(1, &currFilter, nullptr);
+
         if (hr == S_OK) {
-            IFileSourceFilter *source;
-            if (!FAILED(filter->QueryInterface(&source))) {
+            ATL::CComQIPtr<IFileSourceFilter> source(currFilter);
+            if (source != nullptr) {
                 LPOLESTR filename;
                 if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
                     _videoSourcePath = std::wstring(filename);
                 }
-                source->Release();
-                break;
             }
 
-            filter->Release();
+            currFilter->Release();
         } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
-            filters->Reset();
+            enumFilters->Reset();
         } else {
             break;
         }
     }
-    filters->Release();
 
-    if (_videoSourcePath.empty()) {
+    // DO NOT call currFilter->Release() any more for the rest of the function
+
+    if (!_videoSourcePath.empty()) {
         return;
     }
 
     while (true) {
         FILTER_INFO filterInfo;
-        if (SUCCEEDED(filter->QueryFilterInfo(&filterInfo))) {
+        if (SUCCEEDED(currFilter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
-
             _videoFilterNames.push_back(filterInfo.achName);
             g_env.Log("Visiting filter: %S", filterInfo.achName);
         }
 
-        IPin *outputPin = FindFirstVideoOutputPin(filter);
-        filter->Release();
-        if (outputPin == nullptr) {
+        const std::optional<IPin *> optOutputPin = FindFirstVideoOutputPin(currFilter);
+        if (!optOutputPin) {
             break;
         }
+        ATL::CComPtr<IPin> outputPin = *optOutputPin;
 
-        IPin *nextInputPin;
+        ATL::CComPtr<IPin> nextInputPin;
         if (FAILED(outputPin->ConnectedTo(&nextInputPin))) {
-            outputPin->Release();
             break;
         }
 
         PIN_INFO pinInfo;
         if (SUCCEEDED(nextInputPin->QueryPinInfo(&pinInfo))) {
-            filter = pinInfo.pFilter;
+            QueryPinInfoReleaseFilter(pinInfo);
+            currFilter = pinInfo.pFilter;
         }
-
-        nextInputPin->Release();
-        outputPin->Release();
     }
 }
 

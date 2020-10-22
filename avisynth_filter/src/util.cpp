@@ -51,39 +51,37 @@ auto JoinStrings(const std::vector<std::wstring> &input, wchar_t delimiter) -> s
                            });
 }
 
-auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> IPin * {
-    IEnumPins *pEnum = nullptr;
-    if (FAILED(pFilter->EnumPins(&pEnum))) {
-        return nullptr;
+auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *> {
+    ATL::CComPtr<IEnumPins> enumPins;
+    if (FAILED(pFilter->EnumPins(&enumPins))) {
+        return std::nullopt;
     }
 
-    IPin *pPin = nullptr;
-    while (pEnum->Next(1, &pPin, nullptr) == S_OK) {
+    while (true) {
+        ATL::CComPtr<IPin> currPin;
+        if (enumPins->Next(1, &currPin, nullptr) != S_OK) {
+            break;
+        }
+
         PIN_DIRECTION dir;
-        if (FAILED(pPin->QueryDirection(&dir))) {
-            pPin->Release();
-            pEnum->Release();
-            return nullptr;
+        if (FAILED(currPin->QueryDirection(&dir))) {
+            break;
         }
 
         if (dir == PINDIR_OUTPUT) {
             AM_MEDIA_TYPE mediaType;
-            if (SUCCEEDED(pPin->ConnectionMediaType(&mediaType))) {
+            if (SUCCEEDED(currPin->ConnectionMediaType(&mediaType))) {
                 const bool found = (mediaType.majortype == MEDIATYPE_Video || mediaType.majortype == MEDIATYPE_Stream);
                 FreeMediaType(mediaType);
 
                 if (found) {
-                    pEnum->Release();
-                    return pPin;
+                    return currPin;
                 }
             }
         }
-
-        pPin->Release();
     }
 
-    pEnum->Release();
-    return nullptr;
+    return std::nullopt;
 }
 
 auto ExtractBasename(const wchar_t *path) -> std::wstring {

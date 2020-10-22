@@ -15,8 +15,14 @@
 #include <unordered_map>
 #include <vector>
 
+#define STRICT
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#define _ATL_APARTMENT_THREADED
+#define _ATL_NO_AUTOMATIC_NAMESPACE
+#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
+#include <atlbase.h>
 
 #include <commctrl.h>
 #include <commdlg.h>

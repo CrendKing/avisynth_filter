@@ -77,7 +77,7 @@ auto Environment::Initialize(HRESULT *phr) -> bool {
     return true;
 }
 
-auto Environment::Release() -> void {
+auto Environment::Destroy() -> void {
     _refcount -= 1;
 
     if (_refcount == 0) {

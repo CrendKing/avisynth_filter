@@ -11,7 +11,7 @@ public:
     Environment();
 
     auto Initialize(HRESULT *phr) -> bool;
-    auto Release() -> void;
+    auto Destroy() -> void;
 
     auto SaveConfig() const -> void;
     auto Log(const char *format, ...) -> void;
