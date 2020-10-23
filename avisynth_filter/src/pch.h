@@ -7,6 +7,7 @@
 #include <clocale>
 #include <condition_variable>
 #include <deque>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <shared_mutex>

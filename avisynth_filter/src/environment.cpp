@@ -32,7 +32,7 @@ auto Environment::Initialize(HRESULT *phr) -> bool {
         CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
         We don't use any new feature from IScriptEnvironment2 anyway.
         */
-        typedef IScriptEnvironment *(AVSC_CC *CreateScriptEnvironment_Func)(int version);
+        using CreateScriptEnvironment_Func = auto (AVSC_CC *)(int version) -> IScriptEnvironment *;
         const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
         if (CreateScriptEnvironment == nullptr) {
             ShowFatalError(L"Unable to locate CreateScriptEnvironment()", phr);

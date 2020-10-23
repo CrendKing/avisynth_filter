@@ -50,7 +50,6 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 
 CAviSynthFilter::~CAviSynthFilter() {
     StopAviSynthScript();
-    DeletePinTypes();
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
@@ -117,38 +116,32 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     // this one will be the preferred media type for potential pin reconnection
 
                     const std::optional<int> optInputDefinition = GetInputDefinition(nextType);
-
                     if (optInputDefinition && IsInputUniqueByAvsType(*optInputDefinition)) {
                         const int inputDefinition = *optInputDefinition;
 
                         // invoke AviSynth script with each supported input definition, and observe the output avs type
                         if (!ReloadAviSynthScript(*nextType)) {
                             g_env.Log("Disconnect due to AvsFilterDisconnect()");
-                            DeleteMediaType(nextType);
                             _disconnectFilter = true;
                             break;
                         }
 
-                        _acceptableInputTypes[inputDefinition] = nextType;
+                        _acceptableInputTypes[inputDefinition].reset(nextType);
                         g_env.Log("Add acceptable input definition: %2i", inputDefinition);
 
                         // all media types that share the same avs type are acceptable for output pin connection
                         for (int outputDefinition : Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)) {
                             if (_acceptableOutputTypes[outputDefinition] == nullptr) {
-                                AM_MEDIA_TYPE *outputType = GenerateMediaType(outputDefinition, nextType);
-                                _acceptableOutputTypes[outputDefinition] = outputType;
+                                _acceptableOutputTypes[outputDefinition].reset(GenerateMediaType(outputDefinition, nextType));
                                 g_env.Log("Add acceptable output definition: %2i", outputDefinition);
 
                                 _compatibleDefinitions.emplace_back(DefinitionPair { inputDefinition, outputDefinition });
                                 g_env.Log("Add compatible definitions: input %2i output %2i", inputDefinition, outputDefinition);
                             }
                         }
-                    } else {
-                        DeleteMediaType(nextType);
                     }
                 } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
                     CheckHr(enumTypes->Reset());
-                    DeletePinTypes();
                 } else {
                     break;
                 }
@@ -261,7 +254,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 
                 if (inputDefiniton != compatibleInput) {
                     g_env.Log("Reconnect with types: old in %2i new in %2i out %2i", inputDefiniton, compatibleInput, outputDefinition);
-                    CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[compatibleInput]));
+                    CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[compatibleInput].get()));
                 } else {
                     g_env.Log("Connected with types: in %2i out %2i", inputDefiniton, outputDefinition);
                 }
@@ -283,16 +276,18 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 
 auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     HRESULT hr;
-    AM_MEDIA_TYPE *pmtOut, *pmt;
 
-    pSample->GetMediaType(&pmt);
-    const bool inputFormatChanged = (pmt != nullptr && pmt->pbFormat != nullptr);
+    AM_MEDIA_TYPE *pmtIn;
+    pSample->GetMediaType(&pmtIn);
+    const UniqueMediaTypePtr pmtInPtr(pmtIn);
+
+    const bool inputFormatChanged = (pmtIn != nullptr && pmtIn->pbFormat != nullptr);
 
     if (inputFormatChanged || _reloadAvsSource) {
         StopStreaming();
 
         if (inputFormatChanged) {
-            m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmt));
+            m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmtIn));
         }
 
         frameHandler.Flush();
@@ -315,7 +310,11 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
     IMediaSample *pOutSample;
     CheckHr(m_pOutput->GetDeliveryBuffer(&pOutSample, nullptr, nullptr, 0));
+
+    AM_MEDIA_TYPE *pmtOut;
     pOutSample->GetMediaType(&pmtOut);
+    const UniqueMediaTypePtr pmtOutPtr(pmtOut);
+
     pOutSample->Release();
 
     if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
@@ -325,7 +324,6 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         HandleOutputFormatChange(pmtOut);
         _confirmNewOutputFormat = true;
 
-        DeleteMediaType(pmtOut);
         hr = StartStreaming();
 
         if (SUCCEEDED(hr)) {
@@ -492,11 +490,12 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
         _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
     AM_MEDIA_TYPE *newOutputType = GenerateMediaType(Format::LookupAvsType(_avsScriptVideoInfo.pixel_type)[0], &inputMediaType);
+    const UniqueMediaTypePtr newOutputTypePtr(newOutputType);
+
     if (m_pOutput->GetConnected()->QueryAccept(newOutputType) != S_OK) {
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
     CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, newOutputType));
-    DeleteMediaType(newOutputType);
 
     return S_OK;
 }
@@ -627,24 +626,6 @@ auto CAviSynthFilter::GenerateMediaType(int definition, const AM_MEDIA_TYPE *tem
     return newMediaType;
 }
 
-auto CAviSynthFilter::DeletePinTypes() -> void {
-    for (AM_MEDIA_TYPE *&type : _acceptableInputTypes) {
-        if (type != nullptr) {
-            DeleteMediaType(type);
-            type = nullptr;
-        }
-    }
-
-    for (AM_MEDIA_TYPE *&type : _acceptableOutputTypes) {
-        if (type != nullptr) {
-            DeleteMediaType(type);
-            type = nullptr;
-        }
-    }
-
-    _compatibleDefinitions.clear();
-}
-
 auto CAviSynthFilter::InitAviSynth() -> bool {
     if (_avsVersionString == nullptr) {
         try {
@@ -743,8 +724,8 @@ auto CAviSynthFilter::StopAviSynthScript() -> void {
 }
 
 auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool {
-    for (size_t d = 0; d < _acceptableInputTypes.size(); ++d) {
-        if (_acceptableInputTypes[d] != nullptr && Format::DEFINITIONS[d].avsType == Format::DEFINITIONS[inputDefinition].avsType) {
+    for (size_t i = 0; i < _acceptableInputTypes.size(); ++i) {
+        if (_acceptableInputTypes[i] != nullptr && Format::DEFINITIONS[i].avsType == Format::DEFINITIONS[inputDefinition].avsType) {
             return false;
         }
     }

@@ -52,6 +52,13 @@ public:
     FrameHandler frameHandler;
     
 private:
+    struct MediaTypeDeleter {
+        auto operator()(AM_MEDIA_TYPE *mediaType) const -> void {
+            DeleteMediaType(mediaType);
+        }
+    };
+    using UniqueMediaTypePtr = std::unique_ptr<AM_MEDIA_TYPE, MediaTypeDeleter>;
+
     struct DefinitionPair {
         int input;
         int output;
@@ -65,7 +72,6 @@ private:
 
     auto TraverseFiltersInGraph() -> void;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
-    auto DeletePinTypes() -> void;
     auto InitAviSynth() -> bool;
     auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
     auto StopAviSynthScript() -> void;
@@ -76,8 +82,8 @@ private:
     std::optional<RemoteControl> _remoteControl;
 
     bool _disconnectFilter;
-    std::vector<AM_MEDIA_TYPE *> _acceptableInputTypes;
-    std::vector<AM_MEDIA_TYPE *> _acceptableOutputTypes;
+    std::vector<UniqueMediaTypePtr> _acceptableInputTypes;
+    std::vector<UniqueMediaTypePtr> _acceptableOutputTypes;
     std::vector<DefinitionPair> _compatibleDefinitions;
 
     Format::VideoFormat _inputFormat;
