@@ -393,40 +393,40 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> H
     return S_OK;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsVersionString() const -> const char * {
+auto CAviSynthFilter::GetAvsVersionString() const -> const char * {
     return _avsVersionString == nullptr ? "unknown AviSynth version" : _avsVersionString;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetInputFormat() const->Format::VideoFormat {
+auto CAviSynthFilter::GetInputFormat() const->Format::VideoFormat {
     return _inputFormat;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetOutputFormat() const->Format::VideoFormat {
+auto CAviSynthFilter::GetOutputFormat() const->Format::VideoFormat {
     return _outputFormat;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
+auto CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
     return _effectiveAvsFile;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetSourceAvgFrameRate() const -> int {
+auto CAviSynthFilter::GetSourceAvgFrameRate() const -> int {
     return _sourceAvgFrameRate;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::ReloadAvsFile(const std::wstring &avsFile) -> void {
+auto CAviSynthFilter::ReloadAvsFile(const std::wstring &avsFile) -> void {
     _effectiveAvsFile = avsFile;
     _reloadAvsSource = true;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
+auto CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
     return _videoSourcePath;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
+auto CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
     return _videoFilterNames;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsState() const -> AvsState {
+auto CAviSynthFilter::GetAvsState() const -> AvsState {
     if (m_State == State_Stopped || !_avsScriptClip) {
         return AvsState::Stopped;
     }
@@ -442,7 +442,7 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsState() const -> AvsState {
     return AvsState::Paused;
 }
 
-auto STDMETHODCALLTYPE CAviSynthFilter::GetAvsError() const -> std::optional<std::string> {
+auto CAviSynthFilter::GetAvsError() const -> std::optional<std::string> {
     if (_avsError.empty()) {
         return std::nullopt;
     }

@@ -38,16 +38,16 @@ public:
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;
 
-    auto STDMETHODCALLTYPE GetAvsVersionString() const -> const char *;
-    auto STDMETHODCALLTYPE GetInputFormat() const -> Format::VideoFormat;
-    auto STDMETHODCALLTYPE GetOutputFormat() const -> Format::VideoFormat;
-    auto STDMETHODCALLTYPE GetEffectiveAvsFile() const -> std::wstring;
-    auto STDMETHODCALLTYPE GetSourceAvgFrameRate() const -> int;
-    auto STDMETHODCALLTYPE ReloadAvsFile(const std::wstring &avsFile) -> void;
-    auto STDMETHODCALLTYPE GetVideoSourcePath() const -> std::wstring;
-    auto STDMETHODCALLTYPE GetVideoFilterNames() const -> std::vector<std::wstring>;
-    auto STDMETHODCALLTYPE GetAvsState() const -> AvsState;
-    auto STDMETHODCALLTYPE GetAvsError() const -> std::optional<std::string>;
+    auto GetAvsVersionString() const -> const char *;
+    auto GetInputFormat() const -> Format::VideoFormat;
+    auto GetOutputFormat() const -> Format::VideoFormat;
+    auto GetEffectiveAvsFile() const -> std::wstring;
+    auto GetSourceAvgFrameRate() const -> int;
+    auto ReloadAvsFile(const std::wstring &avsFile) -> void;
+    auto GetVideoSourcePath() const -> std::wstring;
+    auto GetVideoFilterNames() const -> std::vector<std::wstring>;
+    auto GetAvsState() const -> AvsState;
+    auto GetAvsError() const -> std::optional<std::string>;
 
     FrameHandler frameHandler;
     
