@@ -33,10 +33,10 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _confirmNewOutputFormat(false)
     , _effectiveAvsFile(g_env.GetAvsFile())
     , _avsVersionString(nullptr)
-    , _avsSourceClip(nullptr)
-    , _avsScriptClip(nullptr)
     , _avsSourceVideoInfo()
     , _avsScriptVideoInfo()
+    , _avsSourceClip(new SourceClip(frameHandler, _avsSourceVideoInfo))
+    , _avsScriptClip(nullptr)
     , _sourceAvgFrameTime(0)
     , _scriptAvgFrameTime(0)
     , _sourceAvgFrameRate(0)
@@ -540,7 +540,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
 
     // DO NOT call currFilter->Release() any more for the rest of the function
 
-    if (!_videoSourcePath.empty()) {
+    if (_videoSourcePath.empty()) {
         return;
     }
 
@@ -631,8 +631,9 @@ auto CAviSynthFilter::InitAviSynth() -> bool {
         }
         g_env.Log("Filter version: %s", FILTER_VERSION_STRING);
         g_env.Log("AviSynth version: %s", GetAvsVersionString());
+    }
 
-        _avsSourceClip = new SourceClip(frameHandler, _avsSourceVideoInfo);
+    if (!g_env.GetAvsEnv()->FunctionExists("AvsFilterSource")) {
         g_env.GetAvsEnv()->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _avsSourceClip);
         g_env.GetAvsEnv()->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
     }

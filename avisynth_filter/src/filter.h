@@ -90,10 +90,10 @@ private:
     
     std::wstring _effectiveAvsFile;
     const char *_avsVersionString;
-    PClip _avsSourceClip;
-    PClip _avsScriptClip;
     VideoInfo _avsSourceVideoInfo;
     VideoInfo _avsScriptVideoInfo;
+    PClip _avsSourceClip;
+    PClip _avsScriptClip;
     REFERENCE_TIME _sourceAvgFrameTime;
     REFERENCE_TIME _scriptAvgFrameTime;
     int _sourceAvgFrameRate;
