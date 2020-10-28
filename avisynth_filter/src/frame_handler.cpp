@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "frame_handler.h"
+#include "constants.h"
 #include "environment.h"
 #include "filter.h"
 #include "format.h"
@@ -15,12 +16,6 @@ FrameHandler::FrameHandler(CAviSynthFilter &filter)
     Reset();
 }
 
-FrameHandler::~FrameHandler() {
-    // not all upstreams call EndFlush at the end of stream, we need to always cleanup
-
-    Flush();
-}
-
 auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     std::unique_lock srcLock(_sourceFramesMutex);
 
@@ -34,9 +29,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
             return true;
         }
 
-        // block upstream for flooding in samples until AviSynth actually requests them
-        // +1 for headroom to avoid GetSourceFrame() being blocked
-        if (_nextSourceFrameNb <= _maxRequestedFrameNb + 1) {
+        // +1 to make sure at least 2 frames in input queue for frame time calculation
+        if (_nextSourceFrameNb <= _maxRequestedFrameNb + 1 + MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY) {
             return true;
         }
 
@@ -87,8 +81,9 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     g_env.Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
                  _nextSourceFrameNb, srcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
 
-    std::unordered_map<int, SourceFrameInfo>::iterator iter;
-    if ((iter = _sourceFrames.find(_nextSourceFrameNb - 1)) != _sourceFrames.cend()) {
+    // we just emplaced an entry inside mutex, so map.lower_bound() should never return map::cend()
+    const auto iter = --_sourceFrames.lower_bound(_nextSourceFrameNb);
+    if (iter != _sourceFrames.cend()) {
         /*
          * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
          * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
@@ -133,13 +128,14 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb);
     _addInputSampleCv.notify_one();
 
-    std::unordered_map<int, SourceFrameInfo>::const_iterator iter;
+    std::map<int, SourceFrameInfo>::const_iterator iter;
     _newSourceFrameCv.wait(srcLock, [this, &iter, frameNb]() {
         if (_isFlushing) {
             return true;
         }
 
-        iter = _sourceFrames.find(frameNb);
+        // use map.lower_bound() in case the exact frame is removed by the script
+        iter = _sourceFrames.lower_bound(frameNb);
         return iter != _sourceFrames.cend();
     });
 
@@ -190,7 +186,9 @@ auto FrameHandler::Flush() -> void {
      * are paused, no new frame is allowed to be add in AddInputSample(). To unstuck, GetSourceFrame()
      * just returns a empty new frame during flush.
      */
-    _filter.StopAviSynthScript();
+    if (_filter._avsScriptClip != nullptr) {
+        _filter._avsScriptClip = nullptr;
+    }
 
     {
         std::unique_lock srcLock(_sourceFramesMutex);
@@ -261,6 +259,8 @@ auto FrameHandler::StopWorkerThreads() -> void {
 
     // necessary to unlock output pin's Inactive() in CTransformFilter::Stop()
     _addInputSampleCv.notify_all();
+
+    Flush();
 }
 
 auto FrameHandler::Reset() -> void {
@@ -385,21 +385,25 @@ BEGIN_OF_DELIVERY:
 auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     std::unique_lock srcLock(_sourceFramesMutex);
 
-    const auto srcFrameIter = _sourceFrames.find(srcFrameNb);
-    ASSERT(srcFrameIter != _sourceFrames.end());
+    const size_t dbgPreSize = _sourceFrames.size();
 
-    const int dbgPreRefCount = srcFrameIter->second.refCount;
-    const int dbgPreQueueSize = static_cast<int>(_sourceFrames.size());
+    auto iter = _sourceFrames.begin();
+    do {
+        if (iter->first == srcFrameNb) {
+            iter->second.refCount -= 1;
+        }
 
-    if (srcFrameIter->second.refCount <= 1) {
-        _sourceFrames.erase(srcFrameIter);
-        srcLock.unlock();
-        _addInputSampleCv.notify_one();
-    } else {
-        srcFrameIter->second.refCount -= 1;
-    }
+        if (iter->second.refCount <= 0) {
+            iter = _sourceFrames.erase(iter);
+        } else {
+            ++iter;
+        }
+    } while (iter != _sourceFrames.cend() && iter->first <= srcFrameNb);
 
-    g_env.Log("GarbageCollect frame %6i pre refcount %4i post queue size %2u", srcFrameNb, dbgPreRefCount, dbgPreQueueSize);
+    srcLock.unlock();
+    _addInputSampleCv.notify_one();
+
+    g_env.Log("GarbageCollect frames until %6i pre size %3zu post size %3zu", srcFrameNb, dbgPreSize, _sourceFrames.size());
 }
 
 auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,

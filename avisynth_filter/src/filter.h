@@ -17,7 +17,6 @@ class CAviSynthFilter
 
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
-    virtual ~CAviSynthFilter();
 
     DECLARE_IUNKNOWN
 
@@ -74,7 +73,6 @@ private:
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
     auto InitAviSynth() -> bool;
     auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
-    auto StopAviSynthScript() -> void;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;

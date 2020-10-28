@@ -19,67 +19,67 @@ const AVS_Linkage *AVS_linkage = nullptr;
 
 namespace AvsFilter {
 
-    Environment g_env;
+Environment g_env;
 
-    static REGFILTERPINS REG_PINS[] = {
-        { nullptr                                // pin name (obsolete)
-        , FALSE                                  // is pin rendered?
-        , FALSE                                  // is this output pin?
-        , FALSE                                  // Can the filter create zero instances?
-        , FALSE                                  // Does the filter create multiple instances?
-        , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
-        , nullptr                                // pin name the pin connects to (obsolete)
-        , 0                                      // pin media type count (to be filled in InitRoutine())
-        , nullptr },                             // pin media types (to be filled in InitRoutine())
+static REGFILTERPINS REG_PINS[] = {
+    { nullptr                                // pin name (obsolete)
+    , FALSE                                  // is pin rendered?
+    , FALSE                                  // is this output pin?
+    , FALSE                                  // Can the filter create zero instances?
+    , FALSE                                  // Does the filter create multiple instances?
+    , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
+    , nullptr                                // pin name the pin connects to (obsolete)
+    , 0                                      // pin media type count (to be filled in InitRoutine())
+    , nullptr },                             // pin media types (to be filled in InitRoutine())
 
-        { nullptr                                // pin name (obsolete)
-        , FALSE                                  // is pin rendered?
-        , TRUE                                   // is this output pin?
-        , FALSE                                  // Can the filter create zero instances?
-        , FALSE                                  // Does the filter create multiple instances?
-        , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
-        , nullptr                                // pin name the pin connects to (obsolete)
-        , 0                                      // pin media type count (to be filled in InitRoutine())
-        , nullptr },                             // pin media types (to be filled in InitRoutine())
-    };
+    { nullptr                                // pin name (obsolete)
+    , FALSE                                  // is pin rendered?
+    , TRUE                                   // is this output pin?
+    , FALSE                                  // Can the filter create zero instances?
+    , FALSE                                  // Does the filter create multiple instances?
+    , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
+    , nullptr                                // pin name the pin connects to (obsolete)
+    , 0                                      // pin media type count (to be filled in InitRoutine())
+    , nullptr },                             // pin media types (to be filled in InitRoutine())
+};
 
-    static constexpr AMOVIESETUP_FILTER REG_FILTER = {
-        &AvsFilter::CLSID_AviSynthFilter,        // filter CLSID
-        FILTER_NAME_WIDE,                        // filter name
-        MERIT_DO_NOT_USE + 1,                    // filter merit
-        sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count
-        REG_PINS                                 // pin information
-    };
+static constexpr AMOVIESETUP_FILTER REG_FILTER = {
+    &AvsFilter::CLSID_AviSynthFilter,        // filter CLSID
+    FILTER_NAME_WIDE,                        // filter name
+    MERIT_DO_NOT_USE + 1,                    // filter merit
+    sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count
+    REG_PINS                                 // pin information
+};
 
-    template <typename T>
-    static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-        if constexpr (std::is_same_v<T, CAviSynthFilter>) {
-            if (!g_env.Initialize(phr)) {
-                return nullptr;
-            }
+template <typename T>
+static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+    if constexpr (std::is_same_v<T, CAviSynthFilter>) {
+        if (!g_env.Initialize(phr)) {
+            return nullptr;
         }
-
-        CUnknown *newInstance = new T(pUnk, phr);
-        if (newInstance == nullptr) {
-            *phr = E_OUTOFMEMORY;
-        }
-
-        return newInstance;
     }
 
-    static auto RegisterFilter() -> HRESULT {
-        std::vector<REGPINTYPES> pinTypes;
-        for (const Format::Definition &info : Format::DEFINITIONS) {
-            pinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
-        }
-
-        REG_PINS[0].lpMediaType = pinTypes.data();
-        REG_PINS[0].nMediaTypes = static_cast<UINT>(pinTypes.size());
-        REG_PINS[1].lpMediaType = REG_PINS[0].lpMediaType;
-        REG_PINS[1].nMediaTypes = REG_PINS[0].nMediaTypes;
-
-        return AMovieDllRegisterServer2(TRUE);
+    CUnknown *newInstance = new T(pUnk, phr);
+    if (newInstance == nullptr) {
+        *phr = E_OUTOFMEMORY;
     }
+
+    return newInstance;
+}
+
+static auto RegisterFilter() -> HRESULT {
+    std::vector<REGPINTYPES> pinTypes;
+    for (const Format::Definition &info : Format::DEFINITIONS) {
+        pinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
+    }
+
+    REG_PINS[0].lpMediaType = pinTypes.data();
+    REG_PINS[0].nMediaTypes = static_cast<UINT>(pinTypes.size());
+    REG_PINS[1].lpMediaType = REG_PINS[0].lpMediaType;
+    REG_PINS[1].nMediaTypes = REG_PINS[0].nMediaTypes;
+
+    return AMovieDllRegisterServer2(TRUE);
+}
 
 }
 

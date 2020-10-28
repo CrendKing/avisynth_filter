@@ -56,6 +56,12 @@ static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 #define SETTINGS_WIDE                     Widen(SETTINGS_FULL)
 #define STATUS_WIDE                       Widen(STATUS_FULL)
 
+/*
+ * Max number of frames received before blocking upstream from flooding the input queue.
+ * Once reached, it must wait until the output thread delivers and GC source frames.
+ */
+static constexpr int MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY = 7;
+
 static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 1;
 
 /*

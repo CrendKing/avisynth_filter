@@ -12,7 +12,6 @@ class CAviSynthFilter;
 class FrameHandler {
 public:
     explicit FrameHandler(CAviSynthFilter &filter);
-    virtual ~FrameHandler();
 
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
@@ -59,7 +58,7 @@ private:
 
     CAviSynthFilter &_filter;
 
-    std::unordered_map<int, SourceFrameInfo> _sourceFrames;
+    std::map<int, SourceFrameInfo> _sourceFrames;
     std::deque<OutputFrameInfo> _outputFrames;
 
     mutable std::shared_mutex _sourceFramesMutex;

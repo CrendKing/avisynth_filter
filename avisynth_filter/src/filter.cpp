@@ -48,10 +48,6 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     }
 }
 
-CAviSynthFilter::~CAviSynthFilter() {
-    StopAviSynthScript();
-}
-
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
     CheckPointer(ppv, E_POINTER);
 
@@ -715,12 +711,6 @@ auto CAviSynthFilter::ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bo
     _scriptAvgFrameTime = llMulDiv(_avsScriptVideoInfo.fps_denominator, UNITS, _avsScriptVideoInfo.fps_numerator, 0);
 
     return true;
-}
-
-auto CAviSynthFilter::StopAviSynthScript() -> void {
-    if (_avsScriptClip != nullptr) {
-        _avsScriptClip = nullptr;
-    }
 }
 
 auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool {
