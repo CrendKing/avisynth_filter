@@ -20,14 +20,9 @@ jobs:
               with:
                   languages: 'cpp'
 
-            - name: Setup MSBuild
-              uses: microsoft/setup-msbuild@v1
-
             - name: Build
               shell: cmd
-              run: |
-                  set PATH="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE";%PATH%
-                  build.bat ${{ matrix.config.platform }}
+              run: build.bat ${{ matrix.config.platform }}
 
             - name: Perform CodeQL Analysis
               uses: github/codeql-action/analyze@v1

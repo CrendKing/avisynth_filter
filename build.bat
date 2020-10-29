@@ -1,5 +1,7 @@
 cd /d "%~dp0"
 
+for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -find **\vcvars64.bat ) do call "%%i"
+
 if not exist dep_directshow (
     mkdir checkout_directshow
     cd checkout_directshow
