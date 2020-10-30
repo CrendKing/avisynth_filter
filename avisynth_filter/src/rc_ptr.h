@@ -8,34 +8,42 @@ namespace AvsFilter {
 template <typename T>
 class ReferenceCountPointer {
 public:
-    explicit ReferenceCountPointer()
-        : _ptr(new T())
+    constexpr ReferenceCountPointer()
+        : _ptr(nullptr)
         , _ref(0) {
     }
 
-    auto operator->() const -> T * {
+    constexpr auto operator=(T *ptr) -> ReferenceCountPointer<T> & {
+        if (_ptr != ptr) {
+            _ptr = ptr;
+            _ref = 1;
+        }
+
+        return *this;
+    }
+
+    constexpr auto operator->() const -> T * {
         return _ptr;
     }
 
-    auto operator!() const -> bool {
-        return !_ptr;
+    constexpr explicit operator bool() const {
+        return _ptr != nullptr;
     }
 
-    auto AddRef() -> void {
-        _ref += 1;
+    constexpr auto AddRef() -> void {
+        InterlockedIncrement(&_ref);
     }
 
-    auto Release() -> void {
-        _ref -= 1;
-
-        if (_ref == 0) {
-            delete _ptr;
+    constexpr auto Release() -> void {
+        if (InterlockedDecrement(&_ref) == 0) {
+            std::default_delete<T>()(_ptr);
+            _ptr = nullptr;
         }
     }
 
 private:
     T *_ptr;
-    int _ref;
+    long _ref;
 };
 
 }

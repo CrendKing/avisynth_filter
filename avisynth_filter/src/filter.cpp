@@ -45,7 +45,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid,
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingRelease() -> ULONG {
-
     const ULONG ret = __super::NonDelegatingRelease();
 
     if (ret == 0) {
