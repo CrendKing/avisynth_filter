@@ -29,7 +29,7 @@ public:
 private:
     auto LoadModule() const -> HMODULE;
     auto CreateEnv() const -> IScriptEnvironment *;
-    [[ noreturn ]] auto ShowFatalError(const wchar_t *errorMessage) const -> void;
+    [[ noreturn ]] auto ShowFatalError(const char *errorMessage) const -> void ;
 
     HMODULE _module;
     IScriptEnvironment *_env;

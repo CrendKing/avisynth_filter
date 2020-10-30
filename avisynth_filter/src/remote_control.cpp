@@ -34,7 +34,7 @@ auto RemoteControl::Start() -> void {
 auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
     switch (uMsg) {
     case WM_COPYDATA: {
-        const RemoteControl *rc = reinterpret_cast<const RemoteControl *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+        const RemoteControl *rc = reinterpret_cast<const RemoteControl *>(GetWindowLongPtrA(hWnd, GWLP_USERDATA));
         return rc->HandleCopyData(reinterpret_cast<HWND>(wParam), reinterpret_cast<const COPYDATASTRUCT *>(lParam));
     }
 
@@ -49,36 +49,36 @@ auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 }
 
 auto RemoteControl::Run() -> void {
-	WNDCLASS wc {};
+	WNDCLASSA wc {};
 	wc.lpfnWndProc = &RemoteControl::WndProc;
 	wc.hInstance = g_hInst;
 	wc.lpszClassName = API_CLASS_NAME;
-	if (!RegisterClass(&wc)) {
+	if (!RegisterClassA(&wc)) {
 		return;
 	}
 
-	_hWnd = CreateWindowEx(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
+	_hWnd = CreateWindowExA(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
 	if (!_hWnd) {
 		return;
 	}
-	SetWindowLongPtr(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+	SetWindowLongPtrA(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
 	g_env->Log("Remote control started");
 
 	MSG msg;
 	BOOL msgRet;
-	while ((msgRet = GetMessage(&msg, nullptr, 0, 0)) != 0) {
+	while ((msgRet = GetMessageA(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
 			g_env->Log("Remote control message loop error: %5lu", GetLastError());
 			break;
 		} else {
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageA(&msg);
 		}
 	}
 
 	DestroyWindow(_hWnd);
-	UnregisterClass(API_CLASS_NAME, wc.hInstance);
+	UnregisterClassA(API_CLASS_NAME, wc.hInstance);
 
 	g_env->Log("Remote control stopped");
 }
@@ -89,8 +89,8 @@ auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std:
 	}
 
 	const COPYDATASTRUCT copyData { msgId, static_cast<DWORD>(data.size()), const_cast<char *>(data.c_str()) };
-	SendMessageTimeout(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
-					   SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
+	SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
+					    SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void {

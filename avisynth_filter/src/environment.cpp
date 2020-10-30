@@ -27,7 +27,7 @@ Environment::Environment()
             Log("Configured output threads: %i", _outputThreads);
 
             wchar_t processPath[MAX_PATH];
-            if (GetModuleFileName(nullptr, processPath, MAX_PATH) != 0) {
+            if (GetModuleFileNameW(nullptr, processPath, MAX_PATH) != 0) {
                 Log("Loading process: %S", ExtractBasename(processPath).c_str());
             }
         }

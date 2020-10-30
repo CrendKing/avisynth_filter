@@ -46,7 +46,7 @@ auto JoinStrings(const std::vector<std::wstring> &input, wchar_t delimiter) -> s
     return std::accumulate(std::next(input.begin()),
                            input.end(),
                            input[0],
-                           [delimiter](const std::wstring &a, const std::wstring &b) {
+                           [delimiter](const std::wstring &a, const std::wstring &b) -> std::wstring {
                                return a + delimiter + b;
                            });
 }

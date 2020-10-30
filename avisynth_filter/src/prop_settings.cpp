@@ -4,7 +4,6 @@
 #include "avs_handler.h"
 #include "constants.h"
 #include "environment.h"
-#include "util.h"
 #include "version.h"
 
 
@@ -37,7 +36,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
         ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
     }
 
-    SetDlgItemText(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsFile.c_str());
+    SetDlgItemTextW(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsFile.c_str());
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
@@ -48,13 +47,13 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
         }
     }
 
-    const std::wstring title = std::wstring(L"<a>") + Widen(FILTER_NAME_BASE) +
-        L" v" + Widen(FILTER_VERSION_STRING) +
-        L"</a> with " + ConvertUtf8ToWide(g_avs->GetVersionString());
-    SetDlgItemText(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
+    const std::string title = std::string("<a>") + FILTER_NAME_BASE +
+        " v" + FILTER_VERSION_STRING +
+        "</a> with " + g_avs->GetVersionString();
+    SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
-    PostMessage(m_hwnd, WM_NEXTDLGCTL, 1, FALSE);
+    PostMessageA(m_hwnd, WM_NEXTDLGCTL, 1, FALSE);
 
     return S_OK;
 }
@@ -74,8 +73,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
 
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
-        MessageBox(m_hwnd, L"AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
-                   FILTER_NAME_WIDE, MB_OK | MB_ICONINFORMATION);
+        MessageBoxA(m_hwnd, "AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
+                    FILTER_NAME_FULL, MB_OK | MB_ICONINFORMATION);
     } else if (!_configAvsFile.empty()) {
         _filter->ReloadAvsFile(_configAvsFile);
     }
@@ -91,7 +90,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
 
             if (eventTarget == IDC_EDIT_AVS_FILE) {
                 wchar_t buf[STR_MAX_LENGTH];
-                GetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
+                GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
                 const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
 
                 if (newValue != _configAvsFile) {
@@ -105,21 +104,21 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             const WORD eventTarget = LOWORD(wParam);
 
             if (eventTarget == IDC_BUTTON_EDIT && !_configAvsFile.empty()) {
-                ShellExecute(hwnd, L"edit", _configAvsFile.c_str(), nullptr, nullptr, SW_SHOW);
+                ShellExecuteW(hwnd, L"edit", _configAvsFile.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
                 _filter->ReloadAvsFile(_filter->GetEffectiveAvsFile());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
                 wchar_t szFile[MAX_PATH] {};
 
-                OPENFILENAME ofn {};
+                OPENFILENAMEW ofn {};
                 ofn.lStructSize = sizeof(OPENFILENAME);
                 ofn.lpstrFile = szFile;
                 ofn.nMaxFile = sizeof(szFile);
                 ofn.lpstrFilter = L"avs Files\0*.avs\0All Files\0*.*\0";
                 ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-                if (GetOpenFileName(&ofn) == TRUE) {
-                    SetDlgItemText(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
+                if (GetOpenFileNameW(&ofn) == TRUE) {
+                    SetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
                     SetDirty();
                 }
             } else if (eventTarget > IDC_INPUT_FORMAT_START && eventTarget < IDC_INPUT_FORMAT_END) {
@@ -131,7 +130,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         break;
 
     case WM_CTLCOLORSTATIC:
-        if (GetWindowLong(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
+        if (GetWindowLongA(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
             const HDC hdc = reinterpret_cast<HDC>(wParam);
             SetBkMode(hdc, TRANSPARENT);
             // make the color of the text control (IDC_TEXT_RC_CONTROLLING) blue to catch attention
@@ -147,7 +146,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             switch (notifyHeader->code) {
             case NM_CLICK:
             case NM_RETURN:
-                ShellExecute(hwnd, L"open", L"https://github.com/CrendKing/avisynth_filter", nullptr, nullptr, SW_SHOW);
+                ShellExecuteA(hwnd, "open", "https://github.com/CrendKing/avisynth_filter", nullptr, nullptr, SW_SHOW);
                 return 0;
             }
         }

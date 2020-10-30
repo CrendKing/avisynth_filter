@@ -19,8 +19,8 @@ enum class AvsState {
 };
 
 static constexpr int API_VERSION                           = 1;
-static constexpr wchar_t *API_CLASS_NAME                   = L"AvsFilterRemoteControlClass";
-static constexpr wchar_t API_CSV_DELIMITER                 = ';';
+static constexpr char *API_CLASS_NAME                      = "AvsFilterRemoteControlClass";
+static constexpr char API_CSV_DELIMITER                    = ';';
 
 // scale the fractional numbers by a factor and convert to integer for API messaging
 static constexpr int PAR_SCALE_FACTOR = 1000;

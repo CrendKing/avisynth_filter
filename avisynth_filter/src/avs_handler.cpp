@@ -219,9 +219,9 @@ auto AvsHandler::GetErrorString() const -> std::optional<std::string> {
 }
 
 auto AvsHandler::LoadModule() const -> HMODULE {
-    const HMODULE module = LoadLibrary(L"AviSynth.dll");
+    const HMODULE module = LoadLibraryA("AviSynth.dll");
     if (module == nullptr) {
-        ShowFatalError(L"Failed to load AviSynth.dll");
+        ShowFatalError("Failed to load AviSynth.dll");
     }
     return module;
 }
@@ -236,12 +236,12 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     using CreateScriptEnvironment_Func = auto (AVSC_CC *) (int version)->IScriptEnvironment *;
     const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_module, "CreateScriptEnvironment"));
     if (CreateScriptEnvironment == nullptr) {
-        ShowFatalError(L"Unable to locate CreateScriptEnvironment()");
+        ShowFatalError("Unable to locate CreateScriptEnvironment()");
     }
 
     IScriptEnvironment *env = CreateScriptEnvironment(MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION);
     if (env == nullptr) {
-        ShowFatalError(L"CreateScriptEnvironment() returns nullptr");
+        ShowFatalError("CreateScriptEnvironment() returns nullptr");
     }
 
     AVS_linkage = env->GetAVSLinkage();
@@ -249,11 +249,11 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     return env;
 }
 
-[[ noreturn ]] auto AvsHandler::ShowFatalError(const wchar_t *errorMessage) const -> void {
+[[ noreturn ]] auto AvsHandler::ShowFatalError(const char *errorMessage) const -> void {
     g_env->Log("%S", errorMessage);
-    MessageBox(nullptr, errorMessage, FILTER_NAME_WIDE, MB_ICONERROR);
+    MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     FreeLibrary(_module);
-    throw(errorMessage);
+    throw std::runtime_error(errorMessage);
 }
 
 }
