@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "input_pin.h"
 #include "allocator.h"
+#include "avs_handler.h"
 #include "environment.h"
 #include "format.h"
 
@@ -32,7 +33,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
             CheckHr(m_pAllocator->Decommit());
             CheckHr(m_pAllocator->GetProperties(&props));
 
-            props.cBuffers = max(g_env.GetOutputThreads() + 1, props.cBuffers);
+            props.cBuffers = max(g_env->GetOutputThreads() + 1, props.cBuffers);
 
             const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*pmt);
             props.cbBuffer = bih->biSizeImage;
@@ -94,7 +95,9 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
-    _filter.ReloadAviSynthScript(_filter.m_pInput->CurrentMediaType());
+    g_avs->LinkFrameHandler(&_filter.frameHandler);
+    g_avs->ReloadScript(_filter._effectiveAvsFile, _filter.m_pInput->CurrentMediaType(), true);
+
     _filter.frameHandler.StartWorkerThreads();
 
     return __super::Active();

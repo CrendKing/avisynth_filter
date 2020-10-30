@@ -12,6 +12,7 @@ namespace AvsFilter {
 class CAviSynthFilter
     : public CVideoTransformFilter
     , public ISpecifyPropertyPages {
+
     friend class CAviSynthFilterInputPin;
     friend class FrameHandler;
 
@@ -37,16 +38,13 @@ public:
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;
 
-    auto GetAvsVersionString() const -> const char *;
     auto GetInputFormat() const -> Format::VideoFormat;
     auto GetOutputFormat() const -> Format::VideoFormat;
     auto GetEffectiveAvsFile() const -> std::wstring;
-    auto GetSourceAvgFrameRate() const -> int;
     auto ReloadAvsFile(const std::wstring &avsFile) -> void;
     auto GetVideoSourcePath() const -> std::wstring;
     auto GetVideoFilterNames() const -> std::vector<std::wstring>;
     auto GetAvsState() const -> AvsState;
-    auto GetAvsError() const -> std::optional<std::string>;
 
     FrameHandler frameHandler;
     
@@ -70,9 +68,6 @@ private:
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
 
     auto TraverseFiltersInGraph() -> void;
-    auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE *;
-    auto InitAviSynth() -> bool;
-    auto ReloadAviSynthScript(const AM_MEDIA_TYPE &mediaType) -> bool;
 
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
@@ -87,22 +82,12 @@ private:
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
     bool _confirmNewOutputFormat;
-    
-    std::wstring _effectiveAvsFile;
-    const char *_avsVersionString;
-    VideoInfo _avsSourceVideoInfo;
-    VideoInfo _avsScriptVideoInfo;
-    PClip _avsSourceClip;
-    PClip _avsScriptClip;
-    REFERENCE_TIME _sourceAvgFrameTime;
-    REFERENCE_TIME _scriptAvgFrameTime;
-    int _sourceAvgFrameRate;
 
+    std::wstring _effectiveAvsFile;
     bool _reloadAvsSource;
 
     std::wstring _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;
-    std::string _avsError;
 };
 
 }

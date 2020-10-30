@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "remote_control.h"
 #include "api.h"
+#include "avs_handler.h"
 #include "constants.h"
 #include "environment.h"
 #include "filter.h"
@@ -62,13 +63,13 @@ auto RemoteControl::Run() -> void {
 	}
 	SetWindowLongPtr(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	g_env.Log("Remote control started");
+	g_env->Log("Remote control started");
 
 	MSG msg;
 	BOOL msgRet;
 	while ((msgRet = GetMessage(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
-			g_env.Log("Remote control message loop error: %5lu", GetLastError());
+			g_env->Log("Remote control message loop error: %5lu", GetLastError());
 			break;
 		} else {
 			TranslateMessage(&msg);
@@ -79,7 +80,7 @@ auto RemoteControl::Run() -> void {
 	DestroyWindow(_hWnd);
 	UnregisterClass(API_CLASS_NAME, wc.hInstance);
 
-	g_env.Log("Remote control stopped");
+	g_env->Log("Remote control stopped");
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {
@@ -140,7 +141,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.GetInputFormat().hdrLuminance;
 
     case API_MSG_GET_SOURCE_AVG_FPS:
-        return _filter.GetSourceAvgFrameRate();
+        return g_avs->GetSourceAvgFrameRate();
 
     case API_MSG_GET_CURRENT_OUTPUT_FPS:
         return _filter.frameHandler.GetCurrentOutputFrameRate();
@@ -149,7 +150,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return static_cast<LRESULT>(_filter.GetAvsState());
 
     case API_MSG_GET_AVS_ERROR:
-        if (const std::optional<std::string> optAvsError = _filter.GetAvsError()) {
+        if (const std::optional<std::string> optAvsError = g_avs->GetErrorString()) {
             SendString(hSenderWindow, copyData->dwData, *optAvsError);
             return TRUE;
         } else {

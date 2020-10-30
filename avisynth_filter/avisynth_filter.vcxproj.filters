@@ -75,6 +75,12 @@
     <ClInclude Include="src\environment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\avs_handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rc_ptr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\pch.cpp">
@@ -126,6 +132,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\environment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\avs_handler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,22 +1,19 @@
 #pragma once
 
 #include "pch.h"
+#include "rc_ptr.h"
 #include "registry.h"
-
 
 namespace AvsFilter {
 
 class Environment {
 public:
     Environment();
-
-    auto Initialize(HRESULT *phr) -> bool;
-    auto Destroy() -> void;
+    virtual ~Environment();
 
     auto SaveConfig() const -> void;
     auto Log(const char *format, ...) -> void;
 
-    auto GetAvsEnv() const -> IScriptEnvironment *;
     auto GetAvsFile() const -> const std::wstring &;
     auto SetAvsFile(const std::wstring &avsFile) -> void;
     auto GetInputFormatBits() const->DWORD;
@@ -25,13 +22,6 @@ public:
     auto IsRemoteControlEnabled() const -> bool;
 
 private:
-    auto ShowFatalError(const wchar_t *errorMessage, HRESULT *phr) -> void;
-
-    int _refcount;
-
-    HMODULE _avsModule;
-    IScriptEnvironment *_avsEnv;
-
     Registry _registry;
     std::wstring _avsFile;
     DWORD _inputFormatBits;
@@ -43,6 +33,6 @@ private:
     std::mutex _logMutex;
 };
 
-extern Environment g_env;
+extern ReferenceCountPointer<Environment> g_env;
 
 }

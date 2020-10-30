@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\allocator.h" />
+    <ClInclude Include="src\avs_handler.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\filter.h" />
     <ClInclude Include="src\format.h" />
@@ -31,6 +32,7 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\prop_settings.h" />
     <ClInclude Include="src\prop_status.h" />
+    <ClInclude Include="src\rc_ptr.h" />
     <ClInclude Include="src\registry.h" />
     <ClInclude Include="src\api.h" />
     <ClInclude Include="src\remote_control.h" />
@@ -42,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\allocator.cpp" />
+    <ClCompile Include="src\avs_handler.cpp" />
     <ClCompile Include="src\filter.cpp" />
     <ClCompile Include="src\format.cpp" />
     <ClCompile Include="src\barrier.cpp" />

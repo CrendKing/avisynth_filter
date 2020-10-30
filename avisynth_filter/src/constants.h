@@ -56,6 +56,9 @@ static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 #define SETTINGS_WIDE                     Widen(SETTINGS_FULL)
 #define STATUS_WIDE                       Widen(STATUS_FULL)
 
+// interface version 7 = AviSynth+ 3.5
+static constexpr int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION = 7;
+
 /*
  * Max number of frames received before blocking upstream from flooding the input queue.
  * Once reached, it must wait until the output thread delivers and GC source frames.

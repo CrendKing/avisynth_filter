@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "avs_handler.h"
 #include "constants.h"
 #include "environment.h"
 #include "filter.h"
@@ -15,11 +15,10 @@
 #endif
 #pragma comment(lib, "winmm.lib")
 
-const AVS_Linkage *AVS_linkage = nullptr;
-
 namespace AvsFilter {
 
-Environment g_env;
+ReferenceCountPointer<Environment> g_env;
+ReferenceCountPointer<AvsHandler> g_avs;
 
 static REGFILTERPINS REG_PINS[] = {
     { nullptr                                // pin name (obsolete)
@@ -54,9 +53,8 @@ static constexpr AMOVIESETUP_FILTER REG_FILTER = {
 template <typename T>
 static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
     if constexpr (std::is_same_v<T, CAviSynthFilter>) {
-        if (!g_env.Initialize(phr)) {
-            return nullptr;
-        }
+        g_env.AddRef();
+        g_avs.AddRef();
     }
 
     CUnknown *newInstance = new T(pUnk, phr);

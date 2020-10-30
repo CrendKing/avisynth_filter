@@ -4,13 +4,17 @@
 
 namespace AvsFilter {
 
-SourceClip::SourceClip(FrameHandler &frameHandler, const VideoInfo &videoInfo)
-    : _frameHandler(frameHandler)
-    , _videoInfo(videoInfo) {
+SourceClip::SourceClip(const VideoInfo &videoInfo)
+    : _videoInfo(videoInfo)
+    , _frameHandler(nullptr) {
+}
+
+auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
+    _frameHandler = frameHandler;
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    return _frameHandler.GetSourceFrame(frameNb, env);
+    return _frameHandler->GetSourceFrame(frameNb, env);
 }
 
 auto SourceClip::GetParity(int frameNb) -> bool {

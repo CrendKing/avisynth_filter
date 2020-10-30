@@ -7,8 +7,6 @@
 namespace AvsFilter {
 
 class CAviSynthFilterInputPin : public CTransformInputPin {
-    friend class CAviSynthFilter;
-
 public:
     CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
                             __inout CTransformFilter *pTransformFilter,

@@ -8,93 +8,36 @@
 namespace AvsFilter {
 
 Environment::Environment()
-    : _refcount(0)
-    , _avsModule(nullptr)
-    , _avsEnv(nullptr)
-    , _inputFormatBits(0)
-    , _outputThreads(DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT)
-    , _isRemoteControlEnabled(false)
+    : _avsFile(_registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE))
+    , _inputFormatBits(_registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1))
+    , _outputThreads(_registry.ReadNumber(REGISTRY_VALUE_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT))
+    , _isRemoteControlEnabled(_registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0)
     , _logFile(nullptr)
     , _logStartTime(0) {
-}
+    const std::wstring logFilePath = _registry.ReadString(REGISTRY_VALUE_NAME_LOG_FILE);
+    if (!logFilePath.empty()) {
+        _logFile = _wfsopen(logFilePath.c_str(), L"w", _SH_DENYNO);
+        if (_logFile != nullptr) {
+            _logStartTime = timeGetTime();
 
-auto Environment::Initialize(HRESULT *phr) -> bool {
-    if (_refcount == 0) {
-        _avsModule = LoadLibrary(L"AviSynth.dll");
-        if (_avsModule == nullptr) {
-            ShowFatalError(L"Failed to load AviSynth.dll", phr);
-            return false;
-        }
+            setlocale(LC_CTYPE, ".utf8");
 
-        /*
-        use CreateScriptEnvironment() instead of CreateScriptEnvironment2().
-        CreateScriptEnvironment() is exported from their .def file, which guarantees a stable exported name.
-        CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
-        We don't use any new feature from IScriptEnvironment2 anyway.
-        */
-        using CreateScriptEnvironment_Func = auto (AVSC_CC *)(int version) -> IScriptEnvironment *;
-        const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
-        if (CreateScriptEnvironment == nullptr) {
-            ShowFatalError(L"Unable to locate CreateScriptEnvironment()", phr);
-            return false;
-        }
+            Log("Configured script file: %S", ExtractBasename(_avsFile.c_str()).c_str());
+            Log("Configured input formats: %lu", _inputFormatBits);
+            Log("Configured output threads: %i", _outputThreads);
 
-        // interface version 7 = AviSynth+ 3.5
-        _avsEnv = CreateScriptEnvironment(7);
-        if (_avsEnv == nullptr) {
-            ShowFatalError(L"CreateScriptEnvironment() returns nullptr", phr);
-            return false;
-        }
-
-        AVS_linkage = _avsEnv->GetAVSLinkage();
-
-        _avsFile = _registry.ReadString(REGISTRY_VALUE_NAME_AVS_FILE);
-        _inputFormatBits = _registry.ReadNumber(REGISTRY_VALUE_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
-        _outputThreads = _registry.ReadNumber(REGISTRY_VALUE_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
-        _isRemoteControlEnabled = _registry.ReadNumber(REGISTRY_VALUE_NAME_REMOTE_CONTROL, 0) != 0;
-
-        const std::wstring logFilePath = _registry.ReadString(REGISTRY_VALUE_NAME_LOG_FILE);
-        if (!logFilePath.empty()) {
-            _logFile = _wfsopen(logFilePath.c_str(), L"w", _SH_DENYNO);
-            if (_logFile != nullptr) {
-                _logStartTime = timeGetTime();
-
-                setlocale(LC_CTYPE, ".utf8");
-
-                Log("Configured script file: %S", ExtractBasename(_avsFile.c_str()).c_str());
-                Log("Configured input formats: %lu", _inputFormatBits);
-                Log("Configured output threads: %i", _outputThreads);
-
-                wchar_t processPath[MAX_PATH];
-                if (GetModuleFileName(nullptr, processPath, MAX_PATH) != 0) {
-                    Log("Loading process: %S", ExtractBasename(processPath).c_str());
-                }
+            wchar_t processPath[MAX_PATH];
+            if (GetModuleFileName(nullptr, processPath, MAX_PATH) != 0) {
+                Log("Loading process: %S", ExtractBasename(processPath).c_str());
             }
         }
     }
-
-    _refcount += 1;
-    return true;
 }
 
-auto Environment::Destroy() -> void {
-    _refcount -= 1;
-
-    if (_refcount == 0) {
-        _avsEnv->DeleteScriptEnvironment();
-        FreeLibrary(_avsModule);
-
-        if (_logFile != nullptr) {
-            fclose(_logFile);
-        }
+Environment::~Environment() {
+    if (_logFile != nullptr) {
+        fclose(_logFile);
     }
-}
-
-auto Environment::ShowFatalError(const wchar_t *errorMessage, HRESULT *phr) -> void {
-    *phr = E_FAIL;
-    Log("%S", errorMessage);
-    MessageBox(nullptr, errorMessage, FILTER_NAME_WIDE, MB_ICONERROR);
-    FreeLibrary(_avsModule);
 }
 
 auto Environment::SaveConfig() const -> void {
@@ -119,10 +62,6 @@ auto Environment::Log(const char *format, ...) -> void {
     fputc('\n', _logFile);
 
     fflush(_logFile);
-}
-
-auto Environment::GetAvsEnv() const -> IScriptEnvironment * {
-    return _avsEnv;
 }
 
 auto Environment::GetAvsFile() const -> const std::wstring & {

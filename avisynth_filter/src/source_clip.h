@@ -10,7 +10,9 @@ class CAviSynthFilter;
 
 class SourceClip : public IClip {
 public:
-    SourceClip(FrameHandler &frameHandler, const VideoInfo &videoInfo);
+    explicit SourceClip(const VideoInfo &videoInfo);
+
+    auto SetFrameHandler(FrameHandler *frameHandler) -> void;
 
     auto __stdcall GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame override;
     auto __stdcall GetParity(int frameNb) -> bool override;
@@ -19,8 +21,8 @@ public:
     auto __stdcall GetVideoInfo() -> const VideoInfo & override;
 
 private:
-    FrameHandler &_frameHandler;
     const VideoInfo &_videoInfo;
+    FrameHandler *_frameHandler;
 };
 
 }
