@@ -329,6 +329,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         {
             PVideoFrame scriptFrame;
             try {
+                // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
                 scriptFrame = g_avs->GetScriptClip()->GetFrame(outFrameInfo.frameNb, g_avs->GetEnv());
             } catch (AvisynthError) {
                 goto BEGIN_OF_DELIVERY;

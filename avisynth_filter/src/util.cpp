@@ -4,33 +4,18 @@
 
 namespace AvsFilter {
 
-auto ReplaceSubstring(std::string &str, const char *target, const char *rep) -> void {
-    const size_t repLen = strlen(target);
-    size_t index = 0;
-
-    while (true) {
-        index = str.find(target, index);
-        if (index == std::string::npos) {
-            break;
-        }
-
-        str.replace(index, repLen, rep);
-        index += repLen;
-    }
+auto ConvertWideToUtf8(const std::wstring &wideString) -> std::string {
+    const int count = WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), static_cast<int>(wideString.length()), nullptr, 0, nullptr, nullptr);
+    std::string ret(count, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, ret.data(), count, nullptr, nullptr);
+    return ret;
 }
 
-auto ConvertWideToUtf8(const std::wstring &wstr) -> std::string {
-    const int count = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.length()), nullptr, 0, nullptr, nullptr);
-    std::string str(count, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, nullptr, nullptr);
-    return str;
-}
-
-auto ConvertUtf8ToWide(const std::string &str) -> std::wstring {
-    const int count = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0);
-    std::wstring wstr(count, 0);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), &wstr[0], count);
-    return wstr;
+auto ConvertUtf8ToWide(const std::string &utf8String) -> std::wstring {
+    const int count = MultiByteToWideChar(CP_UTF8, 0, utf8String.c_str(), static_cast<int>(utf8String.length()), nullptr, 0);
+    std::wstring ret(count, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8String.c_str(), -1, ret.data(), count);
+    return ret;
 }
 
 auto DoubleToString(double d, int precision) -> std::string {

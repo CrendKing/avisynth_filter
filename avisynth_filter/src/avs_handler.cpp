@@ -134,8 +134,8 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
     AVSValue invokeResult;
 
     if (!filename.empty()) {
-        const std::string utf8File = ConvertWideToUtf8(filename);
-        const AVSValue args[2] = { utf8File.c_str(), true };
+        const std::string utf8Filename = ConvertWideToUtf8(filename);
+        const AVSValue args[2] = { utf8Filename.c_str(), true };
         const char *const argNames[2] = { nullptr, "utf8" };
 
         try {
@@ -158,13 +158,15 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
     }
 
     if (!_errorString.empty()) {
-        std::string errorScript = _errorString;
-        ReplaceSubstring(errorScript, "\"", "\'");
-        ReplaceSubstring(errorScript, "\n", "\\n");
-        errorScript.insert(0, "return Subtitle(AvsFilterSource(), \"");
-        errorScript.append("\", lsp=0, utf8=true)");
+        // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
+        const char *errorFormat =
+            "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n"
+            "Prefetch(%i)\n";  // add trailing '\n' to pad size because snprintf() does not count the terminating null
 
-        invokeResult = _env->Invoke("Eval", AVSValue(errorScript.c_str()));
+        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env->GetOutputThreads());
+        const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
+        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env->GetOutputThreads());
+        invokeResult = _env->Invoke("Eval", AVSValue(errorScript.get()));
     }
 
     _scriptClip = invokeResult.AsClip();
