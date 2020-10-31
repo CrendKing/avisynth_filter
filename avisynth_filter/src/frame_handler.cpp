@@ -20,7 +20,7 @@ FrameHandler::FrameHandler(CAviSynthFilter &filter)
 auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     std::unique_lock srcLock(_sourceFramesMutex);
 
-    _addInputSampleCv.wait(srcLock, [this]() {
+    _addInputSampleCv.wait(srcLock, [this]() -> bool {
         if (_isFlushing || _stopThreads) {
             return true;
         }
@@ -130,7 +130,7 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     _addInputSampleCv.notify_one();
 
     std::map<int, SourceFrameInfo>::const_iterator iter;
-    _newSourceFrameCv.wait(srcLock, [this, &iter, frameNb]() {
+    _newSourceFrameCv.wait(srcLock, [this, &iter, frameNb]() -> bool {
         if (_isFlushing) {
             return true;
         }
@@ -293,7 +293,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
         std::unique_lock outLock(_outputFramesMutex);
 
-        _outputFramesCv.wait(outLock, [this]() {
+        _outputFramesCv.wait(outLock, [this]() -> bool {
             return _isFlushing || !_outputFrames.empty();
         });
 
@@ -361,7 +361,7 @@ BEGIN_OF_DELIVERY:
             // most renderers require samples to be delivered in order
             // so we need to synchronize between the output threads
 
-            _deliveryCv.wait(delLock, [this, &outFrameInfo]() {
+            _deliveryCv.wait(delLock, [this, &outFrameInfo]() -> bool {
                 return _isFlushing || outFrameInfo.frameNb == _nextDeliverFrameNb;
             });
 

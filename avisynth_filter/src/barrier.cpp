@@ -17,7 +17,7 @@ auto Barrier::Arrive() -> void {
         _waitCv.notify_all();
     }
 
-    _arriveCv.wait(lock, [this]() {
+    _arriveCv.wait(lock, [this]() -> bool {
         return _currentCount == _initialCount;
     });
 }
@@ -25,7 +25,7 @@ auto Barrier::Arrive() -> void {
 auto Barrier::Wait() -> void {
     std::shared_lock lock(_mutex);
 
-    _waitCv.wait(lock, [this]() {
+    _waitCv.wait(lock, [this]() -> bool {
         return _currentCount <= 0;
     });
 }

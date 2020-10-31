@@ -14,11 +14,12 @@ public:
     }
 
     constexpr auto operator=(T *ptr) -> ReferenceCountPointer<T> & {
-        if (_ptr != ptr) {
-            _ptr = ptr;
-            _ref = 1;
+        if (_ptr != nullptr) {
+            throw std::invalid_argument("already has stored pointer");
         }
 
+        _ptr = ptr;
+        _ref = 1;
         return *this;
     }
 
