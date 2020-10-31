@@ -16,6 +16,7 @@ assignees: ''
 - Video renderer: [e.g. madVR, EVR]
 - Video format: [e.g. NV12, P010]
 - AviSynth script: [e.g. minimum content required to reproduce the issue, or software you used such as SVP]
+- Do you use other DirectShow filters? Specify name and version: [e.g. ffdshow]
 
 ### Describe the bug
 <!-- Summary of the unexpected behavior you are experiencing. -->
