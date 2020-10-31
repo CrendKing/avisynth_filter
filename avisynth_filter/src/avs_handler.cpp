@@ -161,11 +161,11 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
         // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
         const char *errorFormat =
             "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n"
-            "Prefetch(%i)\n";  // add trailing '\n' to pad size because snprintf() does not count the terminating null
+            "if (%i > 1) { Prefetch(%i) }\n";  // add trailing '\n' to pad size because snprintf() does not count the terminating null
 
-        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env->GetOutputThreads());
+        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env->GetOutputThreads(), g_env->GetOutputThreads());
         const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
-        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env->GetOutputThreads());
+        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env->GetOutputThreads(), g_env->GetOutputThreads());
         invokeResult = _env->Invoke("Eval", AVSValue(errorScript.get()));
     }
 

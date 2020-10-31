@@ -167,9 +167,9 @@ BEGIN
             VALUE "CompanyName",      "CrendKing"
             VALUE "FileDescription",  "AviSynth DirectShow Filter"
             VALUE "FileVersion",      FILTER_VERSION_STRING
-            VALUE "InternalName",     "avisynth_filter.ax"
-            VALUE "LegalCopyright",   "Copyright (C) 2020"
-            VALUE "OriginalFilename", "avisynth_filter.ax"
+            VALUE "InternalName",     FILTER_FILENAME_BASE ".ax"
+            VALUE "LegalCopyright",   "Copyright (C) 2020 CrendKing"
+            VALUE "OriginalFilename", FILTER_FILENAME_BASE ".ax"
             VALUE "ProductName",      FILTER_NAME_BASE
             VALUE "ProductVersion",   FILTER_VERSION_STRING
         END

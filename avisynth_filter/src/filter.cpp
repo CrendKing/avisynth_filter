@@ -5,7 +5,6 @@
 #include "constants.h"
 #include "environment.h"
 #include "input_pin.h"
-#include "util.h"
 #include "version.h"
 
 
@@ -430,6 +429,39 @@ auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std:
         }
 
         g_env->Log("Reject input definition due to settings: %2i", *optInputDefinition);
+    }
+
+    return std::nullopt;
+}
+
+auto CAviSynthFilter::FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *> {
+    ATL::CComPtr<IEnumPins> enumPins;
+    if (FAILED(pFilter->EnumPins(&enumPins))) {
+        return std::nullopt;
+    }
+
+    while (true) {
+        ATL::CComPtr<IPin> currPin;
+        if (enumPins->Next(1, &currPin, nullptr) != S_OK) {
+            break;
+        }
+
+        PIN_DIRECTION dir;
+        if (FAILED(currPin->QueryDirection(&dir))) {
+            break;
+        }
+
+        if (dir == PINDIR_OUTPUT) {
+            AM_MEDIA_TYPE mediaType;
+            if (SUCCEEDED(currPin->ConnectionMediaType(&mediaType))) {
+                const bool found = (mediaType.majortype == MEDIATYPE_Video || mediaType.majortype == MEDIATYPE_Stream);
+                FreeMediaType(mediaType);
+
+                if (found) {
+                    return currPin;
+                }
+            }
+        }
     }
 
     return std::nullopt;

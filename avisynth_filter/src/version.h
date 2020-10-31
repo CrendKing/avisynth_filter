@@ -7,6 +7,7 @@ namespace AvsFilter {
 #define STR(x)                          STR_HELPER(x)
 
 #define FILTER_NAME_BASE                "AviSynth Filter"
+#define FILTER_FILENAME_BASE            "avisynth_filter"
 #define FILTER_VERSION_MAJOR            0
 #define FILTER_VERSION_MINOR            7
 #define FILTER_VERSION_PATCH            5

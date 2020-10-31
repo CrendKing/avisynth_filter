@@ -22,12 +22,21 @@ public:
     auto IsRemoteControlEnabled() const -> bool;
 
 private:
+    auto LoadConfigFromIni() -> bool;
+    auto LoadConfigFromRegistry() -> void;
+    auto SaveConfigToIni() const -> bool;
+    auto SaveConfigToRegistry() const -> void;
+
     Registry _registry;
+    bool _useIni;
+
     std::wstring _avsFile;
     DWORD _inputFormatBits;
     int _outputThreads;
     bool _isRemoteControlEnabled;
 
+    std::wstring _iniFilePath;
+    std::wstring _logFilePath;
     FILE *_logFile;
     DWORD _logStartTime;
     std::mutex _logMutex;

@@ -63,12 +63,11 @@ private:
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
     static auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
+    static auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *>;
 
     auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
-
     auto TraverseFiltersInGraph() -> void;
-
     auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
     auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 

@@ -40,6 +40,8 @@
 // AviSynth
 #include <avisynth.h>
 
+#include <SimpleIni.h>
+
 #pragma warning(pop)
 
 #include "resource.h"
