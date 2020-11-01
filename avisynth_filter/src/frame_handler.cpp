@@ -1,3 +1,5 @@
+// License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
+
 #include "pch.h"
 #include "frame_handler.h"
 #include "avs_handler.h"

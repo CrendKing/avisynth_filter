@@ -1,3 +1,5 @@
+// License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
+
 #pragma once
 
 #include "pch.h"

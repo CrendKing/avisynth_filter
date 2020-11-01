@@ -1,3 +1,5 @@
+// License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
+
 #include "pch.h"
 #include "remote_control.h"
 #include "api.h"
