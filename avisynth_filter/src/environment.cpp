@@ -20,17 +20,20 @@ Environment::Environment()
     wchar_t processDirname[_MAX_DIR] {};
     wchar_t processFilename[_MAX_FNAME] {};
     wchar_t processFileExt[_MAX_EXT] {};
-    if (GetModuleFileNameW(nullptr, processPath, _MAX_PATH) != 0) {
-        if (_wsplitpath_s(processPath, processDrive, _MAX_DRIVE, processDirname, _MAX_DIR, processFilename, _MAX_FNAME, processFileExt, _MAX_EXT) == 0) {
-            _iniFilePath = std::wstring(processDrive) + processDirname + Widen(FILTER_FILENAME_BASE) + L".ini";
-        }
+    if (GetModuleFileNameW(nullptr, processPath, _MAX_PATH) != 0 &&
+        _wsplitpath_s(processPath, processDrive, _MAX_DRIVE, processDirname, _MAX_DIR, processFilename, _MAX_FNAME, processFileExt, _MAX_EXT) == 0) {
+        _iniFilePath = std::wstring(processDrive) + processDirname + Widen(FILTER_FILENAME_BASE) + L".ini";
+        _useIni = _ini.LoadFile(_iniFilePath.c_str()) == SI_OK;
     }
 
-    if (!_iniFilePath.empty()) {
-        _useIni = LoadConfigFromIni();
-    }
-    if (!_useIni) {
-        LoadConfigFromRegistry();
+    if (_useIni) {
+        LoadSettingsFromIni();
+    } else if (_registry.Initialize()) {
+        LoadSettingsFromRegistry();
+    } else {
+        const char *errorMessage = "Unload to load settings";
+        g_env->Log("%S", errorMessage);
+        MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     }
 
     if (!_logFilePath.empty()) {
@@ -59,9 +62,11 @@ Environment::~Environment() {
     }
 }
 
-auto Environment::SaveConfig() const -> void {
-    if (!_useIni || !SaveConfigToIni()) {
-        SaveConfigToRegistry();
+auto Environment::SaveSettings() const -> void {
+    if (_useIni) {
+        SaveSettingsToIni();
+    } else if (_registry) {
+        SaveSettingsToRegistry();
     }
 }
 
@@ -90,6 +95,10 @@ auto Environment::GetAvsFile() const -> const std::wstring & {
 
 auto Environment::SetAvsFile(const std::wstring &avsFile) -> void {
     _avsFile = avsFile;
+
+    if (_useIni) {
+        _ini.SetValue(L"", SETTING_NAME_AVS_FILE, _avsFile.c_str());
+    }
 }
 
 auto Environment::GetInputFormatBits() const -> DWORD {
@@ -98,6 +107,10 @@ auto Environment::GetInputFormatBits() const -> DWORD {
 
 auto Environment::SetInputFormatBits(DWORD formatBits) -> void {
     _inputFormatBits = formatBits;
+
+    if (_useIni) {
+        _ini.SetLongValue(L"", SETTING_NAME_FORMATS, _inputFormatBits);
+    }
 }
 
 auto Environment::GetOutputThreads() const -> int {
@@ -108,22 +121,15 @@ auto Environment::IsRemoteControlEnabled() const -> bool {
     return _isRemoteControlEnabled;
 }
 
-auto Environment::LoadConfigFromIni() -> bool {
-    CSimpleIniW ini;
-    if (ini.LoadFile(_iniFilePath.c_str()) != SI_OK) {
-        return false;
-    }
-
-    _avsFile = ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
-    _inputFormatBits = ini.GetLongValue(L"", SETTING_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
-    _outputThreads = ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
-    _isRemoteControlEnabled = ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
-    _logFilePath = ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
-
-    return true;
+auto Environment::LoadSettingsFromIni() -> void {
+    _avsFile = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
+    _inputFormatBits = _ini.GetLongValue(L"", SETTING_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
+    _outputThreads = _ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
+    _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
+    _logFilePath = _ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
 }
 
-auto Environment::LoadConfigFromRegistry() -> void {
+auto Environment::LoadSettingsFromRegistry() -> void {
     _avsFile = _registry.ReadString(SETTING_NAME_AVS_FILE);
     _inputFormatBits = _registry.ReadNumber(SETTING_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
     _outputThreads = _registry.ReadNumber(SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
@@ -131,24 +137,13 @@ auto Environment::LoadConfigFromRegistry() -> void {
     _logFilePath = _registry.ReadString(SETTING_NAME_LOG_FILE);
 }
 
-auto Environment::SaveConfigToIni() const -> bool {
-    CSimpleIniW ini;
-
-    ini.SetValue(L"", SETTING_NAME_AVS_FILE, _avsFile.c_str());
-    ini.SetLongValue(L"", SETTING_NAME_FORMATS, _inputFormatBits);
-    ini.SetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, _outputThreads);
-    ini.SetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled);
-    ini.SetValue(L"", SETTING_NAME_LOG_FILE, _logFilePath.c_str());
-
-    return ini.SaveFile(_iniFilePath.c_str()) == SI_OK;
+auto Environment::SaveSettingsToIni() const -> void {
+    (void) _ini.SaveFile(_iniFilePath.c_str());
 }
 
-auto Environment::SaveConfigToRegistry() const -> void {
+auto Environment::SaveSettingsToRegistry() const -> void {
     _registry.WriteString(SETTING_NAME_AVS_FILE, _avsFile);
     _registry.WriteNumber(SETTING_NAME_FORMATS, _inputFormatBits);
-    _registry.WriteNumber(SETTING_NAME_OUTPUT_THREADS, _outputThreads);
-    _registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled);
-    _registry.WriteString(SETTING_NAME_LOG_FILE, _logFilePath);
 }
 
 }

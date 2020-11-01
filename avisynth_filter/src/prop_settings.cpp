@@ -71,7 +71,7 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     }
     g_env->SetInputFormatBits(formatBits);
 
-    g_env->SaveConfig();
+    g_env->SaveSettings();
 
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
