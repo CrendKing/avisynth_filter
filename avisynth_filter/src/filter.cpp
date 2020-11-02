@@ -32,6 +32,12 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     }
 }
 
+CAviSynthFilter::~CAviSynthFilter() {
+    g_env->Log("Destroy CAviSynthFilter: %p", this);
+    g_avs.Release();
+    g_env.Release();
+}
+
 auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
     CheckPointer(ppv, E_POINTER);
 
@@ -43,18 +49,6 @@ auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingQueryInterface(REFIID riid,
     }
 
     return __super::NonDelegatingQueryInterface(riid, ppv);
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilter::NonDelegatingRelease() -> ULONG {
-    const ULONG ret = __super::NonDelegatingRelease();
-
-    if (ret == 0) {
-        g_env->Log("Destroy CAviSynthFilter: %p", this);
-        g_avs.Release();
-        g_env.Release();
-    }
-
-    return ret;
 }
 
 auto CAviSynthFilter::GetPin(int n) -> CBasePin * {
@@ -267,8 +261,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
             m_pInput->SetMediaType(reinterpret_cast<CMediaType *>(pmtIn));
         }
 
-        frameHandler.Flush();
+        frameHandler.BeginFlush();
         g_avs->ReloadScript(_effectiveAvsFile, m_pInput->CurrentMediaType(), true);
+        frameHandler.EndFlush();
         _reloadAvsSource = false;
 
         m_csReceive.Unlock();
@@ -342,8 +337,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
-        frameHandler.Flush();
+        frameHandler.BeginFlush();
         g_avs->ReloadScript(_effectiveAvsFile, m_pInput->CurrentMediaType(), true);
+        frameHandler.EndFlush();
     }
 
     return __super::EndFlush();

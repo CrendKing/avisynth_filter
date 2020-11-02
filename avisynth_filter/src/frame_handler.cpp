@@ -149,7 +149,7 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
             g_env->Log("Bad frame %6i", frameNb);
         }
 
-        return env->NewVideoFrame(_filter._inputFormat.videoInfo);
+        return g_avs->GetSourceDrainFrame();
     }
 
     g_env->Log("Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
@@ -157,8 +157,8 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     return iter->second.avsFrame;
 }
 
-auto FrameHandler::Flush() -> void {
-    g_env->Log("Frame handler begin flush");
+auto FrameHandler::BeginFlush() -> void {
+    g_env->Log("Frame handler start BeginFlush()");
 
     _isFlushing = true;
     _addInputSampleCv.notify_all();
@@ -202,11 +202,17 @@ auto FrameHandler::Flush() -> void {
     }
 
     Reset();
-    _isFlushing = false;
 
+    g_env->Log("Frame handler finish BeginFlush()");
+}
+
+auto FrameHandler::EndFlush() -> void {
+    g_env->Log("Frame handler start EndFlush()");
+
+    _isFlushing = false;
     _flushBarrier.Unlock();
 
-    g_env->Log("Frame handler end flush");
+    g_env->Log("Frame handler finish EndFlush()");
 }
 
 auto FrameHandler::GetInputBufferSize() const -> int {
@@ -261,7 +267,7 @@ auto FrameHandler::StopWorkerThreads() -> void {
     // necessary to unlock output pin's Inactive() in CTransformFilter::Stop()
     _addInputSampleCv.notify_all();
 
-    Flush();
+    BeginFlush();
 }
 
 auto FrameHandler::Reset() -> void {

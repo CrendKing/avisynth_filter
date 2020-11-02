@@ -20,11 +20,11 @@ class CAviSynthFilter
 
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
+    virtual ~CAviSynthFilter();
 
     DECLARE_IUNKNOWN
 
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT override;
-    auto STDMETHODCALLTYPE NonDelegatingRelease() -> ULONG override;
 
     // CVideoTransformFilter
     auto GetPin(int n) -> CBasePin * override;

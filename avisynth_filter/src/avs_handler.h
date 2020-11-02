@@ -23,6 +23,7 @@ public:
     auto GetVersionString() const -> const char *;
     auto GetScriptPixelType() const -> int;
     auto GetScriptClip() const -> PClip;
+    auto GetSourceDrainFrame() const -> PVideoFrame;
     auto GetSourceAvgFrameTime() const -> REFERENCE_TIME;
     auto GetScriptAvgFrameTime() const -> REFERENCE_TIME;
     auto GetSourceAvgFrameRate() const -> int;
@@ -40,6 +41,7 @@ private:
     VideoInfo _scriptVideoInfo;
     PClip _sourceClip;
     PClip _scriptClip;
+    PVideoFrame _sourceDrainFrame;
     REFERENCE_TIME _sourceAvgFrameTime;
     REFERENCE_TIME _scriptAvgFrameTime;
     int _sourceAvgFrameRate;

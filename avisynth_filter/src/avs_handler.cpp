@@ -31,6 +31,7 @@ AvsHandler::AvsHandler()
     , _scriptVideoInfo()
     , _sourceClip(new SourceClip(_sourceVideoInfo))
     , _scriptClip(nullptr)
+    , _sourceDrainFrame(nullptr)
     , _sourceAvgFrameTime(0)
     , _scriptAvgFrameTime(0)
     , _sourceAvgFrameRate(0) {
@@ -112,6 +113,7 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
     g_env->Log("ReloadAviSynthScript");
 
     _sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
+    _sourceDrainFrame = _env->NewVideoFrame(_sourceVideoInfo);
 
     /*
      * When reloading AviSynth, there are two alternative approaches:
@@ -200,6 +202,10 @@ auto AvsHandler::GetScriptPixelType() const -> int {
 
 auto AvsHandler::GetScriptClip() const -> PClip {
     return _scriptClip;
+}
+
+auto AvsHandler::GetSourceDrainFrame() const -> PVideoFrame {
+    return _sourceDrainFrame;
 }
 
 auto AvsHandler::GetSourceAvgFrameTime() const -> REFERENCE_TIME {
