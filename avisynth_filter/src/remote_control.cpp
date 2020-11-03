@@ -65,13 +65,13 @@ auto RemoteControl::Run() -> void {
 	}
 	SetWindowLongPtrA(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	g_env->Log("Remote control started");
+	g_env.Log("Remote control started");
 
 	MSG msg;
 	BOOL msgRet;
 	while ((msgRet = GetMessageA(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
-			g_env->Log("Remote control message loop error: %5lu", GetLastError());
+			g_env.Log("Remote control message loop error: %5lu", GetLastError());
 			break;
 		} else {
 			TranslateMessage(&msg);
@@ -82,7 +82,7 @@ auto RemoteControl::Run() -> void {
 	DestroyWindow(_hWnd);
 	UnregisterClassA(API_CLASS_NAME, wc.hInstance);
 
-	g_env->Log("Remote control stopped");
+	g_env.Log("Remote control stopped");
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {

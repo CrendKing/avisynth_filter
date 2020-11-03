@@ -19,7 +19,7 @@
 
 namespace AvsFilter {
 
-ReferenceCountPointer<Environment> g_env;
+Environment g_env;
 ReferenceCountPointer<AvsHandler> g_avs;
 
 static REGFILTERPINS REG_PINS[] = {
@@ -55,12 +55,6 @@ static constexpr AMOVIESETUP_FILTER REG_FILTER = {
 template <typename T>
 static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
     if constexpr (std::is_same_v<T, CAviSynthFilter>) {
-        if (!g_env) {
-            g_env = new Environment();
-        } else {
-            g_env.AddRef();
-        }
-
         if (!g_avs) {
             g_avs = new AvsHandler();
         } else {

@@ -46,6 +46,6 @@ private:
     std::mutex _logMutex;
 };
 
-extern ReferenceCountPointer<Environment> g_env;
+extern Environment g_env;
 
 }

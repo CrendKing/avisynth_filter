@@ -32,7 +32,7 @@ Environment::Environment()
         LoadSettingsFromRegistry();
     } else {
         const char *errorMessage = "Unload to load settings";
-        g_env->Log("%S", errorMessage);
+        g_env.Log("%S", errorMessage);
         MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     }
 

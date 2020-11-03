@@ -35,16 +35,16 @@ AvsHandler::AvsHandler()
     , _sourceAvgFrameTime(0)
     , _scriptAvgFrameTime(0)
     , _sourceAvgFrameRate(0) {
-    g_env->Log("AvsHandler()");
-    g_env->Log("Filter version: %s", FILTER_VERSION_STRING);
-    g_env->Log("AviSynth version: %s", GetVersionString());
+    g_env.Log("AvsHandler()");
+    g_env.Log("Filter version: %s", FILTER_VERSION_STRING);
+    g_env.Log("AviSynth version: %s", GetVersionString());
 
     _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
     _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 }
 
 AvsHandler::~AvsHandler() {
-    g_env->Log("~AvsHandler()");
+    g_env.Log("~AvsHandler()");
 
     _env->DeleteScriptEnvironment();
     AVS_linkage = nullptr;
@@ -110,7 +110,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
  * Create new AviSynth script clip with specified media type.
  */
 auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE &mediaType, bool fallback) -> bool {
-    g_env->Log("ReloadAviSynthScript");
+    g_env.Log("ReloadAviSynthScript");
 
     _sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
     _sourceDrainFrame = _env->NewVideoFrame(_sourceVideoInfo);
@@ -167,9 +167,9 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
             "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n"
             "if (%i > 1) { Prefetch(%i) }\n";  // add trailing '\n' to pad size because snprintf() does not count the terminating null
 
-        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env->GetOutputThreads(), g_env->GetOutputThreads());
+        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env.GetOutputThreads(), g_env.GetOutputThreads());
         const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
-        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env->GetOutputThreads(), g_env->GetOutputThreads());
+        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env.GetOutputThreads(), g_env.GetOutputThreads());
         invokeResult = _env->Invoke("Eval", AVSValue(errorScript.get()));
     }
 
@@ -260,7 +260,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
 }
 
 [[ noreturn ]] auto AvsHandler::ShowFatalError(const char *errorMessage) const -> void {
-    g_env->Log("%S", errorMessage);
+    g_env.Log("%S", errorMessage);
     MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     FreeLibrary(_module);
     throw std::runtime_error(errorMessage);

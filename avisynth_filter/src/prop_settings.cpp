@@ -32,7 +32,7 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    _configAvsFile = g_env->GetAvsFile();
+    _configAvsFile = g_env.GetAvsFile();
     _avsFileManagedByRC = _configAvsFile != _filter->GetEffectiveAvsFile();
     if (_avsFileManagedByRC) {
         ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
@@ -42,7 +42,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
-    const DWORD formatBits = g_env->GetInputFormatBits();
+    const DWORD formatBits = g_env.GetInputFormatBits();
     for (int i = 0; i < IDC_INPUT_FORMAT_END - IDC_INPUT_FORMAT_START; ++i) {
         if ((formatBits & (1 << i)) != 0) {
             CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_START + 1 + i, 1);
@@ -61,7 +61,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
-    g_env->SetAvsFile(_configAvsFile);
+    g_env.SetAvsFile(_configAvsFile);
 
     DWORD formatBits = 0;
     for (int i = 0; i < IDC_INPUT_FORMAT_END - IDC_INPUT_FORMAT_START; ++i) {
@@ -69,9 +69,9 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
             formatBits |= 1 << i;
         }
     }
-    g_env->SetInputFormatBits(formatBits);
+    g_env.SetInputFormatBits(formatBits);
 
-    g_env->SaveSettings();
+    g_env.SaveSettings();
 
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
