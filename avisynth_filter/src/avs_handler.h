@@ -22,8 +22,8 @@ public:
     auto GetEnv() const -> IScriptEnvironment *;
     auto GetVersionString() const -> const char *;
     auto GetScriptPixelType() const -> int;
-    auto GetScriptClip() const -> PClip;
-    auto GetSourceDrainFrame() const -> PVideoFrame;
+    auto GetScriptClip() -> PClip &;
+    auto GetSourceDrainFrame() -> PVideoFrame &;
     auto GetSourceAvgFrameTime() const -> REFERENCE_TIME;
     auto GetScriptAvgFrameTime() const -> REFERENCE_TIME;
     auto GetSourceAvgFrameRate() const -> int;

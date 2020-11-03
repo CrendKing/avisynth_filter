@@ -200,11 +200,11 @@ auto AvsHandler::GetScriptPixelType() const -> int {
     return _scriptVideoInfo.pixel_type;
 }
 
-auto AvsHandler::GetScriptClip() const -> PClip {
+auto AvsHandler::GetScriptClip() -> PClip & {
     return _scriptClip;
 }
 
-auto AvsHandler::GetSourceDrainFrame() const -> PVideoFrame {
+auto AvsHandler::GetSourceDrainFrame() -> PVideoFrame & {
     return _sourceDrainFrame;
 }
 

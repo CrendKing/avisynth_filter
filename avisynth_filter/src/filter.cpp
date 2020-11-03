@@ -389,12 +389,12 @@ auto CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
 }
 
 auto CAviSynthFilter::GetAvsState() const -> AvsState {
-    if (m_State == State_Stopped || !g_avs->GetScriptClip()) {
-        return AvsState::Stopped;
-    }
-
     if (g_avs->GetErrorString()) {
         return AvsState::Error;
+    }
+
+    if (m_State == State_Stopped || !g_avs->GetScriptClip()) {
+        return AvsState::Stopped;
     }
 
     if (m_State == State_Running) {
