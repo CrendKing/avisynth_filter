@@ -55,6 +55,10 @@ Since version 0.6.0, this filter allows other programs to remotely control it vi
 
 For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
 
+## Portable mode
+
+Read https://github.com/CrendKing/avisynth_filter/wiki/Portable-mode.
+
 ## Example script
 
 Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.

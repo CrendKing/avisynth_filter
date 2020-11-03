@@ -5,7 +5,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)dep_directshow;$(MSBuildThisFileDirectory)dep_avisynth_plus;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)dep_directshow;$(MSBuildThisFileDirectory)dep_avisynth_plus;$(MSBuildThisFileDirectory)dep_simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Platform)' == 'x64'">$(MSBuildThisFileDirectory)\dep_directshow\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

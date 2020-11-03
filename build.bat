@@ -1,6 +1,6 @@
 cd /d "%~dp0"
 
-for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -find **\vcvars64.bat ) do call "%%i"
+for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -find **\vcvars64.bat') do call "%%i"
 
 if not exist dep_directshow (
     mkdir checkout_directshow
@@ -28,6 +28,10 @@ if not exist dep_avisynth_plus (
     cd ..
     move checkout_avisynth_plus\avs_core\include dep_avisynth_plus
     rmdir /s /q checkout_avisynth_plus
+)
+
+if not exist dep_simpleini (
+    git clone https://github.com/brofield/simpleini.git dep_simpleini
 )
 
 set ds_platform=%1
