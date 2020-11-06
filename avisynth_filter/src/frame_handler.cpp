@@ -251,7 +251,9 @@ auto FrameHandler::GetOutputWorkerThreadCount() const -> int {
 
 auto FrameHandler::StartWorkerThreads() -> void {
     ASSERT(_outputThreads.empty());
-    
+
+    EndFlush();
+
     _stopThreads = false;
 
     for (int i = 0; i < g_env.GetOutputThreads(); ++i) {
@@ -265,7 +267,8 @@ auto FrameHandler::StopWorkerThreads() -> void {
     // necessary to unlock output pin's Inactive() in CTransformFilter::Stop()
     _addInputSampleCv.notify_all();
 
-    // no need for a pairing EndFlush() as the class will be destroyed soon afterward
+    // _isFlushing == true is needed when the filter is being unloaded to unblock AviSynth prefetcher
+    // thus the pairing EndFlush() is called at StartWorkerThreads() 
     BeginFlush();
 }
 

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "pch.h"
-#include "rc_ptr.h"
 #include "registry.h"
 
 namespace AvsFilter {

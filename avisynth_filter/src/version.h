@@ -12,7 +12,7 @@ namespace AvsFilter {
 #define FILTER_FILENAME_BASE            "avisynth_filter"
 #define FILTER_VERSION_MAJOR            0
 #define FILTER_VERSION_MINOR            8
-#define FILTER_VERSION_PATCH            0
+#define FILTER_VERSION_PATCH            1
 #define FILTER_VERSION_STRING           STR(FILTER_VERSION_MAJOR) "." STR(FILTER_VERSION_MINOR) "." STR(FILTER_VERSION_PATCH)
 
 }
