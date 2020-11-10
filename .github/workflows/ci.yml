@@ -1,28 +1,31 @@
 name: CI
 
-on: workflow_dispatch
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
-    build:
-        name: ${{ matrix.config.platform }}
-        runs-on: windows-latest
-        strategy:
-            matrix:
-                config:
-                    - { platform: 'x64' }
-                    - { platform: 'x86' }
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v2
+  build:
+    name: ${{ matrix.config.platform }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        config:
+          - { platform: 'x64' }
+          - { platform: 'x86' }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-            - name: Initialize CodeQL
-              uses: github/codeql-action/init@v1
-              with:
-                  languages: 'cpp'
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: 'cpp'
 
-            - name: Build
-              shell: cmd
-              run: build.bat ${{ matrix.config.platform }}
+      - name: Build
+        shell: cmd
+        run: build.bat ${{ matrix.config.platform }}
 
-            - name: Perform CodeQL Analysis
-              uses: github/codeql-action/analyze@v1
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
