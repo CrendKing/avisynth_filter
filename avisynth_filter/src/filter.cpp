@@ -524,14 +524,16 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
             }
 
             currFilter->Release();
+
+            if (source != nullptr) {
+                break;
+            }
         } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
             enumFilters->Reset();
         } else {
             break;
         }
     }
-
-    // DO NOT call currFilter->Release() any more for the rest of the function
 
     if (_videoSourcePath.empty()) {
         return;
