@@ -30,8 +30,8 @@ static REGFILTERPINS REG_PINS[] = {
     , FALSE                                  // Does the filter create multiple instances?
     , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
     , nullptr                                // pin name the pin connects to (obsolete)
-    , 0                                      // pin media type count (to be filled in InitRoutine())
-    , nullptr },                             // pin media types (to be filled in InitRoutine())
+    , 0                                      // pin media type count (to be filled in RegisterFilter())
+    , nullptr },                             // pin media types (to be filled in RegisterFilter())
 
     { nullptr                                // pin name (obsolete)
     , FALSE                                  // is pin rendered?
@@ -40,8 +40,8 @@ static REGFILTERPINS REG_PINS[] = {
     , FALSE                                  // Does the filter create multiple instances?
     , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
     , nullptr                                // pin name the pin connects to (obsolete)
-    , 0                                      // pin media type count (to be filled in InitRoutine())
-    , nullptr },                             // pin media types (to be filled in InitRoutine())
+    , 0                                      // pin media type count (to be filled in RegisterFilter())
+    , nullptr },                             // pin media types (to be filled in RegisterFilter())
 };
 
 static constexpr AMOVIESETUP_FILTER REG_FILTER = {
