@@ -1,6 +1,6 @@
-cd /d "%~dp0"
+if "%VSINSTALLDIR%"=="" for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -find **\vcvars64.bat') do call "%%i"
 
-for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -find **\vcvars64.bat') do call "%%i"
+cd /d "%~dp0"
 
 if not exist dep_directshow (
     mkdir checkout_directshow
