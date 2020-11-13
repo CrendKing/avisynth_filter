@@ -327,8 +327,8 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         ATL::CComPtr<IMediaSample> outSample;
 
         if (FAILED(_filter.InitializeOutputSample(nullptr, &outSample))) {
-            // reset it to nullptr here in case the function change it to some random invalid address
-            outSample = nullptr;
+            // avoid releasing the invalid pointer in case the function change it to some random invalid address
+            outSample.Detach();
             goto BEGIN_OF_DELIVERY;
         }
 
