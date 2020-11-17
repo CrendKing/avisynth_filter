@@ -33,7 +33,7 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
     _configAvsFile = g_env.GetAvsFile();
-    _avsFileManagedByRC = _configAvsFile != _filter->GetEffectiveAvsFile();
+    _avsFileManagedByRC = _configAvsFile != g_avs->GetScriptFile();
     if (_avsFileManagedByRC) {
         ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
     }
@@ -108,7 +108,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             if (eventTarget == IDC_BUTTON_EDIT && !_configAvsFile.empty()) {
                 ShellExecuteW(hwnd, L"edit", _configAvsFile.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
-                _filter->ReloadAvsFile(_filter->GetEffectiveAvsFile());
+                _filter->ReloadAvsFile(g_avs->GetScriptFile());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
                 wchar_t szFile[MAX_PATH] {};
 

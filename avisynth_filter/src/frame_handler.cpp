@@ -352,8 +352,8 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             Format::WriteSample(_filter._outputFormat, scriptFrame, outBuffer, g_avs->GetEnv());
         }
 
-        if (_filter._confirmNewOutputFormat && SUCCEEDED(outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType()))) {
-            _filter._confirmNewOutputFormat = false;
+        if (_filter._sendOutputFormatInNextSample && SUCCEEDED(outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType()))) {
+            _filter._sendOutputFormatInNextSample = false;
         }
 
         {

@@ -27,6 +27,7 @@ AvsHandler::AvsHandler()
     : _module(LoadModule())
     , _env(CreateEnv())
     , _versionString(_env->Invoke("Eval", AVSValue("VersionString()")).AsString())
+    , _scriptFile(g_env.GetAvsFile())
     , _sourceVideoInfo()
     , _scriptVideoInfo()
     , _sourceClip(new SourceClip(_sourceVideoInfo))
@@ -109,7 +110,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
 /**
  * Create new AviSynth script clip with specified media type.
  */
-auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE &mediaType, bool fallback) -> bool {
+auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     g_env.Log("ReloadAviSynthScript");
 
     _sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
@@ -137,8 +138,8 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
 
     AVSValue invokeResult;
 
-    if (!filename.empty()) {
-        const std::string utf8Filename = ConvertWideToUtf8(filename);
+    if (!_scriptFile.empty()) {
+        const std::string utf8Filename = ConvertWideToUtf8(_scriptFile);
         const AVSValue args[2] = { utf8Filename.c_str(), true };
         const char *const argNames[2] = { nullptr, "utf8" };
 
@@ -151,7 +152,7 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
 
     if (_errorString.empty()) {
         if (!invokeResult.Defined()) {
-            if (!fallback) {
+            if (!ignoreDisconnect) {
                 return false;
             }
 
@@ -163,10 +164,10 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
 
     if (!_errorString.empty()) {
         // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
-        const char *errorFormat =
+        const char *errorFormat = 
             "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n"
             "if (%i > 1) { Prefetch(%i) }\n";  // add trailing '\n' to pad size because snprintf() does not count the terminating null
-
+            
         const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env.GetOutputThreads(), g_env.GetOutputThreads());
         const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
         snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env.GetOutputThreads(), g_env.GetOutputThreads());
@@ -182,6 +183,10 @@ auto AvsHandler::ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE 
     return true;
 }
 
+auto AvsHandler::SetScriptFile(const std::wstring &scriptFile) -> void {
+    _scriptFile = scriptFile;
+}
+
 auto AvsHandler::StopScript() -> void {
     if (_scriptClip != nullptr) {
         _scriptClip = nullptr;
@@ -194,6 +199,10 @@ auto AvsHandler::GetEnv() const -> IScriptEnvironment * {
 
 auto AvsHandler::GetVersionString() const -> const char * {
     return _versionString == nullptr ? "unknown AviSynth version" : _versionString;
+}
+
+auto AvsHandler::GetScriptFile() const -> std::wstring {
+    return _scriptFile;
 }
 
 auto AvsHandler::GetScriptPixelType() const -> int {

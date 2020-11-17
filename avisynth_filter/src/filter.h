@@ -42,7 +42,6 @@ public:
 
     auto GetInputFormat() const -> Format::VideoFormat;
     auto GetOutputFormat() const -> Format::VideoFormat;
-    auto GetEffectiveAvsFile() const -> std::wstring;
     auto ReloadAvsFile(const std::wstring &avsFile) -> void;
     auto GetVideoSourcePath() const -> std::wstring;
     auto GetVideoFilterNames() const -> std::vector<std::wstring>;
@@ -82,9 +81,8 @@ private:
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;
-    bool _confirmNewOutputFormat;
+    bool _sendOutputFormatInNextSample;
 
-    std::wstring _effectiveAvsFile;
     bool _reloadAvsSource;
 
     std::wstring _videoSourcePath;

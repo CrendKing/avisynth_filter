@@ -160,7 +160,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         }
 
     case API_MSG_GET_AVS_SOURCE_FILE: {
-        const std::wstring effectiveAvsFile = _filter.GetEffectiveAvsFile();
+        const std::wstring effectiveAvsFile = g_avs->GetScriptFile();
         if (effectiveAvsFile.empty()) {
             return FALSE;
         }

@@ -16,11 +16,13 @@ public:
 
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const->AM_MEDIA_TYPE *;
-    auto ReloadScript(const std::wstring &filename, const AM_MEDIA_TYPE &mediaType, bool fallback) -> bool;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    auto SetScriptFile(const std::wstring &scriptFile) -> void;
     auto StopScript() -> void;
 
     auto GetEnv() const -> IScriptEnvironment *;
     auto GetVersionString() const -> const char *;
+    auto GetScriptFile() const -> std::wstring;
     auto GetScriptPixelType() const -> int;
     auto GetScriptClip() -> PClip &;
     auto GetSourceDrainFrame() -> PVideoFrame &;
@@ -30,6 +32,7 @@ public:
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
+
     auto LoadModule() const -> HMODULE;
     auto CreateEnv() const -> IScriptEnvironment *;
     [[ noreturn ]] auto ShowFatalError(const char *errorMessage) const -> void ;
@@ -37,6 +40,7 @@ private:
     HMODULE _module;
     IScriptEnvironment *_env;
     const char *_versionString;
+    std::wstring _scriptFile;
     VideoInfo _sourceVideoInfo;
     VideoInfo _scriptVideoInfo;
     PClip _sourceClip;

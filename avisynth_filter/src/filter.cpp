@@ -22,9 +22,8 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
     , _inputFormat()
     , _outputFormat()
-    , _confirmNewOutputFormat(false)
-    , _effectiveAvsFile(g_env.GetAvsFile())
-    , _reloadAvsSource(false) {
+    , _sendOutputFormatInNextSample(false) 
+	, _reloadAvsSource(false) {
     g_env.Log("CAviSynthFilter(): %p", this);
 
     if (g_env.IsRemoteControlEnabled()) {
@@ -90,7 +89,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                         const int inputDefinition = *optInputDefinition;
 
                         // invoke AviSynth script with each supported input definition, and observe the output avs type
-                        if (!g_avs->ReloadScript(_effectiveAvsFile, *nextType, _remoteControl.has_value())) {
+                        if (!g_avs->ReloadScript(*nextType, _remoteControl.has_value())) {
                             g_env.Log("Disconnect due to AvsFilterDisconnect()");
                             _disconnectFilter = true;
                             break;
@@ -261,7 +260,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         }
 
         frameHandler.BeginFlush();
-        g_avs->ReloadScript(_effectiveAvsFile, m_pInput->CurrentMediaType(), true);
+        g_avs->ReloadScript(m_pInput->CurrentMediaType(), true);
         frameHandler.EndFlush();
         _reloadAvsSource = false;
 
@@ -293,7 +292,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         m_pOutput->SetMediaType(reinterpret_cast<CMediaType *>(pmtOut));
 
         HandleOutputFormatChange(pmtOut);
-        _confirmNewOutputFormat = true;
+        _sendOutputFormatInNextSample = true;
 
         hr = StartStreaming();
 
@@ -337,7 +336,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 auto CAviSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
         frameHandler.BeginFlush();
-        g_avs->ReloadScript(_effectiveAvsFile, m_pInput->CurrentMediaType(), true);
+        g_avs->ReloadScript(m_pInput->CurrentMediaType(), true);
         frameHandler.EndFlush();
     }
 
@@ -371,12 +370,8 @@ auto CAviSynthFilter::GetOutputFormat() const->Format::VideoFormat {
     return _outputFormat;
 }
 
-auto CAviSynthFilter::GetEffectiveAvsFile() const -> std::wstring {
-    return _effectiveAvsFile;
-}
-
 auto CAviSynthFilter::ReloadAvsFile(const std::wstring &avsFile) -> void {
-    _effectiveAvsFile = avsFile;
+    g_avs->SetScriptFile(avsFile);
     _reloadAvsSource = true;
 }
 
