@@ -16,6 +16,7 @@ assignees: ''
 - Video renderer: [e.g. madVR, EVR]
 - Video format: [e.g. NV12, P010]
 - AviSynth script: [e.g. minimum content required to reproduce the issue, or software you used such as SVP]
+<!-- Wrap script content in pairs of ``` -->
 - Do you use other DirectShow filters? Specify name and version: [e.g. ffdshow]
 
 ### Describe the bug
@@ -28,14 +29,14 @@ assignees: ''
 3.
 
 **Checklist**
-- Did you try a different **video player** and check if the issue persist? For example, if your main video player is MPC-HC, try MPC-BE.
-Answer:
+- Try a different **video player** and check if the issue persist. For example, if your main video player is MPC-HC, try MPC-BE.
+Findings:
 
-- Did you try a different **video renderer** and check if the issue persist? For example, if issue exists with madVR, try EVR.
-Answer:
+- Try a different **video renderer** and check if the issue persist. For example, if issue exists with madVR, try EVR.
+Findings:
 
-- Did you try a different **video file** and check if the issue persist? Try another file with different format, dimension and frame rate.
-Answer:
+- Try a different **video file** and check if the issue persist. Try another file with different format, dimension and frame rate.
+Findings:
 
 <!--
 You could enable logging and upload the log file to help diagnosis. Follow wiki https://github.com/CrendKing/avisynth_filter/wiki/How-to-enable-logging
