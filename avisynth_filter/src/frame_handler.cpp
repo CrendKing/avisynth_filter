@@ -82,40 +82,52 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     _sourceFrames.emplace(_nextSourceFrameNb, srcFrameInfo);
 
     g_env.Log("Processed source frame: %6i at %10lli ~ %10lli, nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
-                 _nextSourceFrameNb, srcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
+              _nextSourceFrameNb, srcFrameInfo.startTime, inSampleStopTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
 
-    // we just emplaced an entry inside mutex, so map.lower_bound() should never return map::cend()
-    const auto iter = --_sourceFrames.lower_bound(_nextSourceFrameNb);
+    auto iter = --_sourceFrames.lower_bound(_nextSourceFrameNb);
     if (iter != _sourceFrames.cend()) {
-        /*
-         * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
-         * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
-         */
+        const SourceFrameInfo &preSrcFrameInfoAfterEdge = iter->second;
+        --iter;
+        if (iter != _sourceFrames.cend()) {
+            SourceFrameInfo &preSrcFrameInfoBeforeEdge = iter->second;
 
-        SourceFrameInfo &preSrcFrameInfo = iter->second;
-        const REFERENCE_TIME outputFrameTime = llMulDiv(srcFrameInfo.startTime - preSrcFrameInfo.startTime, g_avs->GetScriptAvgFrameTime(), g_avs->GetSourceAvgFrameTime(), 0);
+            /*
+             * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
+             * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
+             */
 
-        if (_nextOutputFrameStartTime < preSrcFrameInfo.startTime) {
-            _nextOutputFrameStartTime = preSrcFrameInfo.startTime;
-        }
+            const REFERENCE_TIME outputFrameTimeAfterEdge = llMulDiv(srcFrameInfo.startTime - preSrcFrameInfoAfterEdge.startTime, g_avs->GetScriptAvgFrameTime(), g_avs->GetSourceAvgFrameTime(), 0);
+            const REFERENCE_TIME outputFrameTimeBeforeEdge = llMulDiv(preSrcFrameInfoAfterEdge.startTime - preSrcFrameInfoBeforeEdge.startTime, g_avs->GetScriptAvgFrameTime(), g_avs->GetSourceAvgFrameTime(), 0);
 
-        {
-            std::unique_lock outLock(_outputFramesMutex);
-
-            while (srcFrameInfo.startTime > _nextOutputFrameStartTime) {
-                const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
-                const REFERENCE_TIME outStopTime = outStartTime + outputFrameTime;
-                _nextOutputFrameStartTime = outStopTime;
-
-                g_env.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli", _nextOutputFrameNb, preSrcFrameInfo.frameNb, outStartTime, outStopTime);
-
-                _outputFrames.emplace_back(OutputFrameInfo { _nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfo });
-                _nextOutputFrameNb += 1;
-                preSrcFrameInfo.refCount += 1;
+            if (_nextOutputFrameStartTime < preSrcFrameInfoBeforeEdge.startTime) {
+                _nextOutputFrameStartTime = preSrcFrameInfoBeforeEdge.startTime;
             }
-        }
 
-        _outputFramesCv.notify_one();
+            {
+                std::unique_lock outLock(_outputFramesMutex);
+
+                while (true) {
+                    const REFERENCE_TIME outFrameTimeBeforeEdge = min(preSrcFrameInfoAfterEdge.startTime - _nextOutputFrameStartTime, outputFrameTimeBeforeEdge);
+                    if (outFrameTimeBeforeEdge <= 0) {
+                        g_env.Log("Frame time drift: %10lli", -outFrameTimeBeforeEdge);
+                        break;
+                    }
+                    const REFERENCE_TIME outFrameTimeAfterEdge = outputFrameTimeAfterEdge - llMulDiv(outputFrameTimeAfterEdge, outFrameTimeBeforeEdge, outputFrameTimeBeforeEdge, 0);
+
+                    const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
+                    const REFERENCE_TIME outStopTime = outStartTime + outFrameTimeBeforeEdge + outFrameTimeAfterEdge;
+                    _nextOutputFrameStartTime = outStopTime;
+
+                    g_env.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli", _nextOutputFrameNb, preSrcFrameInfoBeforeEdge.frameNb, outStartTime, outStopTime);
+
+                    _outputFrames.emplace_back(OutputFrameInfo { _nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfoBeforeEdge });
+                    _nextOutputFrameNb += 1;
+                    preSrcFrameInfoBeforeEdge.refCount += 1;
+                }
+            }
+
+            _outputFramesCv.notify_one();
+        }
     }
 
     _nextSourceFrameNb += 1;
