@@ -50,6 +50,9 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     if (inSample->GetTime(&srcFrameInfo.startTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
         srcFrameInfo.startTime = _nextSourceFrameNb * g_avs->GetSourceAvgFrameTime();
+    } else if (srcFrameInfo.startTime < _nextOutputFrameStartTime) {
+        // sample start time should not go backward
+        return VFW_E_SAMPLE_REJECTED;
     }
 
     RefreshInputFrameRates(srcFrameInfo);

@@ -530,16 +530,12 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
         }
     }
 
-    if (_videoSourcePath.empty()) {
-        return;
-    }
-
     while (true) {
         FILTER_INFO filterInfo;
         if (SUCCEEDED(currFilter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
             _videoFilterNames.push_back(filterInfo.achName);
-            g_env.Log("Visiting filter: %S", filterInfo.achName);
+            g_env.Log("Filter in graph: %S", filterInfo.achName);
         }
 
         const std::optional<IPin *> optOutputPin = FindFirstVideoOutputPin(currFilter);
