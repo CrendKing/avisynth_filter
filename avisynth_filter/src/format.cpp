@@ -34,6 +34,16 @@ const std::vector<Format::Definition> Format::DEFINITIONS = {
     /* 10 */ { MEDIASUBTYPE_RGB48, VideoInfo::CS_BGR48, 48, 3 },
 };
 
+auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
+    return definition != other.definition
+        || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
+        || pixelAspectRatio != other.pixelAspectRatio
+        || hdrType != other.hdrType
+        || hdrLuminance != other.hdrLuminance
+        || bmi.biSize != other.bmi.biSize
+        || memcmp(&bmi, &other.bmi, bmi.biSize) != 0;
+}
+
 auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
     return FOURCCMap(&DEFINITIONS[definition].mediaSubtype).GetFOURCC();
 }
@@ -82,8 +92,8 @@ auto Format::LookupAvsType(int avsType) -> std::vector<int> {
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     VideoFormat info {};
 
-    info.vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
-    const REFERENCE_TIME frameTime = info.vih->AvgTimePerFrame > 0 ? info.vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
+    const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
+    const REFERENCE_TIME frameTime = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
     info.definition = *LookupMediaSubtype(mediaType.subtype);
     info.bmi = *GetBitmapInfo(mediaType);
@@ -97,7 +107,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
 
     info.pixelAspectRatio = PAR_SCALE_FACTOR;
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(info.vih);
+        const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
         if (vih2->dwPictAspectRatioY > 0) {
             /*
              * pixel aspect ratio = display aspect ratio (DAR) / storage aspect ratio (SAR)
