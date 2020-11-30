@@ -81,7 +81,12 @@ static auto RegisterFilter() -> HRESULT {
     REG_PINS[1].lpMediaType = REG_PINS[0].lpMediaType;
     REG_PINS[1].nMediaTypes = REG_PINS[0].nMediaTypes;
 
-    return AMovieDllRegisterServer2(TRUE);
+    const HRESULT hr = AMovieDllRegisterServer2(TRUE);
+    if (FAILED(hr)) {
+        g_env.Log("Registeration failed: %li", hr);
+    }
+
+    return hr;
 }
 
 }

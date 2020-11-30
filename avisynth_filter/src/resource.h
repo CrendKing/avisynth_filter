@@ -6,6 +6,7 @@
 #define IDS_SETTINGS                       101
 #define IDD_STATUS_PAGE                    200
 #define IDS_STATUS                         201
+
 #define IDC_TEXT_AVS_SCRIPT                1000
 #define IDC_BUTTON_EDIT                    1001
 #define IDC_BUTTON_RELOAD                  1002

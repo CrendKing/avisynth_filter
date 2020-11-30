@@ -54,7 +54,7 @@ auto RemoteControl::Run() -> void {
 	WNDCLASSA wc {};
 	wc.lpfnWndProc = &RemoteControl::WndProc;
 	wc.hInstance = g_hInst;
-	wc.lpszClassName = API_CLASS_NAME;
+	wc.lpszClassName = API_WND_CLASS_NAME;
 	if (!RegisterClassA(&wc)) {
 		return;
 	}
@@ -80,7 +80,7 @@ auto RemoteControl::Run() -> void {
 	}
 
 	DestroyWindow(_hWnd);
-	UnregisterClassA(API_CLASS_NAME, wc.hInstance);
+	UnregisterClassA(API_WND_CLASS_NAME, wc.hInstance);
 
 	g_env.Log("Remote control stopped");
 }
