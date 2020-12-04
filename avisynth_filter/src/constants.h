@@ -67,6 +67,14 @@ static constexpr int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION = 7;
  */
 static constexpr int MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY = 7;
 
+/*
+ * If an output frame's stop time is this value close to the the next source frame's
+ * start time, make up its stop time with the padding.
+ * This trick helps eliminating frame time drift due to precision loss.
+ * Unit is 100ns. 10 = 1ms.
+ */
+static constexpr int MAX_OUTPUT_FRAME_DURATION_PADDING = 10;
+
 static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 1;
 
 /*

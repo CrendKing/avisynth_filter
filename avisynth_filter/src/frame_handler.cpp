@@ -50,8 +50,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     if (inSample->GetTime(&srcFrameInfo.startTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
         srcFrameInfo.startTime = _nextSourceFrameNb * g_avs->GetSourceAvgFrameDuration();
-    } else if (srcFrameInfo.startTime < _nextOutputFrameStartTime) {
-        // sample start time should not go backward
+    }
+
+    // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
+    if (!_sourceFrames.empty() && srcFrameInfo.startTime <= _sourceFrames.rbegin()->second.startTime) {
+        g_env.Log("Rejecting source sample due to start time not going forward: %10lli", srcFrameInfo.startTime);
         return VFW_E_SAMPLE_REJECTED;
     }
 
@@ -82,12 +85,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         }
     }
 
-    _sourceFrames.emplace(_nextSourceFrameNb, srcFrameInfo);
+    auto iter = _sourceFrames.emplace(_nextSourceFrameNb, srcFrameInfo).first;
 
     g_env.Log("Processed source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i nextOutputFrameStartTime %10lli",
               _nextSourceFrameNb, srcFrameInfo.startTime, inSampleStopTime, inSampleStopTime - srcFrameInfo.startTime, _nextSourceFrameNb, _nextOutputFrameStartTime);
 
-    auto iter = --_sourceFrames.lower_bound(_nextSourceFrameNb);
+    --iter;
     if (iter != _sourceFrames.cend()) {
         const SourceFrameInfo &preSrcFrameInfoAfterEdge = iter->second;
         --iter;
@@ -102,10 +105,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
             const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(srcFrameInfo.startTime - preSrcFrameInfoAfterEdge.startTime, g_avs->GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
             const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(preSrcFrameInfoAfterEdge.startTime - preSrcFrameInfoBeforeEdge.startTime, g_avs->GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
 
-            if (_nextOutputFrameStartTime < preSrcFrameInfoBeforeEdge.startTime) {
-                _nextOutputFrameStartTime = preSrcFrameInfoBeforeEdge.startTime;
-            }
-
             {
                 std::unique_lock outLock(_outputFramesMutex);
 
@@ -118,7 +117,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
                     const REFERENCE_TIME outFrameDurationAfterEdgePortion = outputFrameDurationAfterEdge - llMulDiv(outputFrameDurationAfterEdge, outFrameDurationBeforeEdgePortion, outputFrameDurationBeforeEdge, 0);
 
                     const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
-                    const REFERENCE_TIME outStopTime = outStartTime + outFrameDurationBeforeEdgePortion + outFrameDurationAfterEdgePortion;
+                    REFERENCE_TIME outStopTime = outStartTime + outFrameDurationBeforeEdgePortion + outFrameDurationAfterEdgePortion;
+                    if (outStopTime >= preSrcFrameInfoAfterEdge.startTime - MAX_OUTPUT_FRAME_DURATION_PADDING) {
+                        outStopTime = preSrcFrameInfoAfterEdge.startTime;
+                    }
                     _nextOutputFrameStartTime = outStopTime;
 
                     g_env.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli", _nextOutputFrameNb, preSrcFrameInfoBeforeEdge.frameNb, outStartTime, outStopTime, outStopTime - outStartTime);
