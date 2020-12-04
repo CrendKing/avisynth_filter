@@ -93,7 +93,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     VideoFormat info {};
 
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
-    const REFERENCE_TIME frameTime = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
+    const REFERENCE_TIME frameDuration = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
     info.definition = *LookupMediaSubtype(mediaType.subtype);
     info.bmi = *GetBitmapInfo(mediaType);
@@ -101,7 +101,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     info.videoInfo.width = info.bmi.biWidth;
     info.videoInfo.height = abs(info.bmi.biHeight);
     info.videoInfo.fps_numerator = UNITS;
-    info.videoInfo.fps_denominator = static_cast<unsigned int>(frameTime);
+    info.videoInfo.fps_denominator = static_cast<unsigned int>(frameDuration);
     info.videoInfo.pixel_type = DEFINITIONS[info.definition].avsType;
     info.videoInfo.num_frames = NUM_FRAMES_FOR_INFINITE_STREAM;
 

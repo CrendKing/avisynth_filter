@@ -33,8 +33,8 @@ AvsHandler::AvsHandler()
     , _sourceClip(new SourceClip(_sourceVideoInfo))
     , _scriptClip(nullptr)
     , _sourceDrainFrame(nullptr)
-    , _sourceAvgFrameTime(0)
-    , _scriptAvgFrameTime(0)
+    , _sourceAvgFrameDuration(0)
+    , _scriptAvgFrameDuration(0)
     , _sourceAvgFrameRate(0) {
     g_env.Log("AvsHandler()");
     g_env.Log("Filter version: %s", FILTER_VERSION_STRING);
@@ -177,8 +177,8 @@ auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconn
     _scriptClip = invokeResult.AsClip();
     _scriptVideoInfo = _scriptClip->GetVideoInfo();
     _sourceAvgFrameRate = static_cast<int>(llMulDiv(_sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
-    _sourceAvgFrameTime = llMulDiv(_sourceVideoInfo.fps_denominator, UNITS, _sourceVideoInfo.fps_numerator, 0);
-    _scriptAvgFrameTime = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
+    _sourceAvgFrameDuration = llMulDiv(_sourceVideoInfo.fps_denominator, UNITS, _sourceVideoInfo.fps_numerator, 0);
+    _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
 
     return true;
 }
@@ -217,12 +217,12 @@ auto AvsHandler::GetSourceDrainFrame() -> PVideoFrame & {
     return _sourceDrainFrame;
 }
 
-auto AvsHandler::GetSourceAvgFrameTime() const -> REFERENCE_TIME {
-    return _sourceAvgFrameTime;
+auto AvsHandler::GetSourceAvgFrameDuration() const -> REFERENCE_TIME {
+    return _sourceAvgFrameDuration;
 }
 
-auto AvsHandler::GetScriptAvgFrameTime() const -> REFERENCE_TIME {
-    return _scriptAvgFrameTime;
+auto AvsHandler::GetScriptAvgFrameDuration() const -> REFERENCE_TIME {
+    return _scriptAvgFrameDuration;
 }
 
 auto AvsHandler::GetSourceAvgFrameRate() const -> int {

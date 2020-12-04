@@ -26,8 +26,8 @@ public:
     auto GetScriptPixelType() const -> int;
     auto GetScriptClip() -> PClip &;
     auto GetSourceDrainFrame() -> PVideoFrame &;
-    auto GetSourceAvgFrameTime() const -> REFERENCE_TIME;
-    auto GetScriptAvgFrameTime() const -> REFERENCE_TIME;
+    auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME;
+    auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME;
     auto GetSourceAvgFrameRate() const -> int;
     auto GetErrorString() const -> std::optional<std::string>;
 
@@ -46,8 +46,8 @@ private:
     PClip _sourceClip;
     PClip _scriptClip;
     PVideoFrame _sourceDrainFrame;
-    REFERENCE_TIME _sourceAvgFrameTime;
-    REFERENCE_TIME _scriptAvgFrameTime;
+    REFERENCE_TIME _sourceAvgFrameDuration;
+    REFERENCE_TIME _scriptAvgFrameDuration;
     int _sourceAvgFrameRate;
     std::string _errorString;
 };
