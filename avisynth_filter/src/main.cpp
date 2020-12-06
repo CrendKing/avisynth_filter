@@ -10,11 +10,7 @@
 #include "prop_status.h"
 
 
-#ifdef _DEBUG
-#pragma comment(lib, "strmbasd.lib")
-#else
-#pragma comment(lib, "strmbase.lib")
-#endif
+#pragma comment(lib, "strmiids.lib")
 #pragma comment(lib, "winmm.lib")
 
 namespace AvsFilter {
