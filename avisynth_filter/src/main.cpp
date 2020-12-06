@@ -45,7 +45,7 @@ static REGFILTERPINS REG_PINS[] = {
 };
 
 static constexpr AMOVIESETUP_FILTER REG_FILTER = {
-    &AvsFilter::CLSID_AviSynthFilter,        // filter CLSID
+    &CLSID_AviSynthFilter,                   // filter CLSID
     FILTER_NAME_WIDE,                        // filter name
     MERIT_DO_NOT_USE + 1,                    // filter merit
     sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count

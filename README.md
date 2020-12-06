@@ -10,7 +10,6 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
 
 * CPU with SSSE3 instructions.
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above.
-* [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads).
 
 ## Install
 
