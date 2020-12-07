@@ -98,8 +98,6 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
     }
 
     g_avs->LinkFrameHandler(&_filter.frameHandler);
-    g_avs->ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-
     _filter.frameHandler.StartWorkerThreads();
 
     return __super::Active();

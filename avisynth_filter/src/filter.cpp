@@ -226,6 +226,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
                     CheckHr(ReconnectPin(m_pInput, _acceptableInputTypes[compatibleInput].get()));
                 } else {
                     g_env.Log("Connected with types: in %2i out %2i", inputDefiniton, outputDefinition);
+                    g_avs->ReloadScript(m_pInput->CurrentMediaType(), true);
                 }
             } else {
                 g_env.Log("Unexpected lookup result for compatible definition");

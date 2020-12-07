@@ -2,6 +2,7 @@
 
 #include "pch.h"
 #include "source_clip.h"
+#include "avs_handler.h"
 
 
 namespace AvsFilter {
@@ -16,7 +17,11 @@ auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    return _frameHandler->GetSourceFrame(frameNb, env);
+    if (_frameHandler == nullptr) {
+        return g_avs->GetSourceDrainFrame();
+    } else {
+        return _frameHandler->GetSourceFrame(frameNb, env);
+    }
 }
 
 auto SourceClip::GetParity(int frameNb) -> bool {
