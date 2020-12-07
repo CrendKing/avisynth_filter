@@ -58,6 +58,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return VFW_E_SAMPLE_REJECTED;
     }
 
+    if (_nextOutputFrameStartTime == 0) {
+        _nextOutputFrameStartTime = srcFrameInfo.startTime;
+    }
+
     RefreshInputFrameRates(srcFrameInfo);
 
     BYTE *sampleBuffer;
@@ -118,7 +122,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
                     const REFERENCE_TIME outStartTime = _nextOutputFrameStartTime;
                     REFERENCE_TIME outStopTime = outStartTime + outFrameDurationBeforeEdgePortion + outFrameDurationAfterEdgePortion;
-                    if (outStopTime >= preSrcFrameInfoAfterEdge.startTime - MAX_OUTPUT_FRAME_DURATION_PADDING) {
+                    if (outStopTime < preSrcFrameInfoAfterEdge.startTime && outStopTime >= preSrcFrameInfoAfterEdge.startTime - MAX_OUTPUT_FRAME_DURATION_PADDING) {
                         outStopTime = preSrcFrameInfoAfterEdge.startTime;
                     }
                     _nextOutputFrameStartTime = outStopTime;
