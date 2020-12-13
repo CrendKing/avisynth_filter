@@ -77,9 +77,7 @@ if (fps < 20) {
 
 ## Build
 
-A build script `build.bat` is included to automate the process. It obtains dependencies and starts compilation. The project statically links to the DirectShow filter base classes from https://github.com/microsoft/Windows-classic-samples, thus requiring building it from source. Microsoft has not updated the sample for long time, and the sample solution is still on Visual Studio 2005. One needs to upgrade the solution before building it (already included in `build.bat`).
-
-Before running `build.bat`, make sure you are in an development environment, such as Visual Studio developer command prompt. To run the script, pass the target platform as the first argument, e.g. `build.bat x64` or `build.bat x86`.
+A build script `build.bat` is included to automate the process. It obtains dependencies and starts compilation. Before running `build.bat`, make sure you have the latest Visual Studio installed. The script will automatically assume the Visual Studio developer environment and check out dependencies. To run the script, pass the target platform as the first argument, e.g. `build.bat x64` or `build.bat x86`.
 
 ## Credit
 
