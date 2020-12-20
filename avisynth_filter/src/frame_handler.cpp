@@ -44,7 +44,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return S_OK;
     }
 
-    SourceFrameInfo srcFrameInfo { _nextSourceFrameNb };
+    SourceFrameInfo srcFrameInfo { .frameNb = _nextSourceFrameNb };
 
     REFERENCE_TIME inSampleStopTime = 0;
     if (inSample->GetTime(&srcFrameInfo.startTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
@@ -129,7 +129,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
                     g_env.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli", _nextOutputFrameNb, preSrcFrameInfoBeforeEdge.frameNb, outStartTime, outStopTime, outStopTime - outStartTime);
 
-                    _outputFrames.emplace_back(OutputFrameInfo { _nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfoBeforeEdge });
+                    _outputFrames.emplace_back(OutputFrameInfo { .frameNb = _nextOutputFrameNb, .startTime = outStartTime, .stopTime = outStopTime, .srcFrameInfo = &preSrcFrameInfoBeforeEdge });
                     _nextOutputFrameNb += 1;
                     preSrcFrameInfoBeforeEdge.refCount += 1;
                 }
@@ -277,7 +277,8 @@ auto FrameHandler::StartWorkerThreads() -> void {
 
     _stopThreads = false;
 
-    for (int i = 0; i < g_env.GetOutputThreads(); ++i) {
+    // TODO: use ranges::iota_view
+    for (int i = g_env.GetOutputThreads(); i != 0; --i) {
         _outputThreads.emplace_back(&FrameHandler::ProcessOutputSamples, this);
     }
 }

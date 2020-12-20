@@ -90,7 +90,7 @@ auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std:
 		return;
 	}
 
-	const COPYDATASTRUCT copyData { msgId, static_cast<DWORD>(data.size()), const_cast<char *>(data.c_str()) };
+	const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.c_str()) };
 	SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
 					    SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
 }

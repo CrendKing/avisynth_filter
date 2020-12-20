@@ -19,33 +19,33 @@ Environment g_env;
 ReferenceCountPointer<AvsHandler> g_avs;
 
 static REGFILTERPINS REG_PINS[] = {
-    { nullptr                                // pin name (obsolete)
-    , FALSE                                  // is pin rendered?
-    , FALSE                                  // is this output pin?
-    , FALSE                                  // Can the filter create zero instances?
-    , FALSE                                  // Does the filter create multiple instances?
-    , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
-    , nullptr                                // pin name the pin connects to (obsolete)
-    , 0                                      // pin media type count (to be filled in RegisterFilter())
-    , nullptr },                             // pin media types (to be filled in RegisterFilter())
+    { .strName = nullptr                              // pin name (obsolete)
+    , .bRendered = FALSE                              // is pin rendered?
+    , .bOutput = FALSE                                // is this output pin?
+    , .bZero = FALSE                                  // Can the filter create zero instances?
+    , .bMany = FALSE                                  // Does the filter create multiple instances?
+    , .clsConnectsToFilter = &CLSID_NULL              // filter CLSID the pin connects to (obsolete)
+    , .strConnectsToPin = nullptr                     // pin name the pin connects to (obsolete)
+    , .nMediaTypes = 0                                // pin media type count (to be filled in RegisterFilter())
+    , .lpMediaType = nullptr },                       // pin media types (to be filled in RegisterFilter())
 
-    { nullptr                                // pin name (obsolete)
-    , FALSE                                  // is pin rendered?
-    , TRUE                                   // is this output pin?
-    , FALSE                                  // Can the filter create zero instances?
-    , FALSE                                  // Does the filter create multiple instances?
-    , &CLSID_NULL                            // filter CLSID the pin connects to (obsolete)
-    , nullptr                                // pin name the pin connects to (obsolete)
-    , 0                                      // pin media type count (to be filled in RegisterFilter())
-    , nullptr },                             // pin media types (to be filled in RegisterFilter())
+    { .strName = nullptr     
+    , .bRendered = FALSE       
+    , .bOutput = TRUE        
+    , .bZero = FALSE       
+    , .bMany = FALSE       
+    , .clsConnectsToFilter = &CLSID_NULL 
+    , .strConnectsToPin = nullptr     
+    , .nMediaTypes = 0           
+    , .lpMediaType = nullptr },  
 };
 
 static constexpr AMOVIESETUP_FILTER REG_FILTER = {
-    &CLSID_AviSynthFilter,                   // filter CLSID
-    FILTER_NAME_WIDE,                        // filter name
-    MERIT_DO_NOT_USE + 1,                    // filter merit
-    sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count
-    REG_PINS                                 // pin information
+    .clsID = &CLSID_AviSynthFilter,                   // filter CLSID
+    .strName = FILTER_NAME_WIDE,                      // filter name
+    .dwMerit = MERIT_DO_NOT_USE + 1,                  // filter merit
+    .nPins = sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count
+    .lpPin = REG_PINS                                 // pin information
 };
 
 template <typename T>
@@ -69,7 +69,7 @@ static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * 
 static auto RegisterFilter() -> HRESULT {
     std::vector<REGPINTYPES> pinTypes;
     for (const Format::Definition &info : Format::DEFINITIONS) {
-        pinTypes.emplace_back(REGPINTYPES { &MEDIATYPE_Video, &info.mediaSubtype });
+        pinTypes.emplace_back(REGPINTYPES { .clsMajorType = &MEDIATYPE_Video, .clsMinorType = &info.mediaSubtype });
     }
 
     REG_PINS[0].lpMediaType = pinTypes.data();
@@ -88,21 +88,21 @@ static auto RegisterFilter() -> HRESULT {
 }
 
 CFactoryTemplate g_Templates[] = {
-    { FILTER_NAME_WIDE
-    , &AvsFilter::CLSID_AviSynthFilter
-    , AvsFilter::CreateInstance<AvsFilter::CAviSynthFilter>
-    , nullptr
-    , &AvsFilter::REG_FILTER
+    { .m_Name = FILTER_NAME_WIDE
+    , .m_ClsID = &AvsFilter::CLSID_AviSynthFilter
+    , .m_lpfnNew = AvsFilter::CreateInstance<AvsFilter::CAviSynthFilter>
+    , .m_lpfnInit = nullptr
+    , .m_pAMovieSetup_Filter = &AvsFilter::REG_FILTER
     },
 
-    { SETTINGS_WIDE
-    , &AvsFilter::CLSID_AvsPropSettings
-    , AvsFilter::CreateInstance<AvsFilter::CAvsFilterPropSettings>
+    { .m_Name = SETTINGS_WIDE
+    , .m_ClsID = &AvsFilter::CLSID_AvsPropSettings
+    , .m_lpfnNew = AvsFilter::CreateInstance<AvsFilter::CAvsFilterPropSettings>
     },
 
-    { STATUS_WIDE
-    , &AvsFilter::CLSID_AvsPropStatus
-    , AvsFilter::CreateInstance<AvsFilter::CAvsFilterPropStatus>
+    { .m_Name = STATUS_WIDE
+    , .m_ClsID = &AvsFilter::CLSID_AvsPropStatus
+    , .m_lpfnNew = AvsFilter::CreateInstance<AvsFilter::CAvsFilterPropStatus>
     },
 };
 int g_cTemplates = sizeof(g_Templates) / sizeof(g_Templates[0]);

@@ -14,24 +14,24 @@ static const __m128i DEINTERLEAVE_MASK_16_BIT_1 = _mm_set_epi8(29, 28, 25, 24, 2
 static const __m128i DEINTERLEAVE_MASK_16_BIT_2 = _mm_set_epi8(31, 30, 27, 26, 23, 22, 19, 18, 15, 14, 11, 10, 7, 6, 3, 2);
 
 const std::vector<Format::Definition> Format::DEFINITIONS = {
-    /* 0 */  { MEDIASUBTYPE_NV12, VideoInfo::CS_YV12, 12, 1 },
-    /* 1 */  { MEDIASUBTYPE_YV12, VideoInfo::CS_YV12, 12, 1 },
-    /* 2 */  { MEDIASUBTYPE_I420, VideoInfo::CS_YV12, 12, 1 },
-    /* 3 */  { MEDIASUBTYPE_IYUV, VideoInfo::CS_YV12, 12, 1 },
+    /* 0 */  { .mediaSubtype = MEDIASUBTYPE_NV12, .avsType = VideoInfo::CS_YV12, .bitCount = 12, .componentsPerPixel = 1 },
+    /* 1 */  { .mediaSubtype = MEDIASUBTYPE_YV12, .avsType = VideoInfo::CS_YV12, .bitCount = 12, .componentsPerPixel = 1 },
+    /* 2 */  { .mediaSubtype = MEDIASUBTYPE_I420, .avsType = VideoInfo::CS_YV12, .bitCount = 12, .componentsPerPixel = 1 },
+    /* 3 */  { .mediaSubtype = MEDIASUBTYPE_IYUV, .avsType = VideoInfo::CS_YV12, .bitCount = 12, .componentsPerPixel = 1 },
 
     // P010 has the most significant 6 bits zero-padded, while AviSynth expects the least significant bits padded
     // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
-    /* 4 */  { MEDIASUBTYPE_P010, VideoInfo::CS_YUV420P16, 24, 1 },
+    /* 4 */  { .mediaSubtype = MEDIASUBTYPE_P010, .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1 },
 
-    /* 5 */  { MEDIASUBTYPE_P016, VideoInfo::CS_YUV420P16, 24, 1 },
+    /* 5 */  { .mediaSubtype = MEDIASUBTYPE_P016, .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1 },
 
     // packed formats such as YUY2 are twice as wide as unpacked formats per pixel
-    /* 6 */  { MEDIASUBTYPE_YUY2, VideoInfo::CS_YUY2, 16, 2 },
-    /* 7 */  { MEDIASUBTYPE_UYVY, VideoInfo::CS_YUY2, 16, 2 },
+    /* 6 */  { .mediaSubtype = MEDIASUBTYPE_YUY2, .avsType = VideoInfo::CS_YUY2, .bitCount = 16, .componentsPerPixel = 2 },
+    /* 7 */  { .mediaSubtype = MEDIASUBTYPE_UYVY, .avsType = VideoInfo::CS_YUY2, .bitCount = 16, .componentsPerPixel = 2 },
 
-    /* 8 */  { MEDIASUBTYPE_RGB24, VideoInfo::CS_BGR24, 24, 3 },
-    /* 9 */  { MEDIASUBTYPE_RGB32, VideoInfo::CS_BGR32, 24, 4 },
-    /* 10 */ { MEDIASUBTYPE_RGB48, VideoInfo::CS_BGR48, 48, 3 },
+    /* 8 */  { .mediaSubtype = MEDIASUBTYPE_RGB24, .avsType = VideoInfo::CS_BGR24, .bitCount = 24, .componentsPerPixel = 3 },
+    /* 9 */  { .mediaSubtype = MEDIASUBTYPE_RGB32, .avsType = VideoInfo::CS_BGR32, .bitCount = 24, .componentsPerPixel = 4 },
+    /* 10 */ { .mediaSubtype = MEDIASUBTYPE_RGB48, .avsType = VideoInfo::CS_BGR48, .bitCount = 48, .componentsPerPixel = 3 },
 };
 
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {

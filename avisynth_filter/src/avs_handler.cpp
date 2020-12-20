@@ -87,7 +87,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
         newBmi = &newVih->bmiHeader;
     }
 
-    newVih->rcSource = { 0, 0, _scriptVideoInfo.width, _scriptVideoInfo.height };
+    newVih->rcSource = { .left = 0, .top = 0, .right = _scriptVideoInfo.width, .bottom = _scriptVideoInfo.height };
     newVih->rcTarget = newVih->rcSource;
     newVih->AvgTimePerFrame = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
 
