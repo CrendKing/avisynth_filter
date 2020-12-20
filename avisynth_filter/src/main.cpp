@@ -69,7 +69,7 @@ static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * 
 static auto RegisterFilter() -> HRESULT {
     std::vector<REGPINTYPES> pinTypes;
     for (const Format::Definition &info : Format::DEFINITIONS) {
-        pinTypes.emplace_back(REGPINTYPES { .clsMajorType = &MEDIATYPE_Video, .clsMinorType = &info.mediaSubtype });
+        pinTypes.emplace_back(&MEDIATYPE_Video, &info.mediaSubtype);
     }
 
     REG_PINS[0].lpMediaType = pinTypes.data();

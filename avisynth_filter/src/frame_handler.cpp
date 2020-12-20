@@ -129,7 +129,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
                     g_env.Log("Create output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli", _nextOutputFrameNb, preSrcFrameInfoBeforeEdge.frameNb, outStartTime, outStopTime, outStopTime - outStartTime);
 
-                    _outputFrames.emplace_back(OutputFrameInfo { .frameNb = _nextOutputFrameNb, .startTime = outStartTime, .stopTime = outStopTime, .srcFrameInfo = &preSrcFrameInfoBeforeEdge });
+                    _outputFrames.emplace_back(_nextOutputFrameNb, outStartTime, outStopTime, &preSrcFrameInfoBeforeEdge);
                     _nextOutputFrameNb += 1;
                     preSrcFrameInfoBeforeEdge.refCount += 1;
                 }

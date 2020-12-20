@@ -104,7 +104,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                                 _acceptableOutputTypes[outputDefinition].reset(g_avs->GenerateMediaType(outputDefinition, nextType));
                                 g_env.Log("Add acceptable output definition: %2i", outputDefinition);
 
-                                _compatibleDefinitions.emplace_back(DefinitionPair { inputDefinition, outputDefinition });
+                                _compatibleDefinitions.emplace_back(inputDefinition, outputDefinition);
                                 g_env.Log("Add compatible definitions: input %2i output %2i", inputDefinition, outputDefinition);
                             }
                         }
@@ -539,7 +539,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
         FILTER_INFO filterInfo;
         if (SUCCEEDED(currFilter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
-            _videoFilterNames.push_back(filterInfo.achName);
+            _videoFilterNames.emplace_back(filterInfo.achName);
             g_env.Log("Filter in graph: %S", filterInfo.achName);
         }
 
