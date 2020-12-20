@@ -190,11 +190,7 @@ auto FrameHandler::BeginFlush() -> void {
     if (_stopThreads) {
         g_env.Log("Frame handler cleanup after stop threads");
 
-        for (std::thread &t : _outputThreads) {
-            if (t.joinable()) {
-                t.join();
-            }
-        }
+        std::ranges::for_each(_outputThreads | std::views::filter(&std::thread::joinable), &std::thread::join);
         _outputThreads.clear();
     } else {
         g_env.Log("Frame handler wait for barriers");
@@ -277,7 +273,6 @@ auto FrameHandler::StartWorkerThreads() -> void {
 
     _stopThreads = false;
 
-    // TODO: use ranges::iota_view
     for (int i = g_env.GetOutputThreads(); i != 0; --i) {
         _outputThreads.emplace_back(&FrameHandler::ProcessOutputSamples, this);
     }

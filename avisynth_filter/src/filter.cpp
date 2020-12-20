@@ -7,8 +7,8 @@
 #include "constants.h"
 #include "environment.h"
 #include "input_pin.h"
+#include "util.h"
 #include "version.h"
-
 
 namespace AvsFilter {
 
@@ -563,6 +563,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
 }
 
 auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool {
+    // TODO: use ranges::iota_view when available
     for (size_t i = 0; i < _acceptableInputTypes.size(); ++i) {
         if (_acceptableInputTypes[i] != nullptr && Format::DEFINITIONS[i].avsType == Format::DEFINITIONS[inputDefinition].avsType) {
             return false;
@@ -573,12 +574,7 @@ auto CAviSynthFilter::IsInputUniqueByAvsType(int inputDefinition) const -> bool 
 }
 
 auto CAviSynthFilter::FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int> {
-    for (const auto &[input, output] : _compatibleDefinitions) {
-        if (output == outputDefinition) {
-            return input;
-        }
-    }
-    return std::nullopt;
+    return OptionalFind(_compatibleDefinitions, outputDefinition, &DefinitionPair::output, &DefinitionPair::input);
 }
 
 }

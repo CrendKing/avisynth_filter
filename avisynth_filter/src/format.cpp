@@ -49,7 +49,7 @@ auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
 }
 
 auto Format::VideoFormat::GetCodecName() const -> std::string {
-    const CLSID subtype = DEFINITIONS[definition].mediaSubtype;
+    const CLSID &subtype = DEFINITIONS[definition].mediaSubtype;
 
     if (bmi.biCompression == BI_RGB) {
         if (subtype == MEDIASUBTYPE_RGB24) {
