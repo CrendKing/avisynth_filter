@@ -1,17 +1,17 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
 #include "pch.h"
-#include "barrier.h"
+#include "gatekeeper.h"
 
 
 namespace AvsFilter {
 
-Barrier::Barrier(int count)
+Gatekeeper::Gatekeeper(int count)
     : _initialCount(count)
     , _currentCount(count) {
 }
 
-auto Barrier::Arrive() -> void {
+auto Gatekeeper::ArriveAndWait() -> void {
     std::unique_lock lock(_mutex);
 
     _currentCount -= 1;
@@ -24,7 +24,7 @@ auto Barrier::Arrive() -> void {
     });
 }
 
-auto Barrier::Wait() -> void {
+auto Gatekeeper::WaitForCount() -> void {
     std::shared_lock lock(_mutex);
 
     _waitCv.wait(lock, [this]() -> bool {
@@ -32,7 +32,7 @@ auto Barrier::Wait() -> void {
     });
 }
 
-auto Barrier::Unlock() -> void {
+auto Gatekeeper::Unlock() -> void {
     {
         const std::unique_lock lock(_mutex);
         _currentCount = _initialCount;

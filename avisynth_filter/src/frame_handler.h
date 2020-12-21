@@ -3,7 +3,7 @@
 #pragma once
 
 #include "pch.h"
-#include "barrier.h"
+#include "gatekeeper.h"
 #include "side_data.h"
 
 
@@ -81,7 +81,7 @@ private:
 
     std::vector<std::thread> _outputThreads;
 
-    Barrier _flushBarrier;
+    Gatekeeper _flushGatekeeper;
     bool _stopThreads;
     bool _isFlushing;
 

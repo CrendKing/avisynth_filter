@@ -13,7 +13,7 @@ namespace AvsFilter {
 
 FrameHandler::FrameHandler(CAviSynthFilter &filter)
     : _filter(filter)
-    , _flushBarrier(g_env.GetOutputThreads())
+    , _flushGatekeeper(g_env.GetOutputThreads())
     , _stopThreads(true)
     , _isFlushing(false) {
     Reset();
@@ -195,7 +195,7 @@ auto FrameHandler::BeginFlush() -> void {
     } else {
         g_env.Log("Frame handler wait for barriers");
 
-        _flushBarrier.Wait();
+        _flushGatekeeper.WaitForCount();
     }
 
     /*
@@ -227,7 +227,7 @@ auto FrameHandler::EndFlush() -> void {
     g_env.Log("Frame handler EndFlush()");
 
     _isFlushing = false;
-    _flushBarrier.Unlock();
+    _flushGatekeeper.Unlock();
 }
 
 auto FrameHandler::GetInputBufferSize() const -> int {
@@ -315,7 +315,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
         if (_isFlushing) {
             g_env.Log("Output worker thread wait for flush");
 
-            _flushBarrier.Arrive();
+            _flushGatekeeper.ArriveAndWait();
         }
 
         std::unique_lock outLock(_outputFramesMutex);
