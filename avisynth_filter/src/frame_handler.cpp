@@ -58,8 +58,14 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return VFW_E_SAMPLE_REJECTED;
     }
 
-    if (_nextOutputFrameStartTime == 0) {
+    if (_nextOutputFrameStartTime == -1) {
         _nextOutputFrameStartTime = srcFrameInfo.startTime;
+    }
+    if (_frameRateCheckpointInputSampleStartTime == -1) {
+        _frameRateCheckpointInputSampleStartTime = srcFrameInfo.startTime;
+    }
+    if (_frameRateCheckpointOutputFrameStartTime == -1) {
+        _frameRateCheckpointOutputFrameStartTime = srcFrameInfo.startTime;
     }
 
     RefreshInputFrameRates(srcFrameInfo);
@@ -294,12 +300,12 @@ auto FrameHandler::Reset() -> void {
     _nextSourceFrameNb = 0;
     _nextOutputFrameNb = 0;
     _nextDeliverFrameNb = 0;
-    _nextOutputFrameStartTime = 0;
+    _nextOutputFrameStartTime = -1;
 
     _frameRateCheckpointInputSampleNb = 0;
-    _frameRateCheckpointInputSampleStartTime = 0;
+    _frameRateCheckpointInputSampleStartTime = -1;
     _frameRateCheckpointOutputFrameNb = 0;
-    _frameRateCheckpointOutputFrameStartTime = 0;
+    _frameRateCheckpointOutputFrameStartTime = -1;
     _currentInputFrameRate = 0;
     _currentOutputFrameRate = 0;
 }
@@ -414,6 +420,8 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
     const size_t dbgPreSize = _sourceFrames.size();
 
+    // search for all previous zero-ref frames in case of some source frames are never used
+    // this could happen by plugins that decrease frame rate
     auto iter = _sourceFrames.begin();
     do {
         if (iter->first == srcFrameNb) {
