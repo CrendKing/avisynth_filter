@@ -19,9 +19,9 @@ auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     if (_frameHandler == nullptr) {
         return g_avs->GetSourceDrainFrame();
-    } else {
-        return _frameHandler->GetSourceFrame(frameNb, env);
     }
+
+    return _frameHandler->GetSourceFrame(frameNb, env);
 }
 
 auto SourceClip::GetParity(int frameNb) -> bool {

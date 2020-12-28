@@ -73,10 +73,10 @@ auto RemoteControl::Run() -> void {
 		if (msgRet == -1) {
 			g_env.Log("Remote control message loop error: %5lu", GetLastError());
 			break;
-		} else {
-			TranslateMessage(&msg);
-			DispatchMessageA(&msg);
 		}
+
+		TranslateMessage(&msg);
+		DispatchMessageA(&msg);
 	}
 
 	DestroyWindow(_hWnd);
@@ -155,9 +155,9 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         if (const std::optional<std::string> optAvsError = g_avs->GetErrorString()) {
             SendString(hSenderWindow, copyData->dwData, *optAvsError);
             return TRUE;
-        } else {
-            return FALSE;
         }
+
+        return FALSE;
 
     case API_MSG_GET_AVS_SOURCE_FILE: {
         const std::wstring effectiveAvsFile = g_avs->GetScriptFile();

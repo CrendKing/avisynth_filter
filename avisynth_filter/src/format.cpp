@@ -54,17 +54,18 @@ auto Format::VideoFormat::GetCodecName() const -> std::string {
     if (bmi.biCompression == BI_RGB) {
         if (subtype == MEDIASUBTYPE_RGB24) {
             return "RGB24";
-        } else if (subtype == MEDIASUBTYPE_RGB32) {
-            return "RGB32";
-        } else if (subtype == MEDIASUBTYPE_RGB48) {
-            return "RGB48";
-        } else {
-            return "RGB0";
         }
-    } else {
-        const DWORD fourCC = GetCodecFourCC();
-        return std::string(reinterpret_cast<const char *>(&fourCC), 4);
+        if (subtype == MEDIASUBTYPE_RGB32) {
+            return "RGB32";
+        }
+        if (subtype == MEDIASUBTYPE_RGB48) {
+            return "RGB48";
+        }
+        return "RGB0";
     }
+
+    const DWORD fourCC = GetCodecFourCC();
+    return std::string(reinterpret_cast<const char *>(&fourCC), 4);
 }
 
 auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<int> {

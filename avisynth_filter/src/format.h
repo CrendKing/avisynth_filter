@@ -57,7 +57,7 @@ public:
 
 private:
     template <typename Component>
-    static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void {
+    constexpr static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void {
         const int iterations = rowSize / sizeof(__m128i);
         const int remainderStart = iterations * sizeof(__m128i);
 
@@ -85,7 +85,7 @@ private:
     }
 
     template <typename Component>
-    static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    constexpr static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         const int iterations = rowSize / sizeof(__m128i);
         const int remainderStart = iterations * sizeof(__m128i);
 

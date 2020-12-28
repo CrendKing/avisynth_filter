@@ -59,13 +59,13 @@ static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 #define STATUS_WIDE                       Widen(STATUS_FULL)
 
 // interface version 7 = AviSynth+ 3.5
-static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION   = 7;
+static constexpr int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION   = 7;
 
 /*
  * Max number of frames received before blocking upstream from flooding the input queue.
  * Once reached, it must wait until the output thread delivers and GC source frames.
  */
-static constexpr const int MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY       = 7;
+static constexpr int MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY       = 7;
 
 /*
  * If an output frame's stop time is this value close to the the next source frame's
@@ -73,17 +73,17 @@ static constexpr const int MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY       = 7;
  * This trick helps eliminating frame time drift due to precision loss.
  * Unit is 100ns. 10 = 1ms.
  */
-static constexpr const int MAX_OUTPUT_FRAME_DURATION_PADDING         = 10;
+static constexpr int MAX_OUTPUT_FRAME_DURATION_PADDING         = 10;
 
-static constexpr const int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 1;
+static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 1;
 
 /*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
  * Default to 25 FPS in such cases.
  */
-static constexpr const REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME     = 400000;
-static constexpr const int STATUS_PAGE_TIMER_INTERVAL_MS             = 1000;
-static constexpr const wchar_t *UNAVAILABLE_SOURCE_PATH              = L"N/A";
+static constexpr REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME     = 400000;
+static constexpr int STATUS_PAGE_TIMER_INTERVAL_MS             = 1000;
+static constexpr const wchar_t *UNAVAILABLE_SOURCE_PATH        = L"N/A";
 
 /*
  * Stream could last forever. Use a large power as the fake number of frames.
@@ -91,15 +91,15 @@ static constexpr const wchar_t *UNAVAILABLE_SOURCE_PATH              = L"N/A";
  * Also, some filters may perform calculation on it, resulting overflow.
  * Same as ffdshow, uses a highly composite number 10810800, which could last 50 hours for a 60fps stream.
  */
-static constexpr const int NUM_FRAMES_FOR_INFINITE_STREAM            = 10810800;
+static constexpr int NUM_FRAMES_FOR_INFINITE_STREAM            = 10810800;
 
-static constexpr const wchar_t *REGISTRY_KEY_NAME                    = L"Software\\AviSynthFilter";
-static constexpr const wchar_t *SETTING_NAME_AVS_FILE                = L"AvsFile";
-static constexpr const wchar_t *SETTING_NAME_LOG_FILE                = L"LogFile";
-static constexpr const wchar_t *SETTING_NAME_FORMATS                 = L"Formats";
-static constexpr const wchar_t *SETTING_NAME_OUTPUT_THREADS          = L"OutputThreads";
-static constexpr const wchar_t *SETTING_NAME_REMOTE_CONTROL          = L"RemoteControl";
+static constexpr const wchar_t *REGISTRY_KEY_NAME              = L"Software\\AviSynthFilter";
+static constexpr const wchar_t *SETTING_NAME_AVS_FILE          = L"AvsFile";
+static constexpr const wchar_t *SETTING_NAME_LOG_FILE          = L"LogFile";
+static constexpr const wchar_t *SETTING_NAME_FORMATS           = L"Formats";
+static constexpr const wchar_t *SETTING_NAME_OUTPUT_THREADS    = L"OutputThreads";
+static constexpr const wchar_t *SETTING_NAME_REMOTE_CONTROL    = L"RemoteControl";
 
-static constexpr const int REMOTE_CONTROL_SMTO_TIMEOUT_MS            = 1000;
+static constexpr int REMOTE_CONTROL_SMTO_TIMEOUT_MS            = 1000;
 
 }

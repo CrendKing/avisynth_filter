@@ -58,7 +58,6 @@ auto CAviSynthFilter::GetPin(int n) -> CBasePin * {
         }
         return m_pInput;
     }
-
     if (n == 1) {
         if (m_pOutput == nullptr) {
             m_pOutput = new CTransformOutputPin(NAME("AviSynthFilter output pin"), this, &hr, L"Avs Out");
