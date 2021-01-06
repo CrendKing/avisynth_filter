@@ -86,7 +86,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
     } else {
         newBmi = &newVih->bmiHeader;
     }
-    
+
     newVih->rcSource = { .left = 0, .top = 0, .right = _scriptVideoInfo.width, .bottom = _scriptVideoInfo.height };
     newVih->rcTarget = newVih->rcSource;
     newVih->AvgTimePerFrame = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
@@ -164,10 +164,10 @@ auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconn
 
     if (!_errorString.empty()) {
         // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
-        const char *errorFormat = 
+        const char *errorFormat =
             "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n"
             "if (%i > 1) { Prefetch(%i) }\n";  // add trailing '\n' to pad size because snprintf() does not count the terminating null
-            
+
         const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str(), g_env.GetOutputThreads(), g_env.GetOutputThreads());
         const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
         snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str(), g_env.GetOutputThreads(), g_env.GetOutputThreads());

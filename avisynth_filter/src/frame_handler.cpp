@@ -291,7 +291,7 @@ auto FrameHandler::StopWorkerThreads() -> void {
     _addInputSampleCv.notify_all();
 
     // _isFlushing == true is needed when the filter is being unloaded to unblock AviSynth prefetcher
-    // thus the pairing EndFlush() is called at StartWorkerThreads() 
+    // thus the pairing EndFlush() is called at StartWorkerThreads()
     BeginFlush();
 }
 

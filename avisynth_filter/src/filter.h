@@ -48,7 +48,7 @@ public:
     auto GetAvsState() const -> AvsState;
 
     FrameHandler frameHandler;
-    
+
 private:
     struct MediaTypeDeleter {
         auto operator()(AM_MEDIA_TYPE *mediaType) const -> void {

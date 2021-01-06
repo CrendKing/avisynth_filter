@@ -29,15 +29,15 @@ static REGFILTERPINS REG_PINS[] = {
     , .nMediaTypes = 0                                // pin media type count (to be filled in RegisterFilter())
     , .lpMediaType = nullptr },                       // pin media types (to be filled in RegisterFilter())
 
-    { .strName = nullptr     
-    , .bRendered = FALSE       
-    , .bOutput = TRUE        
-    , .bZero = FALSE       
-    , .bMany = FALSE       
-    , .clsConnectsToFilter = &CLSID_NULL 
-    , .strConnectsToPin = nullptr     
-    , .nMediaTypes = 0           
-    , .lpMediaType = nullptr },  
+    { .strName = nullptr
+    , .bRendered = FALSE
+    , .bOutput = TRUE
+    , .bZero = FALSE
+    , .bMany = FALSE
+    , .clsConnectsToFilter = &CLSID_NULL
+    , .strConnectsToPin = nullptr
+    , .nMediaTypes = 0
+    , .lpMediaType = nullptr },
 };
 
 static constexpr AMOVIESETUP_FILTER REG_FILTER = {

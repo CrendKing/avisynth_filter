@@ -27,7 +27,7 @@ static constexpr char API_CSV_DELIMITER                    = ';';
 // scale the fractional numbers by a factor and convert to integer for API messaging
 static constexpr int PAR_SCALE_FACTOR = 1000;
 static constexpr int FRAME_RATE_SCALE_FACTOR = 1000;
-                                                           
+
 ////// filter related messages //////
 
 /**
@@ -42,7 +42,7 @@ static constexpr ULONG_PTR API_MSG_GET_API_VERSION         = 100;
  * note  : the order of filters is preserved
  */
 static constexpr ULONG_PTR API_MSG_GET_VIDEO_FILTERS       = 101;
-                                                           
+
 ////// input related messages //////
 
 /**
@@ -101,7 +101,7 @@ static constexpr ULONG_PTR API_MSG_GET_INPUT_HDR_LUMINANCE = 207;
  * output: average frames per second from the source video, scaled by FRAME_RATE_SCALE_FACTOR
  */
 static constexpr ULONG_PTR API_MSG_GET_SOURCE_AVG_FPS      = 208;
-                                                           
+
 ////// output related messages //////
 
 /**
@@ -109,7 +109,7 @@ static constexpr ULONG_PTR API_MSG_GET_SOURCE_AVG_FPS      = 208;
  * output: current output video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
  */
 static constexpr ULONG_PTR API_MSG_GET_CURRENT_OUTPUT_FPS  = 300;
-                                                           
+
 ////// AviSynth related messages //////
 
 /**

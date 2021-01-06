@@ -22,7 +22,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _acceptableOutputTypes(Format::DEFINITIONS.size())
     , _inputFormat()
     , _outputFormat()
-    , _sendOutputFormatInNextSample(false) 
+    , _sendOutputFormatInNextSample(false)
 	, _reloadAvsSource(false) {
     g_env.Log("CAviSynthFilter(): %p", this);
 
@@ -469,11 +469,11 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 
     AM_MEDIA_TYPE *newOutputType = g_avs->GenerateMediaType(Format::LookupAvsType(g_avs->GetScriptPixelType())[0], &inputMediaType);
     const UniqueMediaTypePtr newOutputTypePtr(newOutputType);
-    
+
     if (m_pOutput->GetConnected()->QueryAccept(newOutputType) != S_OK) {
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
-    
+
     _inputFormat = Format::GetVideoFormat(inputMediaType);
 
     const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(*newOutputType);
