@@ -32,7 +32,6 @@ public:
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-
     auto LoadModule() const -> HMODULE;
     auto CreateEnv() const -> IScriptEnvironment *;
     [[ noreturn ]] auto ShowFatalError(const char *errorMessage) const -> void ;

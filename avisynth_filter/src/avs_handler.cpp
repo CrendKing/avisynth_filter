@@ -47,6 +47,7 @@ AvsHandler::AvsHandler()
 AvsHandler::~AvsHandler() {
     g_env.Log("~AvsHandler()");
 
+    _sourceDrainFrame = nullptr;
     _env->DeleteScriptEnvironment();
     AVS_linkage = nullptr;
     FreeLibrary(_module);
