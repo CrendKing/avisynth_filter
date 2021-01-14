@@ -4,6 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "avisynth_filter", "avisynth_filter\avisynth_filter.vcxproj", "{C84DE615-CF6F-441C-99B8-E30F5046CF9F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60} = {6D6FABA3-51A7-4162-B5A8-ADA838387D60}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "baseclasses", "baseclasses\baseclasses.vcxproj", "{6D6FABA3-51A7-4162-B5A8-ADA838387D60}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +26,14 @@ Global
 		{C84DE615-CF6F-441C-99B8-E30F5046CF9F}.Release|x64.Build.0 = Release|x64
 		{C84DE615-CF6F-441C-99B8-E30F5046CF9F}.Release|x86.ActiveCfg = Release|Win32
 		{C84DE615-CF6F-441C-99B8-E30F5046CF9F}.Release|x86.Build.0 = Release|Win32
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Debug|x64.ActiveCfg = Debug|x64
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Debug|x64.Build.0 = Debug|x64
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Debug|x86.ActiveCfg = Debug|Win32
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Debug|x86.Build.0 = Debug|Win32
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Release|x64.ActiveCfg = Release|x64
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Release|x64.Build.0 = Release|x64
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Release|x86.ActiveCfg = Release|Win32
+		{6D6FABA3-51A7-4162-B5A8-ADA838387D60}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

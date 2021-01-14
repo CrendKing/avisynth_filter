@@ -8,6 +8,8 @@
 //------------------------------------------------------------------------------
 
 
+#define _WINDLL
+
 #include <streams.h>
 #include <stdarg.h>
 #include <stdio.h>
