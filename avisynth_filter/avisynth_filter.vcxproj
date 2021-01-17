@@ -27,6 +27,7 @@
     <ClInclude Include="src\gatekeeper.h" />
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\environment.h" />
+    <ClInclude Include="src\hdr.h" />
     <ClInclude Include="src\input_pin.h" />
     <ClInclude Include="src\media_sample.h" />
     <ClInclude Include="src\pch.h" />
@@ -63,7 +64,7 @@
     <ClCompile Include="src\prop_settings.cpp" />
     <ClCompile Include="src\prop_status.cpp" />
     <ClCompile Include="src\registry.cpp" />
-    <ClCompile Include="src\side_data.cpp" />
+    <ClCompile Include="src\hdr.cpp" />
     <ClCompile Include="src\source_clip.cpp" />
     <ClCompile Include="src\remote_control.cpp" />
     <ClCompile Include="src\util.cpp" />

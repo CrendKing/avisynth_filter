@@ -4,7 +4,7 @@
 
 #include "pch.h"
 #include "gatekeeper.h"
-#include "side_data.h"
+#include "hdr.h"
 
 
 namespace AvsFilter {

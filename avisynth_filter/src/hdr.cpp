@@ -1,8 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
 #include "pch.h"
-#include "side_data.h"
-#include "constants.h"
+#include "hdr.h"
 
 
 namespace AvsFilter {
@@ -46,6 +45,10 @@ auto HDRSideData::Read(IMediaSideData *from) -> void {
         StoreSideData(IID_MediaSideDataHDRContentLightLevel, data, dataSize);
     }
 
+    if (SUCCEEDED(from->GetSideData(IID_MediaSideDataHDR10Plus, &data, &dataSize))) {
+        StoreSideData(IID_MediaSideDataHDR10Plus, data, dataSize);
+    }
+
     if (SUCCEEDED(from->GetSideData(IID_MediaSideData3DOffset, &data, &dataSize))) {
         StoreSideData(IID_MediaSideData3DOffset, data, dataSize);
     }
@@ -58,6 +61,10 @@ auto HDRSideData::Write(IMediaSideData *to) const -> void {
 
     if (!_hdrContentLightLevelData.empty()) {
         to->SetSideData(IID_MediaSideDataHDRContentLightLevel, _hdrContentLightLevelData.data(), _hdrContentLightLevelData.size());
+    }
+
+    if (!_hdr10PlusData.empty()) {
+        to->SetSideData(IID_MediaSideDataHDR10Plus, _hdr10PlusData.data(), _hdr10PlusData.size());
     }
 
     if (!_hdr3DOffsetData.empty()) {
@@ -73,22 +80,28 @@ auto HDRSideData::GetHDRData() const -> std::optional<const BYTE *> {
     return _hdrData.data();
 }
 
-auto HDRSideData::GetContentLightLevelData() const -> std::optional<const BYTE *> {
+auto HDRSideData::GetHDRContentLightLevelData() const -> std::optional<const BYTE *> {
     if (_hdrContentLightLevelData.empty()) {
         return std::nullopt;
     }
 
     return _hdrContentLightLevelData.data();
-
 }
 
-auto HDRSideData::Get3DOffsetData() const -> std::optional<const BYTE *> {
+auto HDRSideData::GetHDR10PlusData() const -> std::optional<const BYTE *> {
+    if (_hdr10PlusData.empty()) {
+        return std::nullopt;
+    }
+
+    return _hdr10PlusData.data();
+}
+
+auto HDRSideData::GetHDR3DOffsetData() const -> std::optional<const BYTE *> {
     if (_hdr3DOffsetData.empty()) {
         return std::nullopt;
     }
 
     return _hdr3DOffsetData.data();
-
 }
 
 auto HDRSideData::GetDataByGUID(GUID guidType) -> std::vector<BYTE> * {
@@ -98,6 +111,10 @@ auto HDRSideData::GetDataByGUID(GUID guidType) -> std::vector<BYTE> * {
 
     if (guidType == IID_MediaSideDataHDRContentLightLevel) {
         return &_hdrContentLightLevelData;
+    }
+
+    if (guidType == IID_MediaSideDataHDR10Plus) {
+        return &_hdr10PlusData;
     }
 
     if (guidType == IID_MediaSideData3DOffset) {

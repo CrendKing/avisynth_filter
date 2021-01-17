@@ -3,7 +3,7 @@
 #pragma once
 
 #include "pch.h"
-#include "side_data.h"
+#include "hdr.h"
 
 
 namespace AvsFilter {

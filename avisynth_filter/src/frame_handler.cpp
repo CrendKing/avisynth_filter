@@ -86,7 +86,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
             if (const std::optional<const BYTE *> optHdr = srcFrameInfo.hdrSideData.GetHDRData()) {
                 _filter._inputFormat.hdrType = 1;
 
-                if (const std::optional<const BYTE *> optHdrCll = srcFrameInfo.hdrSideData.GetContentLightLevelData()) {
+                if (const std::optional<const BYTE *> optHdrCll = srcFrameInfo.hdrSideData.GetHDRContentLightLevelData()) {
                     _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*optHdrCll)->MaxCLL;
                 } else {
                     _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
