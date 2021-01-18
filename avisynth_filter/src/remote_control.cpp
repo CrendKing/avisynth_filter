@@ -51,6 +51,10 @@ auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 }
 
 auto RemoteControl::Run() -> void {
+#ifdef _DEBUG
+    SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Remote Control");
+#endif
+
 	WNDCLASSA wc {};
 	wc.lpfnWndProc = &RemoteControl::WndProc;
 	wc.hInstance = g_hInst;

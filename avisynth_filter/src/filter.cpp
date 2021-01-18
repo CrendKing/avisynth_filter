@@ -82,6 +82,8 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
         while (true) {
             hr = enumTypes->Next(1, &nextType, nullptr);
             if (hr == S_OK) {
+                const UniqueMediaTypePtr nextTypePtr(nextType);
+
                 const std::optional<int> optInputDefinition = GetInputDefinition(nextType);
                 if (optInputDefinition && std::ranges::find(_compatibleMediaTypes, *static_cast<CMediaType *>(nextType), &MediaTypePair::input) == _compatibleMediaTypes.cend()) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
@@ -462,20 +464,20 @@ auto CAviSynthFilter::FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::opti
 auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT {
     HRESULT hr;
 
-    const CMediaType newOutputType = g_avs->GenerateMediaType(Format::LookupAvsType(g_avs->GetScriptPixelType())[0], &inputMediaType);
+    _inputFormat = Format::GetVideoFormat(inputMediaType);
+    g_env.Log("Upstream propose to change input format: definition %i, width %5li, height %5li, codec %s",
+              _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
+    const CMediaType newOutputType = g_avs->GenerateMediaType(Format::LookupAvsType(g_avs->GetScriptPixelType())[0], &inputMediaType);
     if (m_pOutput->GetConnected()->QueryAccept(&newOutputType) != S_OK) {
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
 
-    _inputFormat = Format::GetVideoFormat(inputMediaType);
-
     // even though the new VideoFormat may seem the same as the old, some properties (e.g. VIDEOINFOHEADER2::dwControlFlags which controls HDR colorspace)
     // may have changed. it is safe to always send out the new media type
     const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(newOutputType);
-    g_env.Log("Update to output format definition %i, width %5li, height %5li, codec %s using input format definition %i, width %5li, height %5li, codec %s",
-              newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str(),
-              _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
+    g_env.Log("Downstream accepts new output format definition %i, width %5li, height %5li, codec %s",
+              newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str());
 
     CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, &newOutputType));
 

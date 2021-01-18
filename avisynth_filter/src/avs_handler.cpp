@@ -101,7 +101,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
     newBmi->biSizeImage = GetBitmapSize(newBmi);
     newMediaType.SetSampleSize(newBmi->biSizeImage);
 
-    if (IsEqualGUID(fourCC, def.mediaSubtype)) {
+    if (fourCC == def.mediaSubtype) {
         // uncompressed formats (such as RGB32) have different GUIDs
         newBmi->biCompression = fourCC.GetFOURCC();
     } else {
