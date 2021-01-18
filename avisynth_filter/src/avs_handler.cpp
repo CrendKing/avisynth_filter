@@ -47,7 +47,10 @@ AvsHandler::AvsHandler()
 AvsHandler::~AvsHandler() {
     g_env.Log("~AvsHandler()");
 
+    _scriptClip = nullptr;
+    _sourceClip = nullptr;
     _sourceDrainFrame = nullptr;
+
     _env->DeleteScriptEnvironment();
     AVS_linkage = nullptr;
     FreeLibrary(_module);
@@ -63,18 +66,18 @@ auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
  * For example, when the original subtype has 8-bit samples and new subtype has 16-bit,
  * all "size" and FourCC values will be adjusted.
  */
-auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> AM_MEDIA_TYPE * {
+auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
     const Format::Definition &def = Format::DEFINITIONS[definition];
     FOURCCMap fourCC(&def.mediaSubtype);
 
-    AM_MEDIA_TYPE *newMediaType = CreateMediaType(templateMediaType);
-    newMediaType->subtype = def.mediaSubtype;
+    CMediaType newMediaType(*templateMediaType);
+    newMediaType.SetSubtype(&def.mediaSubtype);
 
-    VIDEOINFOHEADER *newVih = reinterpret_cast<VIDEOINFOHEADER *>(newMediaType->pbFormat);
+    VIDEOINFOHEADER *newVih = reinterpret_cast<VIDEOINFOHEADER *>(newMediaType.Format());
     BITMAPINFOHEADER *newBmi;
 
-    if (SUCCEEDED(CheckVideoInfo2Type(newMediaType))) {
-        VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType->pbFormat);
+    if (SUCCEEDED(CheckVideoInfo2Type(&newMediaType))) {
+        VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType.Format());
         newBmi = &newVih2->bmiHeader;
 
         // generate new DAR if the new SAR differs from the old one
@@ -96,7 +99,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
     newBmi->biHeight = _scriptVideoInfo.height;
     newBmi->biBitCount = def.bitCount;
     newBmi->biSizeImage = GetBitmapSize(newBmi);
-    newMediaType->lSampleSize = newBmi->biSizeImage;
+    newMediaType.SetSampleSize(newBmi->biSizeImage);
 
     if (IsEqualGUID(fourCC, def.mediaSubtype)) {
         // uncompressed formats (such as RGB32) have different GUIDs

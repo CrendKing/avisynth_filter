@@ -57,9 +57,9 @@ private:
     };
     using UniqueMediaTypePtr = std::unique_ptr<AM_MEDIA_TYPE, MediaTypeDeleter>;
 
-    struct DefinitionPair {
-        int input;
-        int output;
+    struct MediaTypePair {
+        CMediaType input;
+        CMediaType output;
     };
 
     static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
@@ -67,17 +67,14 @@ private:
     static auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *>;
 
     auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;
-    auto HandleOutputFormatChange(const AM_MEDIA_TYPE *pmtOut) -> HRESULT;
+    auto HandleOutputFormatChange(const AM_MEDIA_TYPE &outputMediaType) -> HRESULT;
     auto TraverseFiltersInGraph() -> void;
-    auto IsInputUniqueByAvsType(int inputDefinition) const -> bool;
-    auto FindCompatibleInputByOutput(int outputDefinition) const -> std::optional<int>;
 
     std::optional<RemoteControl> _remoteControl;
 
     bool _disconnectFilter;
-    std::vector<UniqueMediaTypePtr> _acceptableInputTypes;
-    std::vector<UniqueMediaTypePtr> _acceptableOutputTypes;
-    std::vector<DefinitionPair> _compatibleDefinitions;
+    std::vector<MediaTypePair> _compatibleMediaTypes;
+    int _mediaTypeReconnectionWatermark;
 
     Format::VideoFormat _inputFormat;
     Format::VideoFormat _outputFormat;

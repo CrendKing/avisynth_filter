@@ -28,8 +28,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
     if (m_Connected) {
         ASSERT(m_pAllocator != nullptr);
 
-        const CMediaType *cmt = static_cast<const CMediaType *>(pmt);
-        if (CheckMediaType(cmt) == S_OK) {
+        if (CheckMediaType(static_cast<const CMediaType *>(pmt)) == S_OK) {
             ALLOCATOR_PROPERTIES props, actual;
 
             CheckHr(m_pAllocator->Decommit());
