@@ -191,7 +191,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
      * We need to find a pair of input/output types that, by feeding the input type to the avs script, the script's equivalent output media type
      * equals to the filter's output pin media type.
      *
-     * The filter graph connects upstream's output pin to our input pin first. We We enumerate the input pin for its N1 media types and calculate
+     * The filter graph connects upstream's output pin to our input pin first. We enumerate the input pin for its N1 media types and calculate
      * acceptable output types by pass the media subtypes to the avs script.
      *
      * During type checking, we accept every Format class compatible media type (minus those excluded from settings), so that both upstream and
@@ -476,14 +476,14 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 
     _inputFormat = Format::GetVideoFormat(inputMediaType);
 
+    // even though the new VideoFormat may seem the same as the old, some properties (e.g. VIDEOINFOHEADER2::dwControlFlags which controls HDR colorspace)
+    // may have changed. it is safe to always send out the new media type
     const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(*newOutputType);
-    if (_outputFormat != newOutputFormat) {
-        g_env.Log("Update to output format definition %i, width %5li, height %5li, codec %s using input format definition %i, width %5li, height %5li, codec %s",
-                  newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str(),
-                  _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
+    g_env.Log("Update to output format definition %i, width %5li, height %5li, codec %s using input format definition %i, width %5li, height %5li, codec %s",
+              newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str(),
+              _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
 
-        CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, newOutputType));
-    }
+    CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, newOutputType));
 
     return S_OK;
 }
