@@ -62,8 +62,8 @@ private:
         CMediaType output;
     };
 
-    static auto MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
-    static auto GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int>;
+    static auto MediaTypeToFormatName(const AM_MEDIA_TYPE *mediaType) -> std::optional<std::wstring>;
+    static auto GetInputFormatName(const AM_MEDIA_TYPE *mediaType) -> std::optional<std::wstring>;
     static auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *>;
 
     auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;

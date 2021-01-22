@@ -19,7 +19,7 @@ public:
     };
 
     struct VideoFormat {
-        int definition;
+        std::wstring name;
         VideoInfo videoInfo;
         int pixelAspectRatio;
         int hdrType;
@@ -28,14 +28,13 @@ public:
 
         auto operator!=(const VideoFormat &other) const -> bool;
         auto GetCodecFourCC() const -> DWORD;
-        auto GetCodecName() const -> std::string;
     };
 
-    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<int>;
-    static auto LookupAvsType(int avsType) -> std::vector<int>;
+    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<std::wstring>;
+    static auto LookupAvsType(int avsType) -> std::vector<std::wstring>;
 
     template<typename T, typename = std::enable_if_t<std::is_base_of_v<AM_MEDIA_TYPE, std::decay_t<T>>>>
-    static auto GetBitmapInfo(T &mediaType) {
+    static auto GetBitmapInfo(T &mediaType) -> BITMAPINFOHEADER * {
         if (SUCCEEDED(CheckVideoInfoType(&mediaType))) {
             return HEADER(mediaType.pbFormat);
         }
@@ -53,7 +52,7 @@ public:
     static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int dstRowSize, int dstHeight, IScriptEnvironment *avsEnv) -> void;
     static auto CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int srcRowSize, int srcHeight, IScriptEnvironment *avsEnv) -> void;
 
-    static const std::vector<Definition> DEFINITIONS;
+    static const std::unordered_map<std::wstring, Definition> FORMATS;
 
 private:
     template <typename Component>

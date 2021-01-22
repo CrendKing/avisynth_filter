@@ -11,6 +11,19 @@
 
 namespace AvsFilter {
 
+const std::unordered_map<std::wstring, int> g_FORMAT_NAME_TO_RESOURCE_ID = {
+    { L"NV12",  IDC_INPUT_FORMAT_NV12  },
+    { L"YV12",  IDC_INPUT_FORMAT_YV12  },
+    { L"I420",  IDC_INPUT_FORMAT_I420  },
+    { L"IYUV",  IDC_INPUT_FORMAT_IYUV  },
+    { L"P010",  IDC_INPUT_FORMAT_P010  },
+    { L"P016",  IDC_INPUT_FORMAT_P016  },
+    { L"YUY2",  IDC_INPUT_FORMAT_YUY2  },
+    { L"UYUY",  IDC_INPUT_FORMAT_UYVY  },
+    { L"RGB24", IDC_INPUT_FORMAT_RGB24 },
+    { L"RGB32", IDC_INPUT_FORMAT_RGB32 },
+};
+
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
     , _filter(nullptr)
@@ -42,11 +55,8 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
-    const DWORD formatBits = g_env.GetInputFormatBits();
-    for (int i = 0; i < IDC_INPUT_FORMAT_END - IDC_INPUT_FORMAT_START; ++i) {
-        if ((formatBits & (1 << i)) != 0) {
-            CheckDlgButton(m_Dlg, IDC_INPUT_FORMAT_START + 1 + i, 1);
-        }
+    for (const auto &[formatName, resourceId] : g_FORMAT_NAME_TO_RESOURCE_ID) {
+        CheckDlgButton(m_Dlg, resourceId, g_env.IsInputFormatEnabled(formatName));
     }
 
     const std::string title = std::string("<a>") + FILTER_NAME_BASE +
@@ -63,13 +73,9 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     g_env.SetAvsFile(_configAvsFile);
 
-    DWORD formatBits = 0;
-    for (int i = 0; i < IDC_INPUT_FORMAT_END - IDC_INPUT_FORMAT_START; ++i) {
-        if (IsDlgButtonChecked(m_Dlg, IDC_INPUT_FORMAT_START + 1 + i) == BST_CHECKED) {
-            formatBits |= 1 << i;
-        }
+    for (const auto &[formatName, resourceId] : g_FORMAT_NAME_TO_RESOURCE_ID) {
+        g_env.SetInputFormatEnabled(formatName, IsDlgButtonChecked(m_Dlg, resourceId) == BST_CHECKED);
     }
-    g_env.SetInputFormatBits(formatBits);
 
     g_env.SaveSettings();
 

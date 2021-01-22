@@ -84,8 +84,8 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
             if (hr == S_OK) {
                 const UniqueMediaTypePtr nextTypePtr(nextType);
 
-                const std::optional<int> optInputDefinition = GetInputDefinition(nextType);
-                if (optInputDefinition && std::ranges::find(_compatibleMediaTypes, *static_cast<CMediaType *>(nextType), &MediaTypePair::input) == _compatibleMediaTypes.cend()) {
+                const std::optional<std::wstring> optInputFormatName = GetInputFormatName(nextType);
+                if (optInputFormatName && std::ranges::find(_compatibleMediaTypes, *static_cast<CMediaType *>(nextType), &MediaTypePair::input) == _compatibleMediaTypes.cend()) {
                     // invoke AviSynth script with each supported input definition, and observe the output avs type
                     if (!g_avs->ReloadScript(*nextType, _remoteControl.has_value())) {
                         g_env.Log("Disconnect due to AvsFilterDisconnect()");
@@ -94,9 +94,9 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     }
 
                     // all media types that share the same avs type are acceptable for output pin connection
-                    for (int outputDefinition : Format::LookupAvsType(g_avs->GetScriptPixelType())) {
-                        _compatibleMediaTypes.emplace_back(*nextType, g_avs->GenerateMediaType(outputDefinition, nextType));
-                        g_env.Log("Add compatible definitions: input %2i output %2i", *optInputDefinition, outputDefinition);
+                    for (const std::wstring &outputFormatName: Format::LookupAvsType(g_avs->GetScriptPixelType())) {
+                        _compatibleMediaTypes.emplace_back(*nextType, g_avs->GenerateMediaType(outputFormatName, nextType));
+                        g_env.Log("Add compatible definitions: input %S output %S", optInputFormatName->c_str(), outputFormatName.c_str());
                     }
                 }
             } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
@@ -111,9 +111,9 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
 }
 
 auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    if (const std::optional<int> optInputDefinition = MediaTypeToDefinition(mtIn)) {
+    if (const std::optional<std::wstring> optInputFormatName = MediaTypeToFormatName(mtIn)) {
         for (const MediaTypePair &pair : _compatibleMediaTypes) {
-            if (*optInputDefinition == MediaTypeToDefinition(&pair.input)) {
+            if (*optInputFormatName == MediaTypeToFormatName(&pair.input)) {
                 return S_OK;
             }
         }
@@ -141,11 +141,11 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
 }
 
 auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    if (const std::optional<int> optOutputDefinition = MediaTypeToDefinition(mtOut)) {
+    if (const std::optional<std::wstring> optOutputFormatName = MediaTypeToFormatName(mtOut)) {
         for (const MediaTypePair &pair : _compatibleMediaTypes) {
-            if (*optOutputDefinition == MediaTypeToDefinition(&pair.output)) {
-                g_env.Log("Accept transform: output %2i. Offered input: %2i Compatible input: %2i",
-                          *optOutputDefinition, MediaTypeToDefinition(mtIn), MediaTypeToDefinition(&pair.input));
+            if (*optOutputFormatName == MediaTypeToFormatName(&pair.output)) {
+                g_env.Log("Accept transform: output %S Offered input: %S Compatible input: %S",
+                          optOutputFormatName->c_str(), MediaTypeToFormatName(mtIn)->c_str(), MediaTypeToFormatName(&pair.input)->c_str());
                 return S_OK;
             }
         }
@@ -201,9 +201,9 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
     HRESULT hr;
 
     if (m_pInput->IsConnected() && m_pOutput->IsConnected()) {
-        const std::optional<int> optConnectionInputDefinition = MediaTypeToDefinition(&m_pInput->CurrentMediaType());
-        const std::optional<int> optConnectionOutputDefinition = MediaTypeToDefinition(&m_pOutput->CurrentMediaType());
-        if (!optConnectionInputDefinition || !optConnectionOutputDefinition) {
+        const std::optional<std::wstring> optConnectionInputFormatName = MediaTypeToFormatName(&m_pInput->CurrentMediaType());
+        const std::optional<std::wstring> optConnectionOutputFormatName = MediaTypeToFormatName(&m_pOutput->CurrentMediaType());
+        if (!optConnectionInputFormatName || !optConnectionOutputFormatName) {
             g_env.Log("Unexpected input or output definition");
             return E_UNEXPECTED;
         }
@@ -213,9 +213,9 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
         const CMediaType *reconnectInputMediaType = nullptr;
 
         for (const MediaTypePair &pair : _compatibleMediaTypes) {
-            if (*optConnectionOutputDefinition == MediaTypeToDefinition(&pair.output)) {
-                if (*optConnectionInputDefinition == MediaTypeToDefinition(&pair.input)) {
-                    g_env.Log("Connected with types: in %2i out %2i", *optConnectionInputDefinition, *optConnectionOutputDefinition);
+            if (*optConnectionOutputFormatName == MediaTypeToFormatName(&pair.output)) {
+                if (*optConnectionInputFormatName == MediaTypeToFormatName(&pair.input)) {
+                    g_env.Log("Connected with types: in %S out %S", optConnectionInputFormatName->c_str(), optConnectionOutputFormatName->c_str());
                     isMediaTypesCompatible = true;
                     break;
                 }
@@ -232,7 +232,7 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 
         if (!isMediaTypesCompatible) {
             if (reconnectInputMediaType == nullptr) {
-                g_env.Log("Failed to reconnect with any of the %2i candidate input media types", _mediaTypeReconnectionWatermark);
+                g_env.Log("Failed to reconnect with any of the %i candidate input media types", _mediaTypeReconnectionWatermark);
                 return E_UNEXPECTED;
             }
 
@@ -402,7 +402,7 @@ auto CAviSynthFilter::GetAvsState() const -> AvsState {
 /**
  * Check if the media type has valid VideoInfo * definition block.
  */
-auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int> {
+auto CAviSynthFilter::MediaTypeToFormatName(const AM_MEDIA_TYPE *mediaType) -> std::optional<std::wstring> {
     if (mediaType->majortype != MEDIATYPE_Video) {
         return std::nullopt;
     }
@@ -414,13 +414,13 @@ auto CAviSynthFilter::MediaTypeToDefinition(const AM_MEDIA_TYPE *mediaType) -> s
     return Format::LookupMediaSubtype(mediaType->subtype);
 }
 
-auto CAviSynthFilter::GetInputDefinition(const AM_MEDIA_TYPE *mediaType) -> std::optional<int> {
-    if (const std::optional<int> optInputDefinition = MediaTypeToDefinition(mediaType)) {
-        if ((g_env.GetInputFormatBits() & (1 << *optInputDefinition)) != 0) {
-            return optInputDefinition;
+auto CAviSynthFilter::GetInputFormatName(const AM_MEDIA_TYPE *mediaType) -> std::optional<std::wstring> {
+    if (const std::optional<std::wstring> optInputFormatName = MediaTypeToFormatName(mediaType)) {
+        if (g_env.IsInputFormatEnabled(*optInputFormatName)) {
+            return optInputFormatName;
         }
 
-        g_env.Log("Reject input definition due to settings: %2i", *optInputDefinition);
+        g_env.Log("Reject input definition due to settings: %S", optInputFormatName->c_str());
     }
 
     return std::nullopt;
@@ -465,8 +465,8 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
     HRESULT hr;
 
     _inputFormat = Format::GetVideoFormat(inputMediaType);
-    g_env.Log("Upstream propose to change input format: definition %i, width %5li, height %5li, codec %s",
-              _inputFormat.definition, _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight, _inputFormat.GetCodecName().c_str());
+    g_env.Log("Upstream propose to change input format: name %S, width %5li, height %5li",
+              _inputFormat.name.c_str(), _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight);
 
     const CMediaType newOutputType = g_avs->GenerateMediaType(Format::LookupAvsType(g_avs->GetScriptPixelType())[0], &inputMediaType);
     if (m_pOutput->GetConnected()->QueryAccept(&newOutputType) != S_OK) {
@@ -476,8 +476,8 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
     // even though the new VideoFormat may seem the same as the old, some properties (e.g. VIDEOINFOHEADER2::dwControlFlags which controls HDR colorspace)
     // may have changed. it is safe to always send out the new media type
     const Format::VideoFormat newOutputFormat = Format::GetVideoFormat(newOutputType);
-    g_env.Log("Downstream accepts new output format definition %i, width %5li, height %5li, codec %s",
-              newOutputFormat.definition, newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight, newOutputFormat.GetCodecName().c_str());
+    g_env.Log("Downstream accepts new output format: name %S, width %5li, height %5li",
+              newOutputFormat.name.c_str(), newOutputFormat.bmi.biWidth, newOutputFormat.bmi.biHeight);
 
     CheckHr(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, &newOutputType));
 
@@ -490,8 +490,8 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
 auto CAviSynthFilter::HandleOutputFormatChange(const AM_MEDIA_TYPE &outputMediaType) -> HRESULT {
     _outputFormat = Format::GetVideoFormat(outputMediaType);
 
-    g_env.Log("New output format: definition %i, width %5li, height %5li, codec %s",
-              _outputFormat.definition, _outputFormat.bmi.biWidth, _outputFormat.bmi.biHeight, _outputFormat.GetCodecName().c_str());
+    g_env.Log("New output format: name %S, width %5li, height %5li",
+              _outputFormat.name.c_str(), _outputFormat.bmi.biWidth, _outputFormat.bmi.biHeight);
 
     return S_OK;
 }

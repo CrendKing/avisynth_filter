@@ -17,8 +17,8 @@ public:
 
     auto GetAvsFile() const -> const std::wstring &;
     auto SetAvsFile(const std::wstring &avsFile) -> void;
-    auto GetInputFormatBits() const->DWORD;
-    auto SetInputFormatBits(DWORD formatBits) -> void;
+    auto IsInputFormatEnabled(const std::wstring &formatName) const -> bool;
+    auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
     auto GetOutputThreads() const -> int;
     auto IsRemoteControlEnabled() const -> bool;
 
@@ -35,7 +35,7 @@ private:
     Registry _registry;
 
     std::wstring _avsFile;
-    DWORD _inputFormatBits;
+    std::unordered_map<std::wstring, bool> _inputFormats;
     int _outputThreads;
     bool _isRemoteControlEnabled;
 

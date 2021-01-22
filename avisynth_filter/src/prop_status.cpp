@@ -89,8 +89,8 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             _isSourcePathSet = true;
         }
 
-        const std::string infoStr = std::to_string(format.bmi.biWidth).append(" x ").append(std::to_string(abs(format.bmi.biHeight))).append(" ").append(format.GetCodecName());
-        SetDlgItemTextA(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
+        const std::wstring infoStr = std::to_wstring(format.bmi.biWidth).append(L" x ").append(std::to_wstring(abs(format.bmi.biHeight))).append(L" ").append(format.name);
+        SetDlgItemTextW(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
         return 0;
     }

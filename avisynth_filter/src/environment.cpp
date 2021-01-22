@@ -10,7 +10,6 @@ namespace AvsFilter {
 
 Environment::Environment()
     : _useIni(false)
-    , _inputFormatBits(0)
     , _outputThreads(0)
     , _isRemoteControlEnabled(false)
     , _logFile(nullptr)
@@ -49,7 +48,11 @@ Environment::Environment()
                 wcscpy_s(avsFilename, L"unknown");
             }
             Log("Configured script file: %S%S", avsFilename, avsExt);
-            Log("Configured input formats: %lu", _inputFormatBits);
+
+            for (const auto &[formatName, enabled] : _inputFormats) {
+                Log("Configured input format %S: %i", formatName.c_str(), enabled);
+            }
+
             Log("Configured output threads: %i", _outputThreads);
             Log("Loading process: %S%S", processFilename, processFileExt);
         }
@@ -101,15 +104,16 @@ auto Environment::SetAvsFile(const std::wstring &avsFile) -> void {
     }
 }
 
-auto Environment::GetInputFormatBits() const -> DWORD {
-    return _inputFormatBits;
+auto Environment::IsInputFormatEnabled(const std::wstring &formatName) const -> bool {
+    return _inputFormats.at(formatName);
 }
 
-auto Environment::SetInputFormatBits(DWORD formatBits) -> void {
-    _inputFormatBits = formatBits;
+auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void {
+    _inputFormats[formatName] = enabled;
 
     if (_useIni) {
-        _ini.SetLongValue(L"", SETTING_NAME_FORMATS, _inputFormatBits);
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
+        _ini.SetBoolValue(L"", settingName.c_str(), enabled);
     }
 }
 
@@ -123,7 +127,12 @@ auto Environment::IsRemoteControlEnabled() const -> bool {
 
 auto Environment::LoadSettingsFromIni() -> void {
     _avsFile = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
-    _inputFormatBits = _ini.GetLongValue(L"", SETTING_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
+
+    for (const auto &[formatName, definition] : Format::FORMATS) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
+        _inputFormats[formatName] = _ini.GetBoolValue(L"", settingName.c_str(), true);
+    }
+
     _outputThreads = _ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
     _logFilePath = _ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
@@ -131,7 +140,12 @@ auto Environment::LoadSettingsFromIni() -> void {
 
 auto Environment::LoadSettingsFromRegistry() -> void {
     _avsFile = _registry.ReadString(SETTING_NAME_AVS_FILE);
-    _inputFormatBits = _registry.ReadNumber(SETTING_NAME_FORMATS, (1 << Format::DEFINITIONS.size()) - 1);
+
+    for (const auto &[formatName, definition] : Format::FORMATS) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
+        _inputFormats[formatName] = _registry.ReadNumber(settingName.c_str(), 1) != 0;
+    }
+
     _outputThreads = _registry.ReadNumber(SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _registry.ReadNumber(SETTING_NAME_REMOTE_CONTROL, 0) != 0;
     _logFilePath = _registry.ReadString(SETTING_NAME_LOG_FILE);
@@ -143,7 +157,11 @@ auto Environment::SaveSettingsToIni() const -> void {
 
 auto Environment::SaveSettingsToRegistry() const -> void {
     _registry.WriteString(SETTING_NAME_AVS_FILE, _avsFile);
-    _registry.WriteNumber(SETTING_NAME_FORMATS, _inputFormatBits);
+
+    for (const auto &[formatName, enabled] : _inputFormats) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
+        _registry.WriteNumber(settingName.c_str(), enabled);
+    }
 }
 
 }

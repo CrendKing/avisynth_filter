@@ -66,8 +66,8 @@ auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
  * For example, when the original subtype has 8-bit samples and new subtype has 16-bit,
  * all "size" and FourCC values will be adjusted.
  */
-auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
-    const Format::Definition &def = Format::DEFINITIONS[definition];
+auto AvsHandler::GenerateMediaType(const std::wstring &formatName, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
+    const Format::Definition &def = Format::FORMATS.at(formatName);
     FOURCCMap fourCC(&def.mediaSubtype);
 
     CMediaType newMediaType(*templateMediaType);

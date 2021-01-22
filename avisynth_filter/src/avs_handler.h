@@ -15,7 +15,7 @@ public:
     virtual ~AvsHandler();
 
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
-    auto GenerateMediaType(int definition, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
+    auto GenerateMediaType(const std::wstring &formatName, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto SetScriptFile(const std::wstring &scriptFile) -> void;
     auto StopScript() -> void;
