@@ -12,9 +12,15 @@ public:
     struct Definition {
         const CLSID &mediaSubtype;
         int avsType;
+
+        // for BITMAPINFOHEADER::biBitCount
         uint8_t bitCount;
 
-        // in case of planar formats, these numbers are for the default plane
+        // ratio of width between the main plane and the subsampled planes
+        int subsampleWidthRatio;
+        // ratio of height between the main plane and the subsampled planes
+        int subsampleHeightRatio;
+
         uint8_t componentsPerPixel;
     };
 

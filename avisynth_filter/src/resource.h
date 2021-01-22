@@ -20,7 +20,8 @@
 #define IDC_INPUT_FORMAT_16BIT             1103
 #define IDC_INPUT_FORMAT_420               1104
 #define IDC_INPUT_FORMAT_422               1105
-#define IDC_INPUT_FORMAT_RGB               1106
+#define IDC_INPUT_FORMAT_444               1106
+#define IDC_INPUT_FORMAT_RGB               1107
 
 #define IDC_INPUT_FORMAT_START             1200
 #define IDC_INPUT_FORMAT_NV12              1201
@@ -30,10 +31,12 @@
 #define IDC_INPUT_FORMAT_P010              1205
 #define IDC_INPUT_FORMAT_P016              1206
 #define IDC_INPUT_FORMAT_YUY2              1207
-#define IDC_INPUT_FORMAT_UYVY              1208
-#define IDC_INPUT_FORMAT_RGB24             1209
-#define IDC_INPUT_FORMAT_RGB32             1210
-#define IDC_INPUT_FORMAT_END               1211
+#define IDC_INPUT_FORMAT_P210              1208
+#define IDC_INPUT_FORMAT_P216              1209
+#define IDC_INPUT_FORMAT_YV24              1210
+#define IDC_INPUT_FORMAT_RGB24             1213
+#define IDC_INPUT_FORMAT_RGB32             1214
+#define IDC_INPUT_FORMAT_END               1215
 
 #define IDT_TIMER_STATUS                   2000
 #define IDC_TEXT_FRAME_NUMBER              2001

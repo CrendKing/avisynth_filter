@@ -19,7 +19,9 @@ const std::unordered_map<std::wstring, int> g_FORMAT_NAME_TO_RESOURCE_ID = {
     { L"P010",  IDC_INPUT_FORMAT_P010  },
     { L"P016",  IDC_INPUT_FORMAT_P016  },
     { L"YUY2",  IDC_INPUT_FORMAT_YUY2  },
-    { L"UYUY",  IDC_INPUT_FORMAT_UYVY  },
+    { L"P210",  IDC_INPUT_FORMAT_P210  },
+    { L"P216",  IDC_INPUT_FORMAT_P216  },
+    { L"YV24",  IDC_INPUT_FORMAT_YV24  },
     { L"RGB24", IDC_INPUT_FORMAT_RGB24 },
     { L"RGB32", IDC_INPUT_FORMAT_RGB32 },
 };
