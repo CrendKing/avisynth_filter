@@ -25,7 +25,6 @@ DEFINE_GUID(inline IID_IAvsFilter,
             0x85c582fe, 0x5b6f, 0x4be5, 0xa0, 0xb0, 0x57, 0xa4, 0xfd, 0xab, 0x44, 0x12);
 
 static const GUID MEDIASUBTYPE_I420  = FOURCCMap('024I');
-static const GUID MEDIASUBTYPE_RGB48 = FOURCCMap('0BGR');
 
 #define WidenHelper(str)                  L##str
 #define Widen(str)                        WidenHelper(str)

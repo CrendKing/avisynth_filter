@@ -31,7 +31,7 @@ const std::vector<Format::Definition> Format::DEFINITIONS = {
 
     /* 8 */  { .mediaSubtype = MEDIASUBTYPE_RGB24, .avsType = VideoInfo::CS_BGR24, .bitCount = 24, .componentsPerPixel = 3 },
     /* 9 */  { .mediaSubtype = MEDIASUBTYPE_RGB32, .avsType = VideoInfo::CS_BGR32, .bitCount = 24, .componentsPerPixel = 4 },
-    /* 10 */ { .mediaSubtype = MEDIASUBTYPE_RGB48, .avsType = VideoInfo::CS_BGR48, .bitCount = 48, .componentsPerPixel = 3 },
+    /* 10 */ // reserved for the removed BGR48 format for backward compatibility
 };
 
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
@@ -57,9 +57,6 @@ auto Format::VideoFormat::GetCodecName() const -> std::string {
         }
         if (subtype == MEDIASUBTYPE_RGB32) {
             return "RGB32";
-        }
-        if (subtype == MEDIASUBTYPE_RGB48) {
-            return "RGB48";
         }
         return "RGB0";
     }
@@ -156,9 +153,10 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
 
     const BYTE *srcDefaultPlane;
     int srcDefaultPlaneStride;
-    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        // positive height for RGB definition is bottom-up DIB, negative is top-down
-        // AviSynth is always bottom-up
+
+    // for RGB DIB in Windows (biCompression == BI_RGB), positive biHeight is bottom-up, negative is top-down
+    // AviSynth+'s convert functions always assume the input DIB is bottom-up, so we invert the DIB if it's top-down
+    if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
         srcDefaultPlane = srcBuffer + srcDefaultPlaneSize - srcStride;
         srcDefaultPlaneStride = -srcStride;
     } else {
@@ -225,7 +223,9 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
     BYTE *dstDefaultPlane;
     int dstDefaultPlaneStride;
-    if ((def.avsType & VideoInfo::CS_BGR) != 0 && format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
+
+    // AviSynth+'s convert functions always produce bottom-up DIB, so we invert the DIB if downstream needs top-down
+    if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
         dstDefaultPlane = dstBuffer + dstDefaultPlaneSize - dstStride;
         dstDefaultPlaneStride = -dstStride;
     } else {

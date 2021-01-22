@@ -33,8 +33,7 @@
 #define IDC_INPUT_FORMAT_UYVY              1115
 #define IDC_INPUT_FORMAT_RGB24             1116
 #define IDC_INPUT_FORMAT_RGB32             1117
-#define IDC_INPUT_FORMAT_RGB48             1118
-#define IDC_INPUT_FORMAT_END               1119
+#define IDC_INPUT_FORMAT_END               1118
 
 #define IDT_TIMER_STATUS                   2000
 #define IDC_TEXT_FRAME_NUMBER              2001

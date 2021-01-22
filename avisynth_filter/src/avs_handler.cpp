@@ -82,7 +82,7 @@ auto AvsHandler::GenerateMediaType(int definition, const AM_MEDIA_TYPE *template
 
         // generate new DAR if the new SAR differs from the old one
         // because AviSynth does not tell us anything about DAR, use SAR as the DAR
-        if (newBmi->biWidth * _scriptVideoInfo.height != _scriptVideoInfo.width * std::abs(newBmi->biHeight)) {
+        if (newBmi->biWidth * _scriptVideoInfo.height != _scriptVideoInfo.width * abs(newBmi->biHeight)) {
             const int gcd = std::gcd(_scriptVideoInfo.width, _scriptVideoInfo.height);
             newVih2->dwPictAspectRatioX = _scriptVideoInfo.width / gcd;
             newVih2->dwPictAspectRatioY = _scriptVideoInfo.height / gcd;
