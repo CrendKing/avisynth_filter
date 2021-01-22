@@ -11,21 +11,6 @@
 
 namespace AvsFilter {
 
-const std::unordered_map<std::wstring, int> g_FORMAT_NAME_TO_RESOURCE_ID = {
-    { L"NV12",  IDC_INPUT_FORMAT_NV12  },
-    { L"YV12",  IDC_INPUT_FORMAT_YV12  },
-    { L"I420",  IDC_INPUT_FORMAT_I420  },
-    { L"IYUV",  IDC_INPUT_FORMAT_IYUV  },
-    { L"P010",  IDC_INPUT_FORMAT_P010  },
-    { L"P016",  IDC_INPUT_FORMAT_P016  },
-    { L"YUY2",  IDC_INPUT_FORMAT_YUY2  },
-    { L"P210",  IDC_INPUT_FORMAT_P210  },
-    { L"P216",  IDC_INPUT_FORMAT_P216  },
-    { L"YV24",  IDC_INPUT_FORMAT_YV24  },
-    { L"RGB24", IDC_INPUT_FORMAT_RGB24 },
-    { L"RGB32", IDC_INPUT_FORMAT_RGB32 },
-};
-
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
     : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
     , _filter(nullptr)
@@ -57,8 +42,8 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
-    for (const auto &[formatName, resourceId] : g_FORMAT_NAME_TO_RESOURCE_ID) {
-        CheckDlgButton(m_Dlg, resourceId, g_env.IsInputFormatEnabled(formatName));
+    for (const auto &[formatName, definition] : Format::FORMATS) {
+        CheckDlgButton(m_Dlg, definition.resourceId, g_env.IsInputFormatEnabled(formatName));
     }
 
     const std::string title = std::string("<a>") + FILTER_NAME_BASE +
@@ -75,8 +60,8 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     g_env.SetAvsFile(_configAvsFile);
 
-    for (const auto &[formatName, resourceId] : g_FORMAT_NAME_TO_RESOURCE_ID) {
-        g_env.SetInputFormatEnabled(formatName, IsDlgButtonChecked(m_Dlg, resourceId) == BST_CHECKED);
+    for (const auto &[formatName, definition] : Format::FORMATS) {
+        g_env.SetInputFormatEnabled(formatName, IsDlgButtonChecked(m_Dlg, definition.resourceId) == BST_CHECKED);
     }
 
     g_env.SaveSettings();

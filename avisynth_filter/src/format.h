@@ -16,12 +16,12 @@ public:
         // for BITMAPINFOHEADER::biBitCount
         uint8_t bitCount;
 
-        // ratio of width between the main plane and the subsampled planes
+        // ratio between the main plane and the subsampled planes
         int subsampleWidthRatio;
-        // ratio of height between the main plane and the subsampled planes
         int subsampleHeightRatio;
 
         uint8_t componentsPerPixel;
+        int resourceId;
     };
 
     struct VideoFormat {
