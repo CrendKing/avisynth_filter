@@ -16,30 +16,30 @@ static const __m128i DEINTERLEAVE_MASK_16_BIT_2 = _mm_set_epi8(31, 30, 27, 26, 2
 
 const std::unordered_map<std::wstring, Format::Definition> Format::FORMATS = {
     // 4:2:0
-    { L"NV12",  { .mediaSubtype = MEDIASUBTYPE_NV12,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .subsampleWidthRatio = 1, .subsampleHeightRatio = 2, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_NV12 } },
-    { L"YV12",  { .mediaSubtype = MEDIASUBTYPE_YV12,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_YV12 } },
-    { L"I420",  { .mediaSubtype = MEDIASUBTYPE_I420,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_I420 } },
-    { L"IYUV",  { .mediaSubtype = MEDIASUBTYPE_IYUV,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_IYUV } },
+    { L"NV12",  { .mediaSubtype = MEDIASUBTYPE_NV12,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 } },
+    { L"YV12",  { .mediaSubtype = MEDIASUBTYPE_YV12,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV12 } },
+    { L"I420",  { .mediaSubtype = MEDIASUBTYPE_I420,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_I420 } },
+    { L"IYUV",  { .mediaSubtype = MEDIASUBTYPE_IYUV,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_IYUV } },
 
     // P010 has the most significant 6 bits zero-padded, while AviSynth expects the least significant bits padded
     // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
-    { L"P010",  { .mediaSubtype = MEDIASUBTYPE_P010,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 2, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_P010 } },
-    { L"P016",  { .mediaSubtype = MEDIASUBTYPE_P016,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 2, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_P016 } },
+    { L"P010",  { .mediaSubtype = MEDIASUBTYPE_P010,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 } },
+    { L"P016",  { .mediaSubtype = MEDIASUBTYPE_P016,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 } },
 
     // 4:2:2
     // YUY2 interleaves Y and UV planes together, thus twice as wide as unpacked formats per pixel
-    { L"YUY2",  { .mediaSubtype = MEDIASUBTYPE_YUY2,  .avsType = VideoInfo::CS_YUY2,      .bitCount = 16, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .componentsPerPixel = 2, .resourceId = IDC_INPUT_FORMAT_YUY2 } },
+    { L"YUY2",  { .mediaSubtype = MEDIASUBTYPE_YUY2,  .avsType = VideoInfo::CS_YUY2,      .bitCount = 16, .componentsPerPixel = 2, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YUY2 } },
     // AviSynth+ does not support UYVY
     // P210 has the same problem as P010
-    { L"P210",  { .mediaSubtype = MEDIASUBTYPE_P210,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_P210 } },
-    { L"P216",  { .mediaSubtype = MEDIASUBTYPE_P216,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_P216 } },
+    { L"P210",  { .mediaSubtype = MEDIASUBTYPE_P210,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 } },
+    { L"P216",  { .mediaSubtype = MEDIASUBTYPE_P216,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 } },
 
     // 4:4:4
-    { L"YV24",  { .mediaSubtype = MEDIASUBTYPE_YV24,  .avsType = VideoInfo::CS_YV24,      .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .componentsPerPixel = 1, .resourceId = IDC_INPUT_FORMAT_YV24 } },
+    { L"YV24",  { .mediaSubtype = MEDIASUBTYPE_YV24,  .avsType = VideoInfo::CS_YV24,      .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 } },
 
     // RGB
-    { L"RGB24", { .mediaSubtype = MEDIASUBTYPE_RGB24, .avsType = VideoInfo::CS_BGR24,     .bitCount = 24, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .componentsPerPixel = 3, .resourceId = IDC_INPUT_FORMAT_RGB24 } },
-    { L"RGB32", { .mediaSubtype = MEDIASUBTYPE_RGB32, .avsType = VideoInfo::CS_BGR32,     .bitCount = 32, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .componentsPerPixel = 4, .resourceId = IDC_INPUT_FORMAT_RGB32 } },
+    { L"RGB24", { .mediaSubtype = MEDIASUBTYPE_RGB24, .avsType = VideoInfo::CS_BGR24,     .bitCount = 24, .componentsPerPixel = 3, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_RGB24 } },
+    { L"RGB32", { .mediaSubtype = MEDIASUBTYPE_RGB32, .avsType = VideoInfo::CS_BGR32,     .bitCount = 32, .componentsPerPixel = 4, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_RGB32 } },
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
 
@@ -162,42 +162,42 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
         return;
     }
 
-    if (def.mediaSubtype == MEDIASUBTYPE_YV12 || def.mediaSubtype == MEDIASUBTYPE_YV24 || def.mediaSubtype == MEDIASUBTYPE_I420 || def.mediaSubtype == MEDIASUBTYPE_IYUV) {
-        // these formats' U and V planes are not interleaved. use BitBlt to efficiently copy
-
-        const BYTE *srcPlane1 = srcBuffer + srcMainPlaneSize;
-        const BYTE *srcPlane2 = srcPlane1 + srcMainPlaneSize / (def.subsampleWidthRatio * def.subsampleHeightRatio);
-
-        const BYTE *srcU;
-        const BYTE *srcV;
-        if (def.mediaSubtype == MEDIASUBTYPE_YV12 || def.mediaSubtype == MEDIASUBTYPE_YV24) {
-            // YVxx has V plane first
-
-            srcU = srcPlane2;
-            srcV = srcPlane1;
-        } else {
-            srcU = srcPlane1;
-            srcV = srcPlane2;
-        }
-
-        avsEnv->BitBlt(dstSlices[1], dstStrides[1], srcU, srcStride / def.subsampleWidthRatio, rowSize / def.subsampleWidthRatio, height / def.subsampleHeightRatio);
-        avsEnv->BitBlt(dstSlices[2], dstStrides[2], srcV, srcStride / def.subsampleWidthRatio, rowSize / def.subsampleWidthRatio, height / def.subsampleHeightRatio);
-    } else {
-        // interleaved U and V planes. copy byte by byte
-        // consider using intrinsics for better performance
-
+    const int srcUVHeight = height / def.subsampleHeightRatio;
+    if (def.areUVPlanesInterleaved) {
+        const int srcUVStride = srcStride * 2 / def.subsampleWidthRatio;
+        const int srcUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
         __m128i mask1, mask2;
 
         if (format.videoInfo.ComponentSize() == 1) {
             mask1 = DEINTERLEAVE_MASK_8_BIT_1;
             mask2 = DEINTERLEAVE_MASK_8_BIT_2;
-            Deinterleave<uint8_t>(srcUVStart, srcStride, dstSlices[1], dstSlices[2], dstStrides[1], rowSize, height / def.subsampleHeightRatio, mask1, mask2);
+            Deinterleave<uint8_t>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, mask1, mask2);
         } else {
             mask1 = DEINTERLEAVE_MASK_16_BIT_1;
             mask2 = DEINTERLEAVE_MASK_16_BIT_2;
-            Deinterleave<uint16_t>(srcUVStart, srcStride, dstSlices[1], dstSlices[2], dstStrides[1], rowSize, height / def.subsampleHeightRatio, mask1, mask2);
+            Deinterleave<uint16_t>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, mask1, mask2);
         }
+    } else {
+        const int srcUVStride = srcStride / def.subsampleWidthRatio;
+        const int srcUVRowSize = rowSize / def.subsampleWidthRatio;
+        const BYTE *srcUVPlane1 = srcBuffer + srcMainPlaneSize;
+        const BYTE *srcUVPlane2 = srcUVPlane1 + srcMainPlaneSize / (def.subsampleWidthRatio * def.subsampleHeightRatio);
+
+        const BYTE *srcU;
+        const BYTE *srcV;
+        if (def.mediaSubtype == MEDIASUBTYPE_YV12 || def.mediaSubtype == MEDIASUBTYPE_YV24) {
+            // YVxx has V plane first
+
+            srcU = srcUVPlane2;
+            srcV = srcUVPlane1;
+        } else {
+            srcU = srcUVPlane1;
+            srcV = srcUVPlane2;
+        }
+
+        avsEnv->BitBlt(dstSlices[1], dstStrides[1], srcU, srcUVStride, srcUVRowSize, srcUVHeight);
+        avsEnv->BitBlt(dstSlices[2], dstStrides[2], srcV, srcUVStride, srcUVRowSize, srcUVHeight);
     }
 }
 
@@ -227,30 +227,35 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
         return;
     }
 
-    if (def.mediaSubtype == MEDIASUBTYPE_YV12 || def.mediaSubtype == MEDIASUBTYPE_YV24 || def.mediaSubtype == MEDIASUBTYPE_I420 || def.mediaSubtype == MEDIASUBTYPE_IYUV) {
-        BYTE *dstPlane1 = dstBuffer + dstMainPlaneSize;
-        BYTE *dstPlane2 = dstPlane1 + dstMainPlaneSize / (def.subsampleWidthRatio * def.subsampleHeightRatio);
+    const int dstUVHeight = height / def.subsampleHeightRatio;
+    if (def.areUVPlanesInterleaved) {
+        const int dstUVStride = dstStride * 2 / def.subsampleWidthRatio;
+        const int dstUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
+        BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
+
+        if (format.videoInfo.ComponentSize() == 1) {
+            Interleave<uint8_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+        } else {
+            Interleave<uint16_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+        }
+    } else {
+        const int dstUVStride = dstStride / def.subsampleWidthRatio;
+        const int dstUVRowSize = rowSize / def.subsampleWidthRatio;
+        BYTE *dstUVPlane1 = dstBuffer + dstMainPlaneSize;
+        BYTE *dstUVPlane2 = dstUVPlane1 + dstMainPlaneSize / (def.subsampleWidthRatio * def.subsampleHeightRatio);
 
         BYTE *dstU;
         BYTE *dstV;
         if (def.mediaSubtype == MEDIASUBTYPE_YV12 || def.mediaSubtype == MEDIASUBTYPE_YV24) {
-            dstU = dstPlane2;
-            dstV = dstPlane1;
+            dstU = dstUVPlane2;
+            dstV = dstUVPlane1;
         } else {
-            dstU = dstPlane1;
-            dstV = dstPlane2;
+            dstU = dstUVPlane1;
+            dstV = dstUVPlane2;
         }
 
-        avsEnv->BitBlt(dstU, dstStride / def.subsampleWidthRatio, srcSlices[1], srcStrides[1], rowSize / def.subsampleWidthRatio, height / def.subsampleHeightRatio);
-        avsEnv->BitBlt(dstV, dstStride / def.subsampleWidthRatio, srcSlices[2], srcStrides[2], rowSize / def.subsampleWidthRatio, height / def.subsampleHeightRatio);
-    } else {
-        BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
-
-        if (format.videoInfo.ComponentSize() == 1) {
-            Interleave<uint8_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstStride, rowSize / 2, height / def.subsampleHeightRatio);
-        } else {
-            Interleave<uint16_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstStride, rowSize / 2, height / def.subsampleHeightRatio);
-        }
+        avsEnv->BitBlt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
+        avsEnv->BitBlt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
     }
 }
 

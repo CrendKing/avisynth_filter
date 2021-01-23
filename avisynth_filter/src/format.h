@@ -16,11 +16,14 @@ public:
         // for BITMAPINFOHEADER::biBitCount
         uint8_t bitCount;
 
+        uint8_t componentsPerPixel;
+
         // ratio between the main plane and the subsampled planes
         int subsampleWidthRatio;
         int subsampleHeightRatio;
 
-        uint8_t componentsPerPixel;
+        bool areUVPlanesInterleaved;
+
         int resourceId;
     };
 
@@ -91,8 +94,8 @@ private:
 
     template <typename Component>
     constexpr static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
-        const int iterations = rowSize / sizeof(__m128i);
-        const int remainderStart = iterations * sizeof(__m128i);
+        const int iterations = rowSize / (sizeof(__m128i) * 2);
+        const int remainderStart = iterations * (sizeof(__m128i) * 2);
 
         for (int y = 0; y < height; ++y) {
             const __m128i *src1_128 = reinterpret_cast<const __m128i *>(src1);
