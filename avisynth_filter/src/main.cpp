@@ -27,7 +27,8 @@ static REGFILTERPINS REG_PINS[] = {
     , .clsConnectsToFilter = &CLSID_NULL              // filter CLSID the pin connects to (obsolete)
     , .strConnectsToPin = nullptr                     // pin name the pin connects to (obsolete)
     , .nMediaTypes = 0                                // pin media type count (to be filled in RegisterFilter())
-    , .lpMediaType = nullptr },                       // pin media types (to be filled in RegisterFilter())
+    , .lpMediaType = nullptr                          // pin media types (to be filled in RegisterFilter())
+    },
 
     { .strName = nullptr
     , .bRendered = FALSE
@@ -37,7 +38,8 @@ static REGFILTERPINS REG_PINS[] = {
     , .clsConnectsToFilter = &CLSID_NULL
     , .strConnectsToPin = nullptr
     , .nMediaTypes = 0
-    , .lpMediaType = nullptr },
+    , .lpMediaType = nullptr
+    },
 };
 
 static constexpr AMOVIESETUP_FILTER REG_FILTER = {

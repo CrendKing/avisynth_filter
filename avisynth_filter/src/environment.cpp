@@ -30,9 +30,7 @@ Environment::Environment()
     } else if (_registry.Initialize()) {
         LoadSettingsFromRegistry();
     } else {
-        const char *errorMessage = "Unload to load settings";
-        g_env.Log("%S", errorMessage);
-        MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
+        MessageBoxA(nullptr, "Unload to load settings", FILTER_NAME_FULL, MB_ICONERROR);
     }
 
     if (!_logFilePath.empty()) {
