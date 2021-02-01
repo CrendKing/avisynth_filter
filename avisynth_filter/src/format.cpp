@@ -135,25 +135,23 @@ auto Format::CreateFrame(const VideoFormat &format, const BYTE *srcBuffer, IScri
     return frame;
 }
 
-auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int dstRowSize, int dstHeight, IScriptEnvironment *avsEnv) -> void {
+auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void {
     const Definition &def = FORMATS.at(format.name);
 
-    const int srcStride = format.bmi.biWidth * format.videoInfo.ComponentSize() * def.componentsPerPixel;
-    const int rowSize = min(srcStride, dstRowSize);
-    const int height = min(abs(format.bmi.biHeight), dstHeight);
-    const int srcMainPlaneSize = srcStride * height;
-
+    // bmi.biWidth should be "set equal to the surface stride in pixels" according to the doc of BITMAPINFOHEADER
+    int srcMainPlaneStride = format.bmi.biWidth * format.videoInfo.ComponentSize() * def.componentsPerPixel;
+    ASSERT(rowSize <= srcMainPlaneStride);
+    ASSERT(height == abs(format.bmi.biHeight));
+    const int srcMainPlaneSize = srcMainPlaneStride * height;
     const BYTE *srcMainPlane;
-    int srcMainPlaneStride;
 
     // for RGB DIB in Windows (biCompression == BI_RGB), positive biHeight is bottom-up, negative is top-down
     // AviSynth+'s convert functions always assume the input DIB is bottom-up, so we invert the DIB if it's top-down
     if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        srcMainPlane = srcBuffer + srcMainPlaneSize - srcStride;
-        srcMainPlaneStride = -srcStride;
+        srcMainPlane = srcBuffer + srcMainPlaneSize - srcMainPlaneStride;
+        srcMainPlaneStride = -srcMainPlaneStride;
     } else {
         srcMainPlane = srcBuffer;
-        srcMainPlaneStride = srcStride;
     }
 
     avsEnv->BitBlt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
@@ -164,7 +162,7 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
 
     const int srcUVHeight = height / def.subsampleHeightRatio;
     if (def.areUVPlanesInterleaved) {
-        const int srcUVStride = srcStride * 2 / def.subsampleWidthRatio;
+        const int srcUVStride = srcMainPlaneStride * 2 / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
         __m128i mask1, mask2;
@@ -179,7 +177,7 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
             Deinterleave<uint16_t>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, mask1, mask2);
         }
     } else {
-        const int srcUVStride = srcStride / def.subsampleWidthRatio;
+        const int srcUVStride = srcMainPlaneStride / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize / def.subsampleWidthRatio;
         const BYTE *srcUVPlane1 = srcBuffer + srcMainPlaneSize;
         const BYTE *srcUVPlane2 = srcUVPlane1 + srcMainPlaneSize / (def.subsampleWidthRatio * def.subsampleHeightRatio);
@@ -201,24 +199,21 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
     }
 }
 
-auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int srcRowSize, int srcHeight, IScriptEnvironment *avsEnv) -> void {
+auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int rowSize, int height, IScriptEnvironment *avsEnv) -> void {
     const Definition &def = FORMATS.at(format.name);
 
-    const int dstStride = format.bmi.biWidth * format.videoInfo.ComponentSize() * def.componentsPerPixel;
-    const int rowSize = min(dstStride, srcRowSize);
-    const int height = min(abs(format.bmi.biHeight), srcHeight);
-    const int dstMainPlaneSize = dstStride * height;
-
+    int dstMainPlaneStride = format.bmi.biWidth * format.videoInfo.ComponentSize() * def.componentsPerPixel;
+    ASSERT(rowSize <= dstMainPlaneStride);
+    ASSERT(height == abs(format.bmi.biHeight));
+    const int dstMainPlaneSize = dstMainPlaneStride * height;
     BYTE *dstMainPlane;
-    int dstMainPlaneStride;
 
     // AviSynth+'s convert functions always produce bottom-up DIB, so we invert the DIB if downstream needs top-down
     if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        dstMainPlane = dstBuffer + dstMainPlaneSize - dstStride;
-        dstMainPlaneStride = -dstStride;
+        dstMainPlane = dstBuffer + dstMainPlaneSize - dstMainPlaneStride;
+        dstMainPlaneStride = -dstMainPlaneStride;
     } else {
         dstMainPlane = dstBuffer;
-        dstMainPlaneStride = dstStride;
     }
 
     avsEnv->BitBlt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
@@ -229,7 +224,7 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
     const int dstUVHeight = height / def.subsampleHeightRatio;
     if (def.areUVPlanesInterleaved) {
-        const int dstUVStride = dstStride * 2 / def.subsampleWidthRatio;
+        const int dstUVStride = dstMainPlaneStride * 2 / def.subsampleWidthRatio;
         const int dstUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
         BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
 
@@ -239,7 +234,7 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
             Interleave<uint16_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
         }
     } else {
-        const int dstUVStride = dstStride / def.subsampleWidthRatio;
+        const int dstUVStride = dstMainPlaneStride / def.subsampleWidthRatio;
         const int dstUVRowSize = rowSize / def.subsampleWidthRatio;
         BYTE *dstUVPlane1 = dstBuffer + dstMainPlaneSize;
         BYTE *dstUVPlane2 = dstUVPlane1 + dstMainPlaneSize / (def.subsampleWidthRatio * def.subsampleHeightRatio);
