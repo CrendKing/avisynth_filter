@@ -143,15 +143,13 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
     ASSERT(rowSize <= srcMainPlaneStride);
     ASSERT(height == abs(format.bmi.biHeight));
     const int srcMainPlaneSize = srcMainPlaneStride * height;
-    const BYTE *srcMainPlane;
+    const BYTE *srcMainPlane = srcBuffer;
 
     // for RGB DIB in Windows (biCompression == BI_RGB), positive biHeight is bottom-up, negative is top-down
     // AviSynth+'s convert functions always assume the input DIB is bottom-up, so we invert the DIB if it's top-down
     if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        srcMainPlane = srcBuffer + srcMainPlaneSize - srcMainPlaneStride;
+        srcMainPlane += srcMainPlaneSize - srcMainPlaneStride;
         srcMainPlaneStride = -srcMainPlaneStride;
-    } else {
-        srcMainPlane = srcBuffer;
     }
 
     avsEnv->BitBlt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
@@ -197,14 +195,12 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
     ASSERT(rowSize <= dstMainPlaneStride);
     ASSERT(height == abs(format.bmi.biHeight));
     const int dstMainPlaneSize = dstMainPlaneStride * height;
-    BYTE *dstMainPlane;
+    BYTE *dstMainPlane = dstBuffer;
 
     // AviSynth+'s convert functions always produce bottom-up DIB, so we invert the DIB if downstream needs top-down
     if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        dstMainPlane = dstBuffer + dstMainPlaneSize - dstMainPlaneStride;
+        dstMainPlane += dstMainPlaneSize - dstMainPlaneStride;
         dstMainPlaneStride = -dstMainPlaneStride;
-    } else {
-        dstMainPlane = dstBuffer;
     }
 
     avsEnv->BitBlt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
