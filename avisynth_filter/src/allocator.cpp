@@ -8,8 +8,9 @@
 
 namespace AvsFilter {
 
-CAviSynthFilterAllocator::CAviSynthFilterAllocator(HRESULT *phr)
-    : CMemAllocator(NAME("CAviSynthFilterAllocator"), nullptr, phr) {
+CAviSynthFilterAllocator::CAviSynthFilterAllocator(HRESULT *phr, CAviSynthFilterInputPin &inputPin)
+    : CMemAllocator(NAME("CAviSynthFilterAllocator"), nullptr, phr)
+    , _inputPin(inputPin) {
 }
 
 // allocate CAviSynthFilterMediaSample instead of CMediaSample
@@ -94,7 +95,8 @@ auto CAviSynthFilterAllocator::Alloc() -> HRESULT {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterAllocator::SetProperties(__in ALLOCATOR_PROPERTIES *pRequest, __out ALLOCATOR_PROPERTIES *pActual) -> HRESULT {
-    pRequest->cbBuffer += INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+    const BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(_inputPin.CurrentMediaType());
+    pRequest->cbBuffer = max(static_cast<long>(bmi->biSizeImage + INPUT_MEDIA_SAMPLE_BUFFER_PADDING), pRequest->cbBuffer);
     return __super::SetProperties(pRequest, pActual);
 }
 

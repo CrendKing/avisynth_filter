@@ -4,6 +4,7 @@
 #include "input_pin.h"
 #include "allocator.h"
 #include "avs_handler.h"
+#include "constants.h"
 #include "environment.h"
 #include "format.h"
 
@@ -34,10 +35,8 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
             CheckHr(m_pAllocator->Decommit());
             CheckHr(m_pAllocator->GetProperties(&props));
 
-            props.cBuffers = max(g_env.GetOutputThreads() + 1, props.cBuffers);
-
-            const BITMAPINFOHEADER *bih = Format::GetBitmapInfo(*pmt);
-            props.cbBuffer = bih->biSizeImage;
+            const BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(*pmt);
+            props.cbBuffer = max(static_cast<long>(bmi->biSizeImage + INPUT_MEDIA_SAMPLE_BUFFER_PADDING), props.cbBuffer);
 
             CheckHr(m_pAllocator->SetProperties(&props, &actual));
             CheckHr(m_pAllocator->Commit());
@@ -64,7 +63,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAll
 
     if (m_pAllocator == nullptr) {
         HRESULT hr = S_OK;
-        m_pAllocator = new CAviSynthFilterAllocator(&hr);
+        m_pAllocator = new CAviSynthFilterAllocator(&hr, *this);
         if (FAILED(hr)) {
             return hr;
         }
@@ -74,12 +73,6 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAll
     ASSERT(m_pAllocator != nullptr);
     *ppAllocator = m_pAllocator;
     m_pAllocator->AddRef();
-
-    return S_OK;
-}
-
-auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocatorRequirements(__out ALLOCATOR_PROPERTIES *pProps) -> HRESULT {
-    pProps->cBuffers = 1;
 
     return S_OK;
 }
