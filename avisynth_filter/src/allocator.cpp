@@ -2,6 +2,7 @@
 
 #include "pch.h"
 #include "allocator.h"
+#include "constants.h"
 #include "media_sample.h"
 
 
@@ -90,6 +91,11 @@ auto CAviSynthFilterAllocator::Alloc() -> HRESULT {
 
     m_bChanged = FALSE;
     return NOERROR;
+}
+
+auto STDMETHODCALLTYPE CAviSynthFilterAllocator::SetProperties(__in ALLOCATOR_PROPERTIES *pRequest, __out ALLOCATOR_PROPERTIES *pActual) -> HRESULT {
+    pRequest->cbBuffer += INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+    return __super::SetProperties(pRequest, pActual);
 }
 
 }

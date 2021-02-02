@@ -13,6 +13,13 @@ auto DoubleToString(double d, int precision) -> std::string;
 auto JoinStrings(const std::vector<std::wstring> &input, wchar_t delimiter) -> std::wstring;
 
 /**
+ * ceil(dividend / divisor), assuming both oprands are positive
+ */
+constexpr auto DivideRoundUp(int dividend, int divisor) -> int {
+    return (dividend + divisor - 1) / divisor;
+}
+
+/**
  * find first matched value in range and apply output projection
  * return: std::optional of the return value of the output projection, or std::nullopt if not found
  */

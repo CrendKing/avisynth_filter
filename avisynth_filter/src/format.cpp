@@ -165,17 +165,8 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
         const int srcUVStride = srcMainPlaneStride * 2 / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
-        __m128i mask1, mask2;
 
-        if (format.videoInfo.ComponentSize() == 1) {
-            mask1 = DEINTERLEAVE_MASK_8_BIT_1;
-            mask2 = DEINTERLEAVE_MASK_8_BIT_2;
-            Deinterleave<uint8_t>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, mask1, mask2);
-        } else {
-            mask1 = DEINTERLEAVE_MASK_16_BIT_1;
-            mask2 = DEINTERLEAVE_MASK_16_BIT_2;
-            Deinterleave<uint16_t>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, mask1, mask2);
-        }
+        Deinterleave(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, format.videoInfo.ComponentSize());
     } else {
         const int srcUVStride = srcMainPlaneStride / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize / def.subsampleWidthRatio;
@@ -251,6 +242,35 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
         avsEnv->BitBlt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
         avsEnv->BitBlt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
+    }
+}
+
+auto Format::Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, int componentSize) -> void {
+    __m128i mask1, mask2;
+    if (componentSize == 1) {
+        mask1 = DEINTERLEAVE_MASK_8_BIT_1;
+        mask2 = DEINTERLEAVE_MASK_8_BIT_2;
+    } else {
+        mask1 = DEINTERLEAVE_MASK_16_BIT_1;
+        mask2 = DEINTERLEAVE_MASK_16_BIT_2;
+    }
+
+    const int iterations = DivideRoundUp(rowSize, sizeof(__m128i));
+
+    for (int y = 0; y < height; ++y) {
+        const __m128i *src_128 = reinterpret_cast<const __m128i *>(src);
+        __int64 *dst1_64 = reinterpret_cast<__int64 *>(dst1);
+        __int64 *dst2_64 = reinterpret_cast<__int64 *>(dst2);
+
+        for (int i = 0; i < iterations; ++i) {
+            const __m128i n = *src_128++;
+            _mm_storeu_si64(dst1_64++, _mm_shuffle_epi8(n, mask1));
+            _mm_storeu_si64(dst2_64++, _mm_shuffle_epi8(n, mask2));
+        }
+
+        src += srcStride;
+        dst1 += dstStride;
+        dst2 += dstStride;
     }
 }
 

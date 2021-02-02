@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pch.h"
+#include "util.h"
 
 
 namespace AvsFilter {
@@ -64,40 +65,11 @@ public:
     static const std::unordered_map<std::wstring, Definition> FORMATS;
 
 private:
-    template <typename Component>
-    constexpr static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, __m128i mask1, __m128i mask2) -> void {
-        const int iterations = rowSize / sizeof(__m128i);
-        const int remainders = rowSize % sizeof(__m128i) / 2;
-
-        for (int y = 0; y < height; ++y) {
-            const __m128i *src_128 = reinterpret_cast<const __m128i *>(src);
-            __int64 *dst1_64 = reinterpret_cast<__int64 *>(dst1);
-            __int64 *dst2_64 = reinterpret_cast<__int64 *>(dst2);
-
-            for (int i = 0; i < iterations; ++i) {
-                const __m128i n = *src_128++;
-                _mm_storeu_si64(dst1_64++, _mm_shuffle_epi8(n, mask1));
-                _mm_storeu_si64(dst2_64++, _mm_shuffle_epi8(n, mask2));
-            }
-
-            const Component *src_remainder = reinterpret_cast<const Component *>(src_128);
-            Component *dst1_remainder = reinterpret_cast<Component *>(dst1_64);
-            Component *dst2_remainder = reinterpret_cast<Component *>(dst2_64);
-            for (int i = 0; i < remainders; ++i) {
-                *(dst1_remainder + i) = *(src_remainder + i * 2 + 0);
-                *(dst2_remainder + i) = *(src_remainder + i * 2 + 1);
-            }
-
-            src += srcStride;
-            dst1 += dstStride;
-            dst2 += dstStride;
-        }
-    }
+    static auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, int componentSize) -> void;
 
     template <typename Component>
     constexpr static auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
-        const int iterations = rowSize / (sizeof(__m128i) * 2);
-        const int remainders = rowSize % (sizeof(__m128i) * 2) / 2;
+        const int iterations = DivideRoundUp(rowSize, sizeof(__m128i) * 2);
 
         for (int y = 0; y < height; ++y) {
             const __m128i *src1_128 = reinterpret_cast<const __m128i *>(src1);
@@ -115,14 +87,6 @@ private:
                     *dst_128++ = _mm_unpacklo_epi16(s1, s2);
                     *dst_128++ = _mm_unpackhi_epi16(s1, s2);
                 }
-            }
-
-            const Component *src1_remainder = reinterpret_cast<const Component *>(src1_128);
-            const Component *src2_remainder = reinterpret_cast<const Component *>(src2_128);
-            Component *dst_remainder = reinterpret_cast<Component *>(dst_128);
-            for (int i = 0; i < remainders; ++i) {
-                *(dst_remainder + i * 2 + 0) = *(src1_remainder + i);
-                *(dst_remainder + i * 2 + 1) = *(src2_remainder + i);
             }
 
             src1 += srcStride;
