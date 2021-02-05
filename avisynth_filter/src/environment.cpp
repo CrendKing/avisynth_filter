@@ -13,7 +13,9 @@ Environment::Environment()
     , _outputThreads(0)
     , _isRemoteControlEnabled(false)
     , _logFile(nullptr)
-    , _logStartTime(0) {
+    , _logStartTime(0)
+    , _isSupportAVXx(false)
+    , _isSupportSSSE3(false) {
     wchar_t processPath[_MAX_PATH] {};
     wchar_t processDrive[_MAX_DRIVE] {};
     wchar_t processDirname[_MAX_DIR] {};
@@ -55,6 +57,9 @@ Environment::Environment()
             Log("Loading process: %S%S", processFilename, processFileExt);
         }
     }
+
+    DetectCPUID();
+    Format::Init();
 }
 
 Environment::~Environment() {
@@ -123,6 +128,14 @@ auto Environment::IsRemoteControlEnabled() const -> bool {
     return _isRemoteControlEnabled;
 }
 
+auto Environment::IsSupportAVXx() const -> bool {
+    return _isSupportAVXx;
+}
+
+auto Environment::IsSupportSSSE3() const -> bool {
+    return _isSupportSSSE3;
+}
+
 auto Environment::LoadSettingsFromIni() -> void {
     _avsFile = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
 
@@ -160,6 +173,22 @@ auto Environment::SaveSettingsToRegistry() const -> void {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
         _registry.WriteNumber(settingName.c_str(), enabled);
     }
+}
+
+auto Environment::DetectCPUID() -> void {
+    struct CpuInfo {
+        int eax;
+        int ebx;
+        int ecx;
+        int edx;
+    } cpuInfo = {};
+
+    __cpuid(reinterpret_cast<int *>(&cpuInfo), 1);
+    _isSupportAVXx = cpuInfo.ecx & (1 << 28);  // AVX
+    _isSupportSSSE3 = cpuInfo.ecx & (1 << 9);
+
+    __cpuid(reinterpret_cast<int *>(&cpuInfo), 7);
+    _isSupportAVXx &= static_cast<bool>(cpuInfo.ebx & (1 << 5));  // AVX2
 }
 
 }

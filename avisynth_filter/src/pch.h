@@ -32,6 +32,7 @@
 #include <cguid.h>
 #include <immintrin.h>
 #include <initguid.h>
+#include <intrin.h>
 #include <processthreadsapi.h>
 #include <shellapi.h>
 

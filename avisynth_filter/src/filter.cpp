@@ -172,7 +172,7 @@ auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTI
     pProperties->cBuffers = max(g_env.GetOutputThreads() + 1, pProperties->cBuffers);
 
     BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
-    pProperties->cbBuffer = max(static_cast<long>(bmi->biSizeImage + OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING), pProperties->cbBuffer);
+    pProperties->cbBuffer = max(static_cast<long>(bmi->biSizeImage + Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING), pProperties->cbBuffer);
 
     ALLOCATOR_PROPERTIES actual;
     CheckHr(pAlloc->SetProperties(pProperties, &actual));

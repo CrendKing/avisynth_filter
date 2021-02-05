@@ -8,7 +8,7 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
 
 ## Requirement
 
-* CPU with SSSE3 instructions.
+* CPU with SSE2 instruction set.
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above.
 
 ## Install

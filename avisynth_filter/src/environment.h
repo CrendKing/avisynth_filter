@@ -21,12 +21,15 @@ public:
     auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
     auto GetOutputThreads() const -> int;
     auto IsRemoteControlEnabled() const -> bool;
+    auto IsSupportAVXx() const -> bool;
+    auto IsSupportSSSE3() const -> bool;
 
 private:
     auto LoadSettingsFromIni() -> void;
     auto LoadSettingsFromRegistry() -> void;
     auto SaveSettingsToIni() const -> void;
     auto SaveSettingsToRegistry() const -> void;
+    auto DetectCPUID() -> void;
 
     bool _useIni;
     CSimpleIniW _ini;
@@ -43,6 +46,9 @@ private:
     FILE *_logFile;
     DWORD _logStartTime;
     std::mutex _logMutex;
+
+    bool _isSupportAVXx;
+    bool _isSupportSSSE3;
 };
 
 extern Environment g_env;

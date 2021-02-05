@@ -66,22 +66,6 @@ static constexpr int MAX_OUTPUT_FRAME_DURATION_PADDING           = 10;
 static constexpr int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT   = 1;
 
 /*
- * When (de-)interleaving the data from the buffers for U and V planes, if the stride is
- * not a multiple of sizeof(__m128i), we can't use intrinsics to bulk copy the remainder bytes.
- * Traditionally we copy these bytes in a loop.
- *
- * However, if we allocate the buffer size with some headroom, we can keep using the same
- * logic with intrinsics, simplifying the code. The junk data in the padding will be harmless.
- *
- * Maximum padding is needed when there are minimum remainder bytes, which is 1 byte for each
- * U and V planes (total 2 bytes). Thus padding size is:
- *
- * size of data taken by the intrinsic per interation - 2
- */
-static constexpr int INPUT_MEDIA_SAMPLE_BUFFER_PADDING = sizeof(__m128i) - 2;
-static constexpr int OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING = sizeof(__m128i) * 2 - 2;
-
-/*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
  * Default to 25 FPS in such cases.
  */

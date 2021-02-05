@@ -4,15 +4,11 @@
 #include "format.h"
 #include "api.h"
 #include "constants.h"
+#include "environment.h"
 #include "resource.h"
 
 
 namespace AvsFilter {
-
-static const __m128i DEINTERLEAVE_MASK_8_BIT_1 = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 14, 12, 10, 8, 6, 4, 2, 0);
-static const __m128i DEINTERLEAVE_MASK_8_BIT_2 = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 15, 13, 11, 9, 7, 5, 3, 1);
-static const __m128i DEINTERLEAVE_MASK_16_BIT_1 = _mm_set_epi8(29, 28, 25, 24, 21, 20, 17, 16, 13, 12, 9, 8, 5, 4, 1, 0);
-static const __m128i DEINTERLEAVE_MASK_16_BIT_2 = _mm_set_epi8(31, 30, 27, 26, 23, 22, 19, 18, 15, 14, 11, 10, 7, 6, 3, 2);
 
 const std::unordered_map<std::wstring, Format::Definition> Format::FORMATS = {
     // 4:2:0
@@ -43,6 +39,16 @@ const std::unordered_map<std::wstring, Format::Definition> Format::FORMATS = {
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
 
+const __m128i Format::_MASK_SHUFFLE_C8_V128  = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+const __m128i Format::_MASK_SHUFFLE_C16_V128 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+const int Format::_MASK_PERMUTE_V256 = 0b11011000;
+
+size_t Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+size_t Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+__m256i Format::_MASK_SHUFFLE_C8_V256;
+__m256i Format::_MASK_SHUFFLE_C16_V256;
+size_t Format::_vectorSize;
+
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
     return name != other.name
         || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
@@ -55,6 +61,21 @@ auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
 
 auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
     return FOURCCMap(&FORMATS.at(name).mediaSubtype).GetFOURCC();
+}
+
+auto Format::Init() -> void {
+    if (g_env.IsSupportAVXx()) {
+        _vectorSize = sizeof(__m256i);
+        _MASK_SHUFFLE_C8_V256  = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+        _MASK_SHUFFLE_C16_V256 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    } else if (g_env.IsSupportSSSE3()) {
+        _vectorSize = sizeof(__m128i);
+    } else {
+        _vectorSize = 1;
+    }
+
+    INPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 1 ? 0 : _vectorSize - 2;
+    OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 1 ? 0 : _vectorSize * 2 - 2;
 }
 
 auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<std::wstring> {
@@ -125,7 +146,7 @@ auto Format::WriteSample(const VideoFormat &format, PVideoFrame srcFrame, BYTE *
 }
 
 auto Format::CreateFrame(const VideoFormat &format, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> PVideoFrame {
-    PVideoFrame frame = avsEnv->NewVideoFrame(format.videoInfo, sizeof(__m128i));
+    PVideoFrame frame = avsEnv->NewVideoFrame(format.videoInfo, static_cast<int>(_vectorSize));
 
     BYTE *dstSlices[] = { frame->GetWritePtr(), frame->GetWritePtr(PLANAR_U), frame->GetWritePtr(PLANAR_V) };
     const int dstStrides[] = { frame->GetPitch(), frame->GetPitch(PLANAR_U), frame->GetPitch(PLANAR_V) };
@@ -164,7 +185,23 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
         const int srcUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
 
-        Deinterleave(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight, format.videoInfo.ComponentSize());
+        if (format.videoInfo.ComponentSize() == 1) {
+            if (g_env.IsSupportAVXx()) {
+                Deinterleave<1, __m256i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+            } else if (g_env.IsSupportSSSE3()) {
+                Deinterleave<1, __m128i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+            } else {
+                Deinterleave<1, __int16>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+            }
+        } else {
+            if (g_env.IsSupportAVXx()) {
+                Deinterleave<2, __m256i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+            } else if (g_env.IsSupportSSSE3()) {
+                Deinterleave<2, __m128i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+            } else {
+                Deinterleave<2, __int32>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+            }
+        }
     } else {
         const int srcUVStride = srcMainPlaneStride / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize / def.subsampleWidthRatio;
@@ -216,9 +253,17 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
         BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
 
         if (format.videoInfo.ComponentSize() == 1) {
-            Interleave<uint8_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+            if (g_env.IsSupportAVXx()) {
+                Interleave<1, __m256i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+            } else {
+                Interleave<1, __m128i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+            }
         } else {
-            Interleave<uint16_t>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+            if (g_env.IsSupportAVXx()) {
+                Interleave<2, __m256i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+            } else {
+                Interleave<2, __m128i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+            }
         }
     } else {
         const int dstUVStride = dstMainPlaneStride / def.subsampleWidthRatio;
@@ -238,35 +283,6 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
         avsEnv->BitBlt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
         avsEnv->BitBlt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
-    }
-}
-
-auto Format::Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height, int componentSize) -> void {
-    __m128i mask1, mask2;
-    if (componentSize == 1) {
-        mask1 = DEINTERLEAVE_MASK_8_BIT_1;
-        mask2 = DEINTERLEAVE_MASK_8_BIT_2;
-    } else {
-        mask1 = DEINTERLEAVE_MASK_16_BIT_1;
-        mask2 = DEINTERLEAVE_MASK_16_BIT_2;
-    }
-
-    const int iterations = DivideRoundUp(rowSize, sizeof(__m128i));
-
-    for (int y = 0; y < height; ++y) {
-        const __m128i *src_128 = reinterpret_cast<const __m128i *>(src);
-        __int64 *dst1_64 = reinterpret_cast<__int64 *>(dst1);
-        __int64 *dst2_64 = reinterpret_cast<__int64 *>(dst2);
-
-        for (int i = 0; i < iterations; ++i) {
-            const __m128i n = *src_128++;
-            _mm_storeu_si64(dst1_64++, _mm_shuffle_epi8(n, mask1));
-            _mm_storeu_si64(dst2_64++, _mm_shuffle_epi8(n, mask2));
-        }
-
-        src += srcStride;
-        dst1 += dstStride;
-        dst2 += dstStride;
     }
 }
 
