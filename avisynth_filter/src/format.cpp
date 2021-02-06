@@ -39,14 +39,10 @@ const std::unordered_map<std::wstring, Format::Definition> Format::FORMATS = {
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
 
-const __m128i Format::_MASK_SHUFFLE_C8_V128  = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
-const __m128i Format::_MASK_SHUFFLE_C16_V128 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
-const int Format::_MASK_PERMUTE_V256 = 0b11011000;
-
 size_t Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
 size_t Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
-__m256i Format::_MASK_SHUFFLE_C8_V256;
-__m256i Format::_MASK_SHUFFLE_C16_V256;
+
+const int Format::_MASK_PERMUTE_V256 = 0b11011000;
 size_t Format::_vectorSize;
 
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
@@ -66,16 +62,14 @@ auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
 auto Format::Init() -> void {
     if (g_env.IsSupportAVXx()) {
         _vectorSize = sizeof(__m256i);
-        _MASK_SHUFFLE_C8_V256  = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
-        _MASK_SHUFFLE_C16_V256 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     } else if (g_env.IsSupportSSSE3()) {
         _vectorSize = sizeof(__m128i);
     } else {
-        _vectorSize = 1;
+        _vectorSize = 0;
     }
 
-    INPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 1 ? 0 : _vectorSize - 2;
-    OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 1 ? 0 : _vectorSize * 2 - 2;
+    INPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 0 ? 0 : _vectorSize - 2;
+    OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING = (_vectorSize == 0 ? sizeof(__m128i) : _vectorSize) * 2 - 2;
 }
 
 auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<std::wstring> {
@@ -169,7 +163,7 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
     // for RGB DIB in Windows (biCompression == BI_RGB), positive biHeight is bottom-up, negative is top-down
     // AviSynth+'s convert functions always assume the input DIB is bottom-up, so we invert the DIB if it's top-down
     if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        srcMainPlane += srcMainPlaneSize - srcMainPlaneStride;
+        srcMainPlane += static_cast<size_t>(srcMainPlaneSize) - srcMainPlaneStride;
         srcMainPlaneStride = -srcMainPlaneStride;
     }
 
@@ -181,27 +175,29 @@ auto Format::CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYT
 
     const int srcUVHeight = height / def.subsampleHeightRatio;
     if (def.areUVPlanesInterleaved) {
+        const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
         const int srcUVStride = srcMainPlaneStride * 2 / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
-        const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
 
+        decltype(Deinterleave<0, 0>)* DeinterleaveFunc;
         if (format.videoInfo.ComponentSize() == 1) {
             if (g_env.IsSupportAVXx()) {
-                Deinterleave<1, __m256i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+                DeinterleaveFunc = Deinterleave<2, 1>;
             } else if (g_env.IsSupportSSSE3()) {
-                Deinterleave<1, __m128i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+                DeinterleaveFunc = Deinterleave<1, 1>;
             } else {
-                Deinterleave<1, __int16>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+                DeinterleaveFunc = Deinterleave<0, 1>;
             }
         } else {
             if (g_env.IsSupportAVXx()) {
-                Deinterleave<2, __m256i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+                DeinterleaveFunc = Deinterleave<2, 2>;
             } else if (g_env.IsSupportSSSE3()) {
-                Deinterleave<2, __m128i>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+                DeinterleaveFunc = Deinterleave<1, 2>;
             } else {
-                Deinterleave<2, __int32>(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+                DeinterleaveFunc = Deinterleave<0, 2>;
             }
         }
+        DeinterleaveFunc(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
     } else {
         const int srcUVStride = srcMainPlaneStride / def.subsampleWidthRatio;
         const int srcUVRowSize = rowSize / def.subsampleWidthRatio;
@@ -236,7 +232,7 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
     // AviSynth+'s convert functions always produce bottom-up DIB, so we invert the DIB if downstream needs top-down
     if (format.bmi.biCompression == BI_RGB && format.bmi.biHeight < 0) {
-        dstMainPlane += dstMainPlaneSize - dstMainPlaneStride;
+        dstMainPlane += static_cast<size_t>(dstMainPlaneSize) - dstMainPlaneStride;
         dstMainPlaneStride = -dstMainPlaneStride;
     }
 
@@ -248,23 +244,25 @@ auto Format::CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], co
 
     const int dstUVHeight = height / def.subsampleHeightRatio;
     if (def.areUVPlanesInterleaved) {
+        BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
         const int dstUVStride = dstMainPlaneStride * 2 / def.subsampleWidthRatio;
         const int dstUVRowSize = rowSize * 2 / def.subsampleWidthRatio;
-        BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
 
+        decltype(Interleave<0, 0>)* InterleaveFunc;
         if (format.videoInfo.ComponentSize() == 1) {
             if (g_env.IsSupportAVXx()) {
-                Interleave<1, __m256i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+                InterleaveFunc = Interleave<2, 1>;
             } else {
-                Interleave<1, __m128i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+                InterleaveFunc = Interleave<1, 1>;
             }
         } else {
             if (g_env.IsSupportAVXx()) {
-                Interleave<2, __m256i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+                InterleaveFunc = Interleave<2, 2>;
             } else {
-                Interleave<2, __m128i>(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+                InterleaveFunc = Interleave<1, 2>;
             }
         }
+        InterleaveFunc(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
     } else {
         const int dstUVStride = dstMainPlaneStride / def.subsampleWidthRatio;
         const int dstUVRowSize = rowSize / def.subsampleWidthRatio;
