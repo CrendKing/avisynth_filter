@@ -60,8 +60,8 @@ public:
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat;
     static auto WriteSample(const VideoFormat &format, PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void;
     static auto CreateFrame(const VideoFormat &format, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> PVideoFrame;
-    static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, BYTE *dstSlices[], const int dstStrides[], int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
-    static auto CopyToOutput(const VideoFormat &format, const BYTE *srcSlices[], const int srcStrides[], BYTE *dstBuffer, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyToOutput(const VideoFormat &format, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
 
     static const std::unordered_map<std::wstring, Definition> FORMATS;
 

@@ -181,7 +181,7 @@ auto Environment::DetectCPUID() -> void {
         int ebx;
         int ecx;
         int edx;
-    } cpuInfo = {};
+    } cpuInfo;
 
     __cpuid(reinterpret_cast<int *>(&cpuInfo), 1);
     _isSupportAVXx = cpuInfo.ecx & (1 << 28);  // AVX
