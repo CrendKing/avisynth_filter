@@ -189,6 +189,40 @@ private:
             dst += dstStride;
         }
     }
+
+    template <int intrinsicType, bool rightShift>
+    constexpr static auto ShiftFor10Bit(const BYTE *src, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+        using Vector = std::conditional_t<intrinsicType == 1, __m128i
+                     , std::conditional_t<intrinsicType == 2, __m256i
+                     , void
+                     >>;
+
+        for (int y = 0; y < height; ++y) {
+            const Vector *srcLine = reinterpret_cast<const Vector *>(src);
+            Vector *dstLine = reinterpret_cast<Vector *>(dst);
+
+            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
+                const Vector srcVec = *srcLine++;
+
+                if constexpr (intrinsicType == 1) {
+                    if constexpr (rightShift) {
+                        *dstLine++ = _mm_srli_epi16(srcVec, 6);
+                    } else {
+                        *dstLine++ = _mm_slli_epi16(srcVec, 6);
+                    }
+                } else if constexpr (intrinsicType == 2) {
+                    if constexpr (rightShift) {
+                        *dstLine++ = _mm256_srli_epi16(srcVec, 6);
+                    } else {
+                        *dstLine++ = _mm256_slli_epi16(srcVec, 6);
+                    }
+                }
+            }
+
+            src += srcStride;
+            dst += dstStride;
+        }
+    }
 };
 
 }
