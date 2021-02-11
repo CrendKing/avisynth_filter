@@ -10,7 +10,8 @@
 
 namespace AvsFilter {
 
-const std::unordered_map<std::wstring, Format::Definition> Format::FORMATS = {
+// for each group of formats with the same avsType, they should appear with the most preferred -> list preferred order
+const std::map<std::wstring, Format::Definition> Format::FORMATS = {
     // 4:2:0
     { L"NV12",  { .mediaSubtype = MEDIASUBTYPE_NV12,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 } },
     { L"YV12",  { .mediaSubtype = MEDIASUBTYPE_YV12,  .avsType = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV12 } },
@@ -19,16 +20,16 @@ const std::unordered_map<std::wstring, Format::Definition> Format::FORMATS = {
 
     // P010 has the most significant 6 bits zero-padded, while AviSynth expects the least significant bits padded
     // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
-    { L"P010",  { .mediaSubtype = MEDIASUBTYPE_P010,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 } },
     { L"P016",  { .mediaSubtype = MEDIASUBTYPE_P016,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 } },
+    { L"P010",  { .mediaSubtype = MEDIASUBTYPE_P010,  .avsType = VideoInfo::CS_YUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 } },
 
     // 4:2:2
     // YUY2 interleaves Y and UV planes together, thus twice as wide as unpacked formats per pixel
     { L"YUY2",  { .mediaSubtype = MEDIASUBTYPE_YUY2,  .avsType = VideoInfo::CS_YUY2,      .bitCount = 16, .componentsPerPixel = 2, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YUY2 } },
     // AviSynth+ does not support UYVY
     // P210 has the same problem as P010
-    { L"P210",  { .mediaSubtype = MEDIASUBTYPE_P210,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 } },
     { L"P216",  { .mediaSubtype = MEDIASUBTYPE_P216,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 } },
+    { L"P210",  { .mediaSubtype = MEDIASUBTYPE_P210,  .avsType = VideoInfo::CS_YUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 } },
 
     // 4:4:4
     { L"YV24",  { .mediaSubtype = MEDIASUBTYPE_YV24,  .avsType = VideoInfo::CS_YV24,      .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 } },
@@ -123,9 +124,9 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
              * SAR comes from info.videoInfo.width / info.videoInfo.height
              */
             format.pixelAspectRatio = static_cast<int>(llMulDiv(static_cast<LONGLONG>(vih2->dwPictAspectRatioX) * format.videoInfo.height,
-                                                     PAR_SCALE_FACTOR,
-                                                     static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * format.videoInfo.width,
-                                                     0));
+                                                       PAR_SCALE_FACTOR,
+                                                       static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * format.videoInfo.width,
+                                                       0));
         }
     }
 

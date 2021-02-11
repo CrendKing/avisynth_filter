@@ -4,8 +4,6 @@
 #include "input_pin.h"
 #include "allocator.h"
 #include "avs_handler.h"
-#include "constants.h"
-#include "environment.h"
 #include "format.h"
 
 
@@ -22,11 +20,13 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
-    const CAutoLock lock(m_pLock);
-
     HRESULT hr;
 
-    if (m_Connected) {
+    const CAutoLock lock(m_pLock);
+
+    const HRESULT receiveConnectionHr = __super::ReceiveConnection(pConnector, pmt);
+
+    if (receiveConnectionHr == VFW_E_ALREADY_CONNECTED) {
         ASSERT(m_pAllocator != nullptr);
 
         if (CheckMediaType(static_cast<const CMediaType *>(pmt)) == S_OK) {
@@ -49,7 +49,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
         }
     }
 
-    return __super::ReceiveConnection(pConnector, pmt);
+    return receiveConnectionHr;
 }
 
 /**

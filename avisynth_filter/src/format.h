@@ -63,7 +63,7 @@ public:
     static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
     static auto CopyToOutput(const VideoFormat &format, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
 
-    static const std::unordered_map<std::wstring, Definition> FORMATS;
+    static const std::map<std::wstring, Definition> FORMATS;
 
     /*
      * When (de-)interleaving the data from the buffers for U and V planes, if the stride is

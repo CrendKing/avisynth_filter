@@ -94,9 +94,9 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     }
 
                     // all media types that share the same avs type are acceptable for output pin connection
-                    for (const std::wstring &outputFormatName: Format::LookupAvsType(g_avs->GetScriptPixelType())) {
-                        _compatibleMediaTypes.emplace_back(*nextType, g_avs->GenerateMediaType(outputFormatName, nextType));
-                        g_env.Log("Add compatible definitions: input %S output %S", optInputFormatName->c_str(), outputFormatName.c_str());
+                    for (const std::wstring &avsFormatName: Format::LookupAvsType(g_avs->GetScriptPixelType())) {
+                        _compatibleMediaTypes.emplace_back(*nextType, g_avs->GenerateMediaType(avsFormatName, nextType));
+                        g_env.Log("Add compatible definitions: input %S output %S", optInputFormatName->c_str(), avsFormatName.c_str());
                     }
                 }
             } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
@@ -111,26 +111,14 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
 }
 
 auto CAviSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    bool isInputCompatible = false;
-
-    if (const std::optional<std::wstring> optInputFormatName = MediaTypeToFormatName(mtIn)) {
-        isInputCompatible = std::ranges::any_of(_compatibleMediaTypes,
-                                               [&optInputFormatName](const std::optional<std::wstring> &optCompatibleFormatName) -> bool { return *optInputFormatName == optCompatibleFormatName; },
-                                               [](const MediaTypePair &pair) -> std::optional<std::wstring> { return MediaTypeToFormatName(&pair.input); });
+    if (const std::optional<std::wstring> optInputFormatName = MediaTypeToFormatName(mtIn);
+        optInputFormatName && std::ranges::any_of(_compatibleMediaTypes,
+                                                  [&optInputFormatName](const std::optional<std::wstring> &optCompatibleFormatName) -> bool { return *optInputFormatName == optCompatibleFormatName; },
+                                                  [](const MediaTypePair &pair) -> std::optional<std::wstring> { return MediaTypeToFormatName(&pair.input); })) {
+        return S_OK;
     }
 
-    if (!isInputCompatible) {
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    }
-
-    if (m_pOutput->IsConnected()) {
-        const CMediaType newOutputType = g_avs->GenerateMediaType(Format::LookupAvsType(g_avs->GetScriptPixelType())[0], mtIn);
-        if (m_pOutput->GetConnected()->QueryAccept(&newOutputType) != S_OK) {
-            return VFW_E_TYPE_NOT_ACCEPTED;
-        }
-    }
-
-    return S_OK;
+    return VFW_E_TYPE_NOT_ACCEPTED;
 }
 
 auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT {
@@ -152,18 +140,34 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
 }
 
 auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    if (const std::optional<std::wstring> optOutputFormatName = MediaTypeToFormatName(mtOut)) {
-        const auto &iter = std::ranges::find_if(_compatibleMediaTypes,
-                                                [&optOutputFormatName](const std::optional<std::wstring> &optCompatibleFormatName) -> bool { return *optOutputFormatName == optCompatibleFormatName; },
-                                                [](const MediaTypePair &pair) -> std::optional<std::wstring> { return MediaTypeToFormatName(&pair.output); });
-        if (iter != _compatibleMediaTypes.cend()) {
-            g_env.Log("Accept transform: output %S Offered input: %S Compatible input: %S",
-                      optOutputFormatName->c_str(), MediaTypeToFormatName(mtIn)->c_str(), MediaTypeToFormatName(&iter->input)->c_str());
-            return S_OK;
+    bool isInputTypeOk = mtIn == &m_pInput->CurrentMediaType();
+    bool isOutputTypeOk = mtOut == &m_pOutput->CurrentMediaType();
+
+    if (!isInputTypeOk) {
+        g_avs->ReloadScript(*mtIn, true);
+        const std::vector<std::wstring> avsFormatNames = Format::LookupAvsType(g_avs->GetScriptPixelType());
+        const auto outputTypes = avsFormatNames | std::views::transform([mtIn](const std::wstring &formatName) -> CMediaType {
+            return g_avs->GenerateMediaType(formatName, mtIn);
+        });
+        isInputTypeOk = std::ranges::any_of(outputTypes, [this](const CMediaType &newOutputType) -> bool {
+            return m_pOutput->GetConnected()->QueryAccept(&newOutputType) == S_OK;
+        });
+
+        g_env.Log("Downstream QueryAccept in CheckTransform(): result %i input %S", isInputTypeOk, MediaTypeToFormatName(mtIn)->c_str());
+    }
+
+    if (!isOutputTypeOk) {
+        if (const std::optional<std::wstring> optOutputFormatName = MediaTypeToFormatName(mtOut)) {
+            const auto &iter = std::ranges::find_if(_compatibleMediaTypes,
+                                                                               [&optOutputFormatName](const std::optional<std::wstring> &optCompatibleFormatName) -> bool { return *optOutputFormatName == optCompatibleFormatName; },
+                                                                               [](const MediaTypePair &pair) -> std::optional<std::wstring> { return MediaTypeToFormatName(&pair.output); });
+            isOutputTypeOk = iter != _compatibleMediaTypes.cend();
+            g_env.Log("CheckTransform() for output type: result: %i output %S offered input: %S compatible input: %S",
+                      isOutputTypeOk, optOutputFormatName->c_str(), MediaTypeToFormatName(mtIn)->c_str(), MediaTypeToFormatName(&iter->input)->c_str());
         }
     }
 
-    return VFW_E_TYPE_NOT_ACCEPTED;
+    return isInputTypeOk && isOutputTypeOk ? S_OK : VFW_E_TYPE_NOT_ACCEPTED;
 }
 
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
@@ -304,7 +308,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         _sendOutputFormatInNextSample = true;
 
         StartStreaming();
-        m_nWaitForKey = 30;
+            m_nWaitForKey = 30;
     }
 
     if (pSample->IsDiscontinuity() == S_OK) {
@@ -472,11 +476,20 @@ auto CAviSynthFilter::UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) ->
     g_env.Log("Upstream propose to change input format: name %S, width %5li, height %5li",
               _inputFormat.name.c_str(), _inputFormat.bmi.biWidth, _inputFormat.bmi.biHeight);
 
-    const CMediaType newOutputType = g_avs->GenerateMediaType(Format::LookupAvsType(g_avs->GetScriptPixelType())[0], &inputMediaType);
-    if (m_pOutput->GetConnected()->QueryAccept(&newOutputType) != S_OK) {
+    const std::vector<std::wstring> avsFormatNames = Format::LookupAvsType(g_avs->GetScriptPixelType());
+    const auto outputTypes = avsFormatNames | std::views::transform([&inputMediaType](const std::wstring &formatName) -> CMediaType {
+        return g_avs->GenerateMediaType(formatName, &inputMediaType);
+    });
+    const auto newOutputTypeIter = std::ranges::find_if(outputTypes, [this](const CMediaType &newOutputType) -> bool {
+        return m_pOutput->GetConnected()->QueryAccept(&newOutputType) == S_OK;
+    });
+
+    if (newOutputTypeIter == outputTypes.end()) {
         g_env.Log("Downstream does not accept new output format");
         return VFW_E_TYPE_NOT_ACCEPTED;
     }
+
+    const CMediaType &newOutputType = *newOutputTypeIter;
 
     // even though the new VideoFormat may seem the same as the old, some properties (e.g. VIDEOINFOHEADER2::dwControlFlags which controls HDR colorspace)
     // may have changed. it is safe to always send out the new media type
