@@ -1,10 +1,22 @@
 # [AviSynth Filter](https://github.com/CrendKing/avisynth_filter)
 
-A DirectShow filter that loads an AviSynth script and feed the frames to the video player.
+A DirectShow filter that puts AviSynth into video playing, by loading AviSynth script and feed the generated frames to video player.
 
 This filter exports an "AvsFilterSource()" function to the AviSynth script, which serves as a source plugin. This filter feeds the video samples from DirectShow upstream to the script. Then it sends the processed frame data to the downstream.
 
-If you used ffdshow's AviSynth plugin, you may find this filter similar in many ways. On top of that, this filter is actively adding new features. Support most common input formats such as NV12, YUY2 and P010 etc.
+If you used ffdshow's AviSynth plugin, you may find this filter similar in many ways. On top of that, this filter is actively adding new features.
+
+## Features
+
+* Support wide range of input formats:
+    * 4:2:0: NV12, YV12, P010, P016, etc
+    * 4:2:2: YUY2, P210, P216
+    * 4:4:4: YV24
+    * RGB24, RGB32
+* High performance multithreaded frame delivery
+* HDR metadata passthrough
+* [API and Remote Control](#api-and-remote-control)
+* [Portable mode](https://github.com/CrendKing/avisynth_filter/wiki/Portable-mode)
 
 ## Requirement
 
@@ -22,7 +34,7 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
 
 Run uninstall.bat to unregister the filter and clean up user data.
 
-## API
+## Usage
 
 The filter exports the following functions to the AviSynth script.
 
@@ -42,24 +54,13 @@ A good example is if your script applies modifications based on video metadata (
 
 This function takes no argument.
 
-## Note
-
-* Similar to ffdshow, there are two frame buffers: ahead buffer and back buffer. The filter will wait until AviSynth to fill the buffer before starting to deliver frames.
-* Unlike ffdshow, this filter automatic calibrates for optimal buffer sizes at the beginning of playback.
-* The optimal buffer sizes depends on the performance of the computer hardware as well as the AviSynth script. If any change is made to to the script during playback, user could use the "Reload" button in the settings page to trigger recalibration.
-* Use the input format selectors if user wants to only activate the filter on certain video formats.
-
 ## API and Remote Control
 
 Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated by importing **activate_remote_control.reg** file.
 
 For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
 
-## Portable mode
-
-Read https://github.com/CrendKing/avisynth_filter/wiki/Portable-mode.
-
-## Example script
+## Example AviSynth script
 
 Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.
 
