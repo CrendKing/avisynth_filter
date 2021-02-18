@@ -308,7 +308,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         _sendOutputFormatInNextSample = true;
 
         StartStreaming();
-            m_nWaitForKey = 30;
+        m_nWaitForKey = 30;
     }
 
     if (pSample->IsDiscontinuity() == S_OK) {

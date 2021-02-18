@@ -24,7 +24,7 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 }
 
 AvsHandler::AvsHandler()
-    : _module(LoadModule())
+    : _avsModule(LoadAvsModule())
     , _env(CreateEnv())
     , _versionString(_env->Invoke("Eval", AVSValue("VersionString()")).AsString())
     , _scriptFile(g_env.GetAvsFile())
@@ -53,7 +53,7 @@ AvsHandler::~AvsHandler() {
 
     _env->DeleteScriptEnvironment();
     AVS_linkage = nullptr;
-    FreeLibrary(_module);
+    FreeLibrary(_avsModule);
 }
 
 auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
@@ -241,12 +241,12 @@ auto AvsHandler::GetErrorString() const -> std::optional<std::string> {
     return _errorString;
 }
 
-auto AvsHandler::LoadModule() const -> HMODULE {
-    const HMODULE module = LoadLibraryA("AviSynth.dll");
-    if (module == nullptr) {
+auto AvsHandler::LoadAvsModule() const -> HMODULE {
+    const HMODULE avsModule = LoadLibraryA("AviSynth.dll");
+    if (avsModule == nullptr) {
         ShowFatalError("Failed to load AviSynth.dll");
     }
-    return module;
+    return avsModule;
 }
 
 auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
@@ -257,7 +257,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     We don't use any new feature from IScriptEnvironment2 anyway.
     */
     using CreateScriptEnvironment_Func = auto (AVSC_CC *) (int version)->IScriptEnvironment *;
-    const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_module, "CreateScriptEnvironment"));
+    const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
     if (CreateScriptEnvironment == nullptr) {
         ShowFatalError("Unable to locate CreateScriptEnvironment()");
     }
@@ -275,7 +275,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
 [[ noreturn ]] auto AvsHandler::ShowFatalError(const char *errorMessage) const -> void {
     g_env.Log("%S", errorMessage);
     MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
-    FreeLibrary(_module);
+    FreeLibrary(_avsModule);
     throw std::runtime_error(errorMessage);
 }
 

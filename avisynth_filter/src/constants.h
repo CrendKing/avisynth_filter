@@ -50,10 +50,10 @@ static const GUID MEDIASUBTYPE_YV24 = FOURCCMap('42VY');
 static constexpr int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION     = 7;
 
 /*
- * Max number of frames received before blocking upstream from flooding the input queue.
+ * Extra number of frames received before blocking upstream from flooding the input queue.
  * Once reached, it must wait until the output thread delivers and GC source frames.
  */
-static constexpr int MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY         = 7;
+static constexpr int EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY       = 3;
 
 /*
  * If an output frame's stop time is this value close to the the next source frame's
@@ -87,6 +87,7 @@ static constexpr const wchar_t *SETTING_NAME_LOG_FILE            = L"LogFile";
 static constexpr const wchar_t *SETTING_NAME_INPUT_FORMAT_PREFIX = L"InputFormat_";
 static constexpr const wchar_t *SETTING_NAME_OUTPUT_THREADS      = L"OutputThreads";
 static constexpr const wchar_t *SETTING_NAME_REMOTE_CONTROL      = L"RemoteControl";
+static constexpr const wchar_t *SETTING_NAME_EXTRA_SOURCE_BUFFER = L"ExtraSourceBuffer";
 
 static constexpr int REMOTE_CONTROL_SMTO_TIMEOUT_MS              = 1000;
 

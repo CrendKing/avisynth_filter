@@ -32,8 +32,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
             return true;
         }
 
-        // +1 to make sure at least 2 frames in input queue for frame time calculation
-        if (_nextSourceFrameNb <= _maxRequestedFrameNb + 1 + MAX_SOURCE_FRAMES_AHEAD_OF_DELIVERY) {
+        // headroom added to make sure at least some frames are in input queue for frame time calculation
+        if (_nextSourceFrameNb <= _maxRequestedFrameNb + 3 + g_env.GetExtraSourceBuffer()) {
             return true;
         }
 

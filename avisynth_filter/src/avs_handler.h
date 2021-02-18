@@ -32,11 +32,11 @@ public:
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-    auto LoadModule() const -> HMODULE;
+    auto LoadAvsModule() const -> HMODULE;
     auto CreateEnv() const -> IScriptEnvironment *;
     [[ noreturn ]] auto ShowFatalError(const char *errorMessage) const -> void ;
 
-    HMODULE _module;
+    HMODULE _avsModule;
     IScriptEnvironment *_env;
     const char *_versionString;
     std::wstring _scriptFile;

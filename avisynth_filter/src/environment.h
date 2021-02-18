@@ -21,6 +21,7 @@ public:
     auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
     auto GetOutputThreads() const -> int;
     auto IsRemoteControlEnabled() const -> bool;
+    auto GetExtraSourceBuffer() const -> int;
     auto IsSupportAVXx() const -> bool;
     auto IsSupportSSSE3() const -> bool;
 
@@ -41,6 +42,7 @@ private:
     std::unordered_map<std::wstring, bool> _inputFormats;
     int _outputThreads;
     bool _isRemoteControlEnabled;
+    int _extraSourceBuffer;
 
     std::wstring _logFilePath;
     FILE *_logFile;
