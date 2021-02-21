@@ -144,11 +144,11 @@ auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconn
 
     if (!_scriptFile.empty()) {
         const std::string utf8Filename = ConvertWideToUtf8(_scriptFile);
-        const AVSValue args[2] = { utf8Filename.c_str(), true };
-        const char *const argNames[2] = { nullptr, "utf8" };
+        const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
+        const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
 
         try {
-            invokeResult = _env->Invoke("Import", AVSValue(args, 2), argNames);
+            invokeResult = _env->Invoke("Import", AVSValue(args.data(), static_cast<int>(args.size())), argNames.data());
         } catch (AvisynthError &err) {
             _errorString = err.msg;
         }

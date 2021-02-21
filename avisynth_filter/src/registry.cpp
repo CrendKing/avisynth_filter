@@ -29,12 +29,12 @@ auto Registry::ReadString(const wchar_t *valueName) const -> std::wstring {
     std::wstring ret;
 
     if (_registryKey) {
-        wchar_t buffer[MAX_PATH];
-        DWORD bufferSize = sizeof(buffer);
+        std::array<wchar_t, MAX_PATH> buffer;
+        DWORD bufferSize = static_cast<DWORD>(buffer.size());
 
-        const LSTATUS registryStatus = RegGetValueW(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer, &bufferSize);
+        const LSTATUS registryStatus = RegGetValueW(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer.data(), &bufferSize);
         if (registryStatus == ERROR_SUCCESS) {
-            ret.assign(buffer, bufferSize / sizeof(wchar_t) - 1);
+            ret.assign(buffer.data(), bufferSize / sizeof(wchar_t) - 1);
         }
     }
 

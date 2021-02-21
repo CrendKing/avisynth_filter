@@ -84,9 +84,9 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             const WORD eventTarget = LOWORD(wParam);
 
             if (eventTarget == IDC_EDIT_AVS_FILE) {
-                wchar_t buf[STR_MAX_LENGTH];
-                GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buf, STR_MAX_LENGTH);
-                const std::wstring newValue = std::wstring(buf, STR_MAX_LENGTH).c_str();
+                std::array<wchar_t, STR_MAX_LENGTH> buffer;
+                GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buffer.data(), static_cast<int>(buffer.size()));
+                const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str();
 
                 if (newValue != _configAvsFile) {
                     _configAvsFile = newValue;
@@ -103,12 +103,12 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
                 _filter->ReloadAvsFile(g_avs->GetScriptFile());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
-                wchar_t szFile[MAX_PATH] {};
+                std::array<wchar_t, MAX_PATH> szFile {};
 
                 OPENFILENAMEW ofn {};
                 ofn.lStructSize = sizeof(OPENFILENAME);
-                ofn.lpstrFile = szFile;
-                ofn.nMaxFile = sizeof(szFile);
+                ofn.lpstrFile = szFile.data();
+                ofn.nMaxFile = static_cast<DWORD>(szFile.size());
                 ofn.lpstrFilter = L"avs Files\0*.avs\0All Files\0*.*\0";
                 ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 

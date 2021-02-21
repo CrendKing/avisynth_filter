@@ -16,14 +16,14 @@ Environment::Environment()
     , _logStartTime(0)
     , _isSupportAVXx(false)
     , _isSupportSSSE3(false) {
-    wchar_t processPath[_MAX_PATH] {};
-    wchar_t processDrive[_MAX_DRIVE] {};
-    wchar_t processDirname[_MAX_DIR] {};
-    wchar_t processFilename[_MAX_FNAME] {};
-    wchar_t processFileExt[_MAX_EXT] {};
-    if (GetModuleFileNameW(nullptr, processPath, _MAX_PATH) != 0 &&
-        _wsplitpath_s(processPath, processDrive, _MAX_DRIVE, processDirname, _MAX_DIR, processFilename, _MAX_FNAME, processFileExt, _MAX_EXT) == 0) {
-        _iniFilePath = std::wstring(processDrive) + processDirname + Widen(FILTER_FILENAME_BASE) + L".ini";
+    std::array<wchar_t, _MAX_PATH> processPath {};
+    std::array<wchar_t, _MAX_DRIVE> processDrive {};
+    std::array<wchar_t, _MAX_DIR> processDirname {};
+    std::array<wchar_t, _MAX_FNAME> processFilename {};
+    std::array<wchar_t, _MAX_EXT> processFileExt {};
+    if (GetModuleFileNameW(nullptr, processPath.data(), static_cast<DWORD>(processPath.size())) != 0 &&
+        _wsplitpath_s(processPath.data(), processDrive.data(), processDrive.size(), processDirname.data(), processDirname.size(), processFilename.data(), processFilename.size(), processFileExt.data(), processFileExt.size()) == 0) {
+        _iniFilePath = std::wstring(processDrive.data(), processDrive.size()) + processDirname.data() + Widen(FILTER_FILENAME_BASE) + L".ini";
         _useIni = _ini.LoadFile(_iniFilePath.c_str()) == SI_OK;
     }
 
@@ -42,10 +42,10 @@ Environment::Environment()
 
             setlocale(LC_CTYPE, ".utf8");
 
-            wchar_t avsFilename[_MAX_FNAME];
-            wchar_t avsExt[_MAX_EXT];
-            if (_wsplitpath_s(_avsFile.c_str(), nullptr, 0, nullptr, 0, avsFilename, _MAX_FNAME, avsExt, _MAX_EXT) != 0) {
-                wcscpy_s(avsFilename, L"unknown");
+            std::array<wchar_t, _MAX_FNAME> avsFilename {};
+            std::array<wchar_t, _MAX_EXT> avsExt {};
+            if (_wsplitpath_s(_avsFile.c_str(), nullptr, 0, nullptr, 0, avsFilename.data(), avsFilename.size(), avsExt.data(), avsExt.size()) != 0) {
+                wcscpy_s(avsFilename.data(), avsFilename.size(), L"unknown");
             }
             Log("Configured script file: %S%S", avsFilename, avsExt);
 
