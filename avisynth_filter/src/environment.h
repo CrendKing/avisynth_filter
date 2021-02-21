@@ -15,8 +15,8 @@ public:
     auto SaveSettings() const -> void;
     auto Log(const char *format, ...) -> void;
 
-    auto GetAvsFile() const -> const std::wstring &;
-    auto SetAvsFile(const std::wstring &avsFile) -> void;
+    auto GetAvsPath() const -> const std::filesystem::path &;
+    auto SetAvsPath(const std::filesystem::path &avsPath) -> void;
     auto IsInputFormatEnabled(const std::wstring &formatName) const -> bool;
     auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
     auto GetOutputThreads() const -> int;
@@ -34,17 +34,17 @@ private:
 
     bool _useIni;
     CSimpleIniW _ini;
-    std::wstring _iniFilePath;
+    std::filesystem::path _iniPath;
 
     Registry _registry;
 
-    std::wstring _avsFile;
+    std::filesystem::path _avsPath;
     std::unordered_map<std::wstring, bool> _inputFormats;
     int _outputThreads;
     bool _isRemoteControlEnabled;
     int _extraSourceBuffer;
 
-    std::wstring _logFilePath;
+    std::filesystem::path _logPath;
     FILE *_logFile;
     DWORD _logStartTime;
     std::mutex _logMutex;

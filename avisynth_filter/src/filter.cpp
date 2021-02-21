@@ -378,12 +378,12 @@ auto CAviSynthFilter::GetOutputFormat() const->Format::VideoFormat {
     return _outputFormat;
 }
 
-auto CAviSynthFilter::ReloadAvsFile(const std::wstring &avsFile) -> void {
-    g_avs->SetScriptFile(avsFile);
+auto CAviSynthFilter::ReloadAvsFile(const std::filesystem::path &avsPath) -> void {
+    g_avs->SetScriptPath(avsPath);
     _reloadAvsSource = true;
 }
 
-auto CAviSynthFilter::GetVideoSourcePath() const -> std::wstring {
+auto CAviSynthFilter::GetVideoSourcePath() const -> const std::filesystem::path & {
     return _videoSourcePath;
 }
 
@@ -532,7 +532,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
             if (source != nullptr) {
                 LPOLESTR filename;
                 if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
-                    _videoSourcePath = std::wstring(filename);
+                    _videoSourcePath = filename;
                 }
             }
 

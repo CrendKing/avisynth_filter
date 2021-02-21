@@ -16,15 +16,14 @@ Environment::Environment()
     , _logStartTime(0)
     , _isSupportAVXx(false)
     , _isSupportSSSE3(false) {
-    std::array<wchar_t, _MAX_PATH> processPath {};
-    std::array<wchar_t, _MAX_DRIVE> processDrive {};
-    std::array<wchar_t, _MAX_DIR> processDirname {};
-    std::array<wchar_t, _MAX_FNAME> processFilename {};
-    std::array<wchar_t, _MAX_EXT> processFileExt {};
-    if (GetModuleFileNameW(nullptr, processPath.data(), static_cast<DWORD>(processPath.size())) != 0 &&
-        _wsplitpath_s(processPath.data(), processDrive.data(), processDrive.size(), processDirname.data(), processDirname.size(), processFilename.data(), processFilename.size(), processFileExt.data(), processFileExt.size()) == 0) {
-        _iniFilePath = std::wstring(processDrive.data(), processDrive.size()) + processDirname.data() + Widen(FILTER_FILENAME_BASE) + L".ini";
-        _useIni = _ini.LoadFile(_iniFilePath.c_str()) == SI_OK;
+    std::array<wchar_t, _MAX_PATH> processPathStr {};
+    std::filesystem::path processName;
+
+    if (GetModuleFileNameW(nullptr, processPathStr.data(), static_cast<DWORD>(processPathStr.size())) != 0) {
+        _iniPath = std::filesystem::path(processPathStr.data());
+        processName = _iniPath.filename();
+        _iniPath.replace_filename(Widen(FILTER_FILENAME_BASE)).replace_extension("ini");
+        _useIni = _ini.LoadFile(_iniPath.c_str()) == SI_OK;
     }
 
     if (_useIni) {
@@ -35,26 +34,21 @@ Environment::Environment()
         MessageBoxA(nullptr, "Unload to load settings", FILTER_NAME_FULL, MB_ICONERROR);
     }
 
-    if (!_logFilePath.empty()) {
-        _logFile = _wfsopen(_logFilePath.c_str(), L"w", _SH_DENYNO);
+    if (!_logPath.empty()) {
+        _logFile = _wfsopen(_logPath.c_str(), L"w", _SH_DENYNO);
         if (_logFile != nullptr) {
             _logStartTime = timeGetTime();
 
             setlocale(LC_CTYPE, ".utf8");
 
-            std::array<wchar_t, _MAX_FNAME> avsFilename {};
-            std::array<wchar_t, _MAX_EXT> avsExt {};
-            if (_wsplitpath_s(_avsFile.c_str(), nullptr, 0, nullptr, 0, avsFilename.data(), avsFilename.size(), avsExt.data(), avsExt.size()) != 0) {
-                wcscpy_s(avsFilename.data(), avsFilename.size(), L"unknown");
-            }
-            Log("Configured script file: %S%S", avsFilename, avsExt);
+            Log("Configured script file: %S", _avsPath.filename().c_str());
 
             for (const auto &[formatName, enabled] : _inputFormats) {
                 Log("Configured input format %S: %i", formatName.c_str(), enabled);
             }
 
             Log("Configured output threads: %i", _outputThreads);
-            Log("Loading process: %S%S", processFilename, processFileExt);
+            Log("Loading process: %S", processName.c_str());
         }
     }
 
@@ -95,15 +89,15 @@ auto Environment::Log(const char *format, ...) -> void {
     fflush(_logFile);
 }
 
-auto Environment::GetAvsFile() const -> const std::wstring & {
-    return _avsFile;
+auto Environment::GetAvsPath() const -> const std::filesystem::path & {
+    return _avsPath;
 }
 
-auto Environment::SetAvsFile(const std::wstring &avsFile) -> void {
-    _avsFile = avsFile;
+auto Environment::SetAvsPath(const std::filesystem::path &avsPath) -> void {
+    _avsPath = avsPath;
 
     if (_useIni) {
-        _ini.SetValue(L"", SETTING_NAME_AVS_FILE, _avsFile.c_str());
+        _ini.SetValue(L"", SETTING_NAME_AVS_FILE, _avsPath.c_str());
     }
 }
 
@@ -141,7 +135,7 @@ auto Environment::IsSupportSSSE3() const -> bool {
 }
 
 auto Environment::LoadSettingsFromIni() -> void {
-    _avsFile = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
+    _avsPath = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
 
     for (const auto &[formatName, definition] : Format::FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
@@ -151,11 +145,11 @@ auto Environment::LoadSettingsFromIni() -> void {
     _outputThreads = _ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
     _extraSourceBuffer = _ini.GetLongValue(L"", SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
-    _logFilePath = _ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
+    _logPath = _ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
 }
 
 auto Environment::LoadSettingsFromRegistry() -> void {
-    _avsFile = _registry.ReadString(SETTING_NAME_AVS_FILE);
+    _avsPath = _registry.ReadString(SETTING_NAME_AVS_FILE);
 
     for (const auto &[formatName, definition] : Format::FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
@@ -165,15 +159,15 @@ auto Environment::LoadSettingsFromRegistry() -> void {
     _outputThreads = _registry.ReadNumber(SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _registry.ReadNumber(SETTING_NAME_REMOTE_CONTROL, 0) != 0;
     _extraSourceBuffer = _registry.ReadNumber(SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
-    _logFilePath = _registry.ReadString(SETTING_NAME_LOG_FILE);
+    _logPath = _registry.ReadString(SETTING_NAME_LOG_FILE);
 }
 
 auto Environment::SaveSettingsToIni() const -> void {
-    (void) _ini.SaveFile(_iniFilePath.c_str());
+    (void) _ini.SaveFile(_iniPath.c_str());
 }
 
 auto Environment::SaveSettingsToRegistry() const -> void {
-    _registry.WriteString(SETTING_NAME_AVS_FILE, _avsFile);
+    _registry.WriteString(SETTING_NAME_AVS_FILE, _avsPath);
 
     for (const auto &[formatName, enabled] : _inputFormats) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;

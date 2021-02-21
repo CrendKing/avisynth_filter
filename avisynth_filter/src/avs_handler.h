@@ -17,12 +17,12 @@ public:
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     auto GenerateMediaType(const std::wstring &formatName, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
-    auto SetScriptFile(const std::wstring &scriptFile) -> void;
+    auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     auto StopScript() -> void;
 
     auto GetEnv() const -> IScriptEnvironment *;
     auto GetVersionString() const -> const char *;
-    auto GetScriptFile() const -> std::wstring;
+    auto GetScriptPath() const -> const std::filesystem::path &;
     auto GetScriptPixelType() const -> int;
     auto GetScriptClip() -> PClip &;
     auto GetSourceDrainFrame() -> PVideoFrame &;
@@ -39,7 +39,7 @@ private:
     HMODULE _avsModule;
     IScriptEnvironment *_env;
     const char *_versionString;
-    std::wstring _scriptFile;
+    std::filesystem::path _scriptPath;
     VideoInfo _sourceVideoInfo;
     VideoInfo _scriptVideoInfo;
     PClip _sourceClip;

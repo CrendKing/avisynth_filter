@@ -42,8 +42,8 @@ public:
 
     auto GetInputFormat() const -> Format::VideoFormat;
     auto GetOutputFormat() const -> Format::VideoFormat;
-    auto ReloadAvsFile(const std::wstring &avsFile) -> void;
-    auto GetVideoSourcePath() const -> std::wstring;
+    auto ReloadAvsFile(const std::filesystem::path &avsPath) -> void;
+    auto GetVideoSourcePath() const -> const std::filesystem::path &;
     auto GetVideoFilterNames() const -> std::vector<std::wstring>;
     auto GetAvsState() const -> AvsState;
 
@@ -82,7 +82,7 @@ private:
 
     bool _reloadAvsSource;
 
-    std::wstring _videoSourcePath;
+    std::filesystem::path _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;
 };
 

@@ -27,7 +27,7 @@ AvsHandler::AvsHandler()
     : _avsModule(LoadAvsModule())
     , _env(CreateEnv())
     , _versionString(_env->Invoke("Eval", AVSValue("VersionString()")).AsString())
-    , _scriptFile(g_env.GetAvsFile())
+    , _scriptPath(g_env.GetAvsPath())
     , _sourceVideoInfo()
     , _scriptVideoInfo()
     , _sourceClip(new SourceClip(_sourceVideoInfo))
@@ -142,8 +142,8 @@ auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconn
 
     AVSValue invokeResult;
 
-    if (!_scriptFile.empty()) {
-        const std::string utf8Filename = ConvertWideToUtf8(_scriptFile);
+    if (!_scriptPath.empty()) {
+        const std::string utf8Filename = ConvertWideToUtf8(_scriptPath);
         const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
         const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
 
@@ -187,8 +187,8 @@ auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconn
     return true;
 }
 
-auto AvsHandler::SetScriptFile(const std::wstring &scriptFile) -> void {
-    _scriptFile = scriptFile;
+auto AvsHandler::SetScriptPath(const std::filesystem::path &scriptPath) -> void {
+    _scriptPath = scriptPath;
 }
 
 auto AvsHandler::StopScript() -> void {
@@ -205,8 +205,8 @@ auto AvsHandler::GetVersionString() const -> const char * {
     return _versionString == nullptr ? "unknown AviSynth version" : _versionString;
 }
 
-auto AvsHandler::GetScriptFile() const -> std::wstring {
-    return _scriptFile;
+auto AvsHandler::GetScriptPath() const -> const std::filesystem::path & {
+    return _scriptPath;
 }
 
 auto AvsHandler::GetScriptPixelType() const -> int {

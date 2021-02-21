@@ -32,13 +32,13 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    _configAvsFile = g_env.GetAvsFile();
-    _avsFileManagedByRC = _configAvsFile != g_avs->GetScriptFile();
+    _configAvsPath = g_env.GetAvsPath();
+    _avsFileManagedByRC = _configAvsPath != g_avs->GetScriptPath();
     if (_avsFileManagedByRC) {
         ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
     }
 
-    SetDlgItemTextW(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsFile.c_str());
+    SetDlgItemTextW(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsPath.c_str());
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
@@ -58,7 +58,11 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
-    g_env.SetAvsFile(_configAvsFile);
+    if (std::filesystem::exists(_configAvsPath)) {
+        g_env.SetAvsPath(_configAvsPath);
+    } else {
+        MessageBoxA(m_hwnd, "Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONERROR);
+    }
 
     for (const auto &[formatName, definition] : Format::FORMATS) {
         g_env.SetInputFormatEnabled(formatName, IsDlgButtonChecked(m_Dlg, definition.resourceId) == BST_CHECKED);
@@ -70,8 +74,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
         // TODO: put message in string table when going multi-language
         MessageBoxA(m_hwnd, "AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
                     FILTER_NAME_FULL, MB_OK | MB_ICONINFORMATION);
-    } else if (!_configAvsFile.empty()) {
-        _filter->ReloadAvsFile(_configAvsFile);
+    } else if (!_configAvsPath.empty()) {
+        _filter->ReloadAvsFile(_configAvsPath);
     }
 
     return S_OK;
@@ -88,8 +92,8 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buffer.data(), static_cast<int>(buffer.size()));
                 const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str();
 
-                if (newValue != _configAvsFile) {
-                    _configAvsFile = newValue;
+                if (newValue != _configAvsPath) {
+                    _configAvsPath = newValue;
                     SetDirty();
                 }
 
@@ -98,10 +102,10 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         } else if (HIWORD(wParam) == BN_CLICKED) {
             const WORD eventTarget = LOWORD(wParam);
 
-            if (eventTarget == IDC_BUTTON_EDIT && !_configAvsFile.empty()) {
-                ShellExecuteW(hwnd, L"edit", _configAvsFile.c_str(), nullptr, nullptr, SW_SHOW);
+            if (eventTarget == IDC_BUTTON_EDIT && !_configAvsPath.empty()) {
+                ShellExecuteW(hwnd, L"edit", _configAvsPath.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
-                _filter->ReloadAvsFile(g_avs->GetScriptFile());
+                _filter->ReloadAvsFile(g_avs->GetScriptPath());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
                 std::array<wchar_t, MAX_PATH> szFile {};
 

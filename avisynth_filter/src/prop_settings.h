@@ -22,7 +22,7 @@ private:
     auto SetDirty() -> void;
 
     CAviSynthFilter *_filter;
-    std::wstring _configAvsFile;
+    std::filesystem::path _configAvsPath;
     bool _avsFileManagedByRC;
 };
 
