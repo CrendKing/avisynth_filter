@@ -19,7 +19,7 @@ RemoteControl::RemoteControl(CAviSynthFilter &filter)
 
 RemoteControl::~RemoteControl() {
     if (_hWnd) {
-        PostMessage(_hWnd, WM_CLOSE, 0, 0);
+        PostMessageW(_hWnd, WM_CLOSE, 0, 0);
     }
 
     if (_msgThread.joinable()) {
@@ -36,7 +36,7 @@ auto RemoteControl::Start() -> void {
 auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
     switch (uMsg) {
     case WM_COPYDATA: {
-        const RemoteControl *rc = reinterpret_cast<const RemoteControl *>(GetWindowLongPtrA(hWnd, GWLP_USERDATA));
+        const RemoteControl *rc = reinterpret_cast<const RemoteControl *>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
         return rc->HandleCopyData(reinterpret_cast<HWND>(wParam), reinterpret_cast<const COPYDATASTRUCT *>(lParam));
     }
 
@@ -46,7 +46,7 @@ auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
     }
 
     default:
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+        return DefWindowProcW(hWnd, uMsg, wParam, lParam);
     }
 }
 
@@ -55,57 +55,48 @@ auto RemoteControl::Run() -> void {
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Remote Control");
 #endif
 
-	WNDCLASSA wc {};
+	WNDCLASSW wc {};
 	wc.lpfnWndProc = &RemoteControl::WndProc;
 	wc.hInstance = g_hInst;
 	wc.lpszClassName = API_WND_CLASS_NAME;
-	if (!RegisterClassA(&wc)) {
+	if (!RegisterClassW(&wc)) {
 		return;
 	}
 
-	_hWnd = CreateWindowExA(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
+	_hWnd = CreateWindowExW(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
 	if (!_hWnd) {
 		return;
 	}
-	SetWindowLongPtrA(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+	SetWindowLongPtrW(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	g_env.Log("Remote control started");
+	g_env.Log(L"Remote control started");
 
 	MSG msg;
 	BOOL msgRet;
-	while ((msgRet = GetMessageA(&msg, nullptr, 0, 0)) != 0) {
+	while ((msgRet = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
-			g_env.Log("Remote control message loop error: %5lu", GetLastError());
+			g_env.Log(L"Remote control message loop error: %5lu", GetLastError());
 			break;
 		}
 
 		TranslateMessage(&msg);
-		DispatchMessageA(&msg);
+		DispatchMessageW(&msg);
 	}
 
 	DestroyWindow(_hWnd);
-	UnregisterClassA(API_WND_CLASS_NAME, wc.hInstance);
+	UnregisterClassW(API_WND_CLASS_NAME, wc.hInstance);
 
-	g_env.Log("Remote control stopped");
+	g_env.Log(L"Remote control stopped");
 }
 
-auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {
+auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void {
 	if (!hReceiverWindow) {
 		return;
 	}
 
-	const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.c_str()) };
-	SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
+	const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<WCHAR *>(data.c_str()) };
+	SendMessageTimeoutW(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
 					    SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
-}
-
-auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void {
-    std::string utf8Data;
-    if (!data.empty()) {
-        utf8Data = ConvertWideToUtf8(data);
-    }
-
-    SendString(hReceiverWindow, msgId, utf8Data);
 }
 
 auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *copyData) const -> LRESULT {
@@ -157,7 +148,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
 
     case API_MSG_GET_AVS_ERROR:
         if (const std::optional<std::string> optAvsError = g_avs->GetErrorString()) {
-            SendString(hSenderWindow, copyData->dwData, *optAvsError);
+            SendString(hSenderWindow, copyData->dwData, ConvertUtf8ToWide(*optAvsError));
             return TRUE;
         }
 
@@ -174,8 +165,8 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
     }
 
     case API_MSG_SET_AVS_SOURCE_FILE: {
-        const std::wstring newAvsFile = ConvertUtf8ToWide(std::string(static_cast<const char *>(copyData->lpData), copyData->cbData));
-        _filter.ReloadAvsFile(newAvsFile);
+        const char *newAvsPathPtr = static_cast<const char *>(copyData->lpData);
+        _filter.ReloadAvsFile(std::filesystem::path(newAvsPathPtr, newAvsPathPtr + copyData->cbData));
         return TRUE;
     }
 

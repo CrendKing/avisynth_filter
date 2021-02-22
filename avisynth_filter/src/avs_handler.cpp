@@ -36,16 +36,16 @@ AvsHandler::AvsHandler()
     , _sourceAvgFrameDuration(0)
     , _scriptAvgFrameDuration(0)
     , _sourceAvgFrameRate(0) {
-    g_env.Log("AvsHandler()");
-    g_env.Log("Filter version: %s", FILTER_VERSION_STRING);
-    g_env.Log("AviSynth version: %s", GetVersionString());
+    g_env.Log(L"AvsHandler()");
+    g_env.Log(L"Filter version: %s", FILTER_VERSION_STRING);
+    g_env.Log(L"AviSynth version: %s", GetVersionString());
 
     _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
     _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 }
 
 AvsHandler::~AvsHandler() {
-    g_env.Log("~AvsHandler()");
+    g_env.Log(L"~AvsHandler()");
 
     _scriptClip = nullptr;
     _sourceClip = nullptr;
@@ -115,7 +115,7 @@ auto AvsHandler::GenerateMediaType(const std::wstring &formatName, const AM_MEDI
  * Create new AviSynth script clip with specified media type.
  */
 auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    g_env.Log("ReloadAviSynthScript");
+    g_env.Log(L"ReloadAviSynthScript");
 
     _sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
     _sourceDrainFrame = _env->NewVideoFrame(_sourceVideoInfo);
@@ -242,9 +242,9 @@ auto AvsHandler::GetErrorString() const -> std::optional<std::string> {
 }
 
 auto AvsHandler::LoadAvsModule() const -> HMODULE {
-    const HMODULE avsModule = LoadLibraryA("AviSynth.dll");
+    const HMODULE avsModule = LoadLibraryW(L"AviSynth.dll");
     if (avsModule == nullptr) {
-        ShowFatalError("Failed to load AviSynth.dll");
+        ShowFatalError(L"Failed to load AviSynth.dll");
     }
     return avsModule;
 }
@@ -259,12 +259,12 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     using CreateScriptEnvironment_Func = auto (AVSC_CC *) (int version)->IScriptEnvironment *;
     const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
     if (CreateScriptEnvironment == nullptr) {
-        ShowFatalError("Unable to locate CreateScriptEnvironment()");
+        ShowFatalError(L"Unable to locate CreateScriptEnvironment()");
     }
 
     IScriptEnvironment *env = CreateScriptEnvironment(MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION);
     if (env == nullptr) {
-        ShowFatalError("CreateScriptEnvironment() returns nullptr");
+        ShowFatalError(L"CreateScriptEnvironment() returns nullptr");
     }
 
     AVS_linkage = env->GetAVSLinkage();
@@ -272,11 +272,11 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     return env;
 }
 
-[[ noreturn ]] auto AvsHandler::ShowFatalError(const char *errorMessage) const -> void {
-    g_env.Log("%S", errorMessage);
-    MessageBoxA(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
+[[ noreturn ]] auto AvsHandler::ShowFatalError(const WCHAR *errorMessage) const -> void {
+    g_env.Log(L"%s", errorMessage);
+    MessageBoxW(nullptr, errorMessage, FILTER_NAME_WIDE, MB_ICONERROR);
     FreeLibrary(_avsModule);
-    throw std::runtime_error(errorMessage);
+    throw;
 }
 
 }

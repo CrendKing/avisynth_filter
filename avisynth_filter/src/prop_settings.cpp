@@ -46,13 +46,11 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
         CheckDlgButton(m_Dlg, definition.resourceId, g_env.IsInputFormatEnabled(formatName));
     }
 
-    const std::string title = std::string("<a>") + FILTER_NAME_BASE +
-        " v" + FILTER_VERSION_STRING +
-        "</a> with " + g_avs->GetVersionString();
+    const std::string title = std::string("<a>").append(FILTER_NAME_BASE).append(" v").append(FILTER_VERSION_STRING).append("</a> with ").append(g_avs->GetVersionString());
     SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
-    PostMessageA(m_hwnd, WM_NEXTDLGCTL, 1, FALSE);
+    PostMessageW(m_hwnd, WM_NEXTDLGCTL, 1, FALSE);
 
     return S_OK;
 }
@@ -61,7 +59,7 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     if (std::filesystem::exists(_configAvsPath)) {
         g_env.SetAvsPath(_configAvsPath);
     } else {
-        MessageBoxA(m_hwnd, "Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_WIDE, MB_OK | MB_ICONERROR);
     }
 
     for (const auto &[formatName, definition] : Format::FORMATS) {
@@ -72,8 +70,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
 
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
-        MessageBoxA(m_hwnd, "AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
-                    FILTER_NAME_FULL, MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(m_hwnd, L"AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
+                    FILTER_NAME_WIDE, MB_OK | MB_ICONINFORMATION);
     } else if (!_configAvsPath.empty()) {
         _filter->ReloadAvsFile(_configAvsPath);
     }
@@ -88,7 +86,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             const WORD eventTarget = LOWORD(wParam);
 
             if (eventTarget == IDC_EDIT_AVS_FILE) {
-                std::array<wchar_t, STR_MAX_LENGTH> buffer;
+                std::array<WCHAR, STR_MAX_LENGTH> buffer;
                 GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buffer.data(), static_cast<int>(buffer.size()));
                 const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str();
 
@@ -107,7 +105,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
                 _filter->ReloadAvsFile(g_avs->GetScriptPath());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
-                std::array<wchar_t, MAX_PATH> szFile {};
+                std::array<WCHAR, MAX_PATH> szFile {};
 
                 OPENFILENAMEW ofn {};
                 ofn.lStructSize = sizeof(OPENFILENAME);
@@ -129,7 +127,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         break;
 
     case WM_CTLCOLORSTATIC:
-        if (GetWindowLongA(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
+        if (GetWindowLongW(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
             const HDC hdc = reinterpret_cast<HDC>(wParam);
             SetBkMode(hdc, TRANSPARENT);
             // make the color of the text control (IDC_TEXT_RC_CONTROLLING) blue to catch attention
@@ -145,7 +143,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             switch (notifyHeader->code) {
             case NM_CLICK:
             case NM_RETURN:
-                ShellExecuteA(hwnd, "open", "https://github.com/CrendKing/avisynth_filter", nullptr, nullptr, SW_SHOW);
+                ShellExecuteW(hwnd, L"open", L"https://github.com/CrendKing/avisynth_filter", nullptr, nullptr, SW_SHOW);
                 return 0;
             }
         }

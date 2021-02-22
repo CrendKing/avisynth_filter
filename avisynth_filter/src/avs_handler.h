@@ -34,7 +34,7 @@ public:
 private:
     auto LoadAvsModule() const -> HMODULE;
     auto CreateEnv() const -> IScriptEnvironment *;
-    [[ noreturn ]] auto ShowFatalError(const char *errorMessage) const -> void ;
+    [[ noreturn ]] auto ShowFatalError(const WCHAR *errorMessage) const -> void ;
 
     HMODULE _avsModule;
     IScriptEnvironment *_env;

@@ -81,7 +81,7 @@ static auto RegisterFilter() -> HRESULT {
 
     const HRESULT hr = AMovieDllRegisterServer2(TRUE);
     if (FAILED(hr)) {
-        g_env.Log("Registeration failed: %li", hr);
+        g_env.Log(L"Registeration failed: %li", hr);
     }
 
     return hr;

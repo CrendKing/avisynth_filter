@@ -20,12 +20,12 @@ auto ConvertUtf8ToWide(const std::string &utf8String) -> std::wstring {
     return ret;
 }
 
-auto DoubleToString(double d, int precision) -> std::string {
-    const std::string str = std::to_string(d);
-    return str.substr(0, str.find('.') + 1 + precision);
+auto DoubleToString(double d, int precision) -> std::wstring {
+    const std::wstring str = std::to_wstring(d);
+    return str.substr(0, str.find(L'.') + 1 + precision);
 }
 
-auto JoinStrings(const std::vector<std::wstring> &input, wchar_t delimiter) -> std::wstring {
+auto JoinStrings(const std::vector<std::wstring> &input, WCHAR delimiter) -> std::wstring {
     if (input.empty()) {
         return L"";
     }

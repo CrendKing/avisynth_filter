@@ -16,13 +16,13 @@ Environment::Environment()
     , _logStartTime(0)
     , _isSupportAVXx(false)
     , _isSupportSSSE3(false) {
-    std::array<wchar_t, _MAX_PATH> processPathStr {};
+    std::array<WCHAR, MAX_PATH> processPathStr {};
     std::filesystem::path processName;
 
     if (GetModuleFileNameW(nullptr, processPathStr.data(), static_cast<DWORD>(processPathStr.size())) != 0) {
         _iniPath = std::filesystem::path(processPathStr.data());
         processName = _iniPath.filename();
-        _iniPath.replace_filename(Widen(FILTER_FILENAME_BASE)).replace_extension("ini");
+        _iniPath.replace_filename(Widen(FILTER_FILENAME_BASE)).replace_extension(L"ini");
         _useIni = _ini.LoadFile(_iniPath.c_str()) == SI_OK;
     }
 
@@ -31,7 +31,7 @@ Environment::Environment()
     } else if (_registry.Initialize()) {
         LoadSettingsFromRegistry();
     } else {
-        MessageBoxA(nullptr, "Unload to load settings", FILTER_NAME_FULL, MB_ICONERROR);
+        MessageBoxW(nullptr, L"Unload to load settings", FILTER_NAME_WIDE, MB_ICONERROR);
     }
 
     if (!_logPath.empty()) {
@@ -39,16 +39,16 @@ Environment::Environment()
         if (_logFile != nullptr) {
             _logStartTime = timeGetTime();
 
-            setlocale(LC_CTYPE, ".utf8");
+            _wsetlocale(LC_CTYPE, L".utf8");
 
-            Log("Configured script file: %S", _avsPath.filename().c_str());
+            Log(L"Configured script file: %s", _avsPath.filename().c_str());
 
             for (const auto &[formatName, enabled] : _inputFormats) {
-                Log("Configured input format %S: %i", formatName.c_str(), enabled);
+                Log(L"Configured input format %s: %i", formatName.c_str(), enabled);
             }
 
-            Log("Configured output threads: %i", _outputThreads);
-            Log("Loading process: %S", processName.c_str());
+            Log(L"Configured output threads: %i", _outputThreads);
+            Log(L"Loading process: %s", processName.c_str());
         }
     }
 
@@ -70,21 +70,21 @@ auto Environment::SaveSettings() const -> void {
     }
 }
 
-auto Environment::Log(const char *format, ...) -> void {
+auto Environment::Log(const WCHAR *format, ...) -> void {
     if (_logFile == nullptr) {
         return;
     }
 
     std::unique_lock lock(_logMutex);
 
-    fprintf_s(_logFile, "T %6lu @ %8lu: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
+    fwprintf_s(_logFile, L"T %6lu @ %8lu: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
 
     va_list args;
     va_start(args, format);
-    vfprintf_s(_logFile, format, args);
+    vfwprintf_s(_logFile, format, args);
     va_end(args);
 
-    fputc('\n', _logFile);
+    fputwc(L'\n', _logFile);
 
     fflush(_logFile);
 }

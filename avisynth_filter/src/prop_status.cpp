@@ -61,24 +61,24 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         const int frameRatePrecision = static_cast<int>(log10(FRAME_RATE_SCALE_FACTOR));
         const int parPrecision = static_cast<int>(log10(PAR_SCALE_FACTOR));
 
-        std::string inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
-        const std::string outputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
-        const std::string outputParStr = DoubleToString(static_cast<double>(format.pixelAspectRatio) / PAR_SCALE_FACTOR, parPrecision);
+        std::wstring inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::wstring outputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::wstring outputParStr = DoubleToString(static_cast<double>(format.pixelAspectRatio) / PAR_SCALE_FACTOR, parPrecision);
 
-        SetDlgItemTextA(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_string(_filter->frameHandler.GetInputBufferSize()).c_str());
-        SetDlgItemTextA(hwnd, IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE, std::to_string(_filter->frameHandler.GetOutputBufferSize()).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler.GetInputBufferSize()).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler.GetOutputBufferSize()).c_str());
 
-        SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
-                        std::to_string(_filter->frameHandler.GetSourceFrameNb())
-                        .append(" -> ")
-                        .append(std::to_string(_filter->frameHandler.GetOutputFrameNb()))
-                        .append(" -> ")
-                        .append(std::to_string(_filter->frameHandler.GetDeliveryFrameNb()))
+        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
+                        std::to_wstring(_filter->frameHandler.GetSourceFrameNb())
+                        .append(L" -> ")
+                        .append(std::to_wstring(_filter->frameHandler.GetOutputFrameNb()))
+                        .append(L" -> ")
+                        .append(std::to_wstring(_filter->frameHandler.GetDeliveryFrameNb()))
                         .c_str());
 
-        SetDlgItemTextA(hwnd, IDC_TEXT_FRAME_RATE_VALUE, inputFrameRateStr.append(" -> ").append(outputFrameRateStr).c_str());
-        SetDlgItemTextA(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
-        SetDlgItemTextA(hwnd, IDC_TEXT_WORKER_THREAD_COUNT_VALUE, std::to_string(_filter->frameHandler.GetOutputWorkerThreadCount()).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, inputFrameRateStr.append(L" -> ").append(outputFrameRateStr).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_WORKER_THREAD_COUNT_VALUE, std::to_wstring(_filter->frameHandler.GetOutputWorkerThreadCount()).c_str());
 
         if (!_isSourcePathSet) {
             std::wstring videoSourcePath = _filter->GetVideoSourcePath();

@@ -13,7 +13,7 @@ public:
     virtual ~Environment();
 
     auto SaveSettings() const -> void;
-    auto Log(const char *format, ...) -> void;
+    auto Log(const WCHAR *format, ...) -> void;
 
     auto GetAvsPath() const -> const std::filesystem::path &;
     auto SetAvsPath(const std::filesystem::path &avsPath) -> void;
