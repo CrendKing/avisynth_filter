@@ -10,6 +10,7 @@ namespace AvsFilter {
 
 Environment::Environment()
     : _useIni(false)
+    , _ini(true)
     , _outputThreads(0)
     , _isRemoteControlEnabled(false)
     , _logFile(nullptr)
