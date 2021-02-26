@@ -37,8 +37,8 @@ AvsHandler::AvsHandler()
     , _scriptAvgFrameDuration(0)
     , _sourceAvgFrameRate(0) {
     g_env.Log(L"AvsHandler()");
-    g_env.Log(L"Filter version: %s", FILTER_VERSION_STRING);
-    g_env.Log(L"AviSynth version: %s", GetVersionString());
+    g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
+    g_env.Log(L"AviSynth version: %S", GetVersionString());
 
     _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
     _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);

@@ -11,6 +11,7 @@ namespace AvsFilter {
  * All requests and responses are transmitted through WM_COPYDATA message.
  * To access the API, activate the remote control module by setting the registry value REGISTRY_VALUE_NAME_REMOTE_CONTROL to non-zero.
  * The return value of each API is either noted as their output value, specified in the documentation, or TRUE if call is successful and FALSE if failed.
+ * All strings are encoded in UTF-8.
  */
 
 enum class AvsState {
@@ -21,8 +22,8 @@ enum class AvsState {
 };
 
 static constexpr const int API_VERSION                           = 1;
-static constexpr const WCHAR *API_WND_CLASS_NAME                 = L"AvsFilterRemoteControlClass";
-static constexpr const WCHAR API_CSV_DELIMITER                   = L';';
+static constexpr const char *API_WND_CLASS_NAME                  = "AvsFilterRemoteControlClass";
+static constexpr const char API_CSV_DELIMITER                    = ';';
 
 // scale the fractional numbers by a factor and convert to integer for API messaging
 static constexpr const int PAR_SCALE_FACTOR                      = 1000;

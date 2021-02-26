@@ -94,7 +94,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                     }
 
                     // all media types that share the same avs type are acceptable for output pin connection
-                    for (const std::wstring &avsFormatName: Format::LookupAvsType(g_avs->GetScriptPixelType())) {
+                    for (const std::wstring &avsFormatName : Format::LookupAvsType(g_avs->GetScriptPixelType())) {
                         _compatibleMediaTypes.emplace_back(*nextType, g_avs->GenerateMediaType(avsFormatName, nextType));
                         g_env.Log(L"Add compatible formats: input %s output %s", optInputFormatName->c_str(), avsFormatName.c_str());
                     }
