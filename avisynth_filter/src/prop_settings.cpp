@@ -12,7 +12,7 @@
 namespace AvsFilter {
 
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(NAME(SETTINGS_FULL), pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
+    : CBasePropertyPage(SETTINGS_NAME_FULL, pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
     , _filter(nullptr)
     , _avsFileManagedByRC(false) {
 }
@@ -59,7 +59,7 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     if (std::filesystem::exists(_configAvsPath)) {
         g_env.SetAvsPath(_configAvsPath);
     } else {
-        MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_WIDE, MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONERROR);
     }
 
     for (const auto &[formatName, definition] : Format::FORMATS) {
@@ -71,7 +71,7 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
         MessageBoxW(m_hwnd, L"AviSynth script file is currently managed by remote control. Your change if any is saved but not used.",
-                    FILTER_NAME_WIDE, MB_OK | MB_ICONINFORMATION);
+                    FILTER_NAME_FULL, MB_OK | MB_ICONINFORMATION);
     } else if (!_configAvsPath.empty()) {
         _filter->ReloadAvsFile(_configAvsPath);
     }

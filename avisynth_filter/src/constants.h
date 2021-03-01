@@ -27,24 +27,17 @@ DEFINE_GUID(inline IID_IAvsFilter,
 static const GUID MEDIASUBTYPE_I420                                  = FOURCCMap('024I');
 static const GUID MEDIASUBTYPE_YV24                                  = FOURCCMap('42VY');
 
-#define WidenHelper(str)                                               L##str
-#define Widen(str)                                                     WidenHelper(str)
-
 #ifdef _DEBUG
 #define FILTER_NAME_SUFFIX                                             " [Debug]"
 #else
 #define FILTER_NAME_SUFFIX
 #endif // DEBUG
-#define SETTINGS_SUFFIX                                                " Settings"
-#define STATUS_SUFFIX                                                  " Status"
+#define SETTINGS_NAME_SUFFIX                                           " Settings"
+#define STATUS_NAME_SUFFIX                                             " Status"
 
-#define FILTER_NAME_FULL                                               FILTER_NAME_BASE FILTER_NAME_SUFFIX
-#define SETTINGS_FULL                                                  FILTER_NAME_BASE SETTINGS_SUFFIX FILTER_NAME_SUFFIX
-#define STATUS_FULL                                                    FILTER_NAME_BASE STATUS_SUFFIX FILTER_NAME_SUFFIX
-
-#define FILTER_NAME_WIDE                                               Widen(FILTER_NAME_FULL)
-#define SETTINGS_WIDE                                                  Widen(SETTINGS_FULL)
-#define STATUS_WIDE                                                    Widen(STATUS_FULL)
+#define FILTER_NAME_FULL                                               FILTER_NAME_WIDE FILTER_NAME_SUFFIX
+#define SETTINGS_NAME_FULL                                             FILTER_NAME_WIDE SETTINGS_NAME_SUFFIX FILTER_NAME_SUFFIX
+#define STATUS_NAME_FULL                                               FILTER_NAME_WIDE STATUS_NAME_SUFFIX FILTER_NAME_SUFFIX
 
 // interface version 7 = AviSynth+ 3.5
 static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION   = 7;

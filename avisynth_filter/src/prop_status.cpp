@@ -11,7 +11,7 @@
 namespace AvsFilter {
 
 CAvsFilterPropStatus::CAvsFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(NAME(STATUS_FULL), pUnk, IDD_STATUS_PAGE, IDS_STATUS)
+    : CBasePropertyPage(STATUS_NAME_FULL, pUnk, IDD_STATUS_PAGE, IDS_STATUS)
     , _filter(nullptr)
     , _isSourcePathSet(false) {
 }

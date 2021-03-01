@@ -15,7 +15,7 @@ namespace AvsFilter {
 #define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
-    : CVideoTransformFilter(NAME(FILTER_NAME_FULL), pUnk, CLSID_AviSynthFilter)
+    : CVideoTransformFilter(FILTER_NAME_FULL, pUnk, CLSID_AviSynthFilter)
     , frameHandler(*this)
     , _disconnectFilter(false)
     , _mediaTypeReconnectionWatermark(0)

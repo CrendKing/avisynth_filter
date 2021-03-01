@@ -44,7 +44,7 @@ static REGFILTERPINS REG_PINS[] = {
 
 static constexpr AMOVIESETUP_FILTER REG_FILTER = {
     .clsID = &CLSID_AviSynthFilter,                   // filter CLSID
-    .strName = FILTER_NAME_WIDE,                      // filter name
+    .strName = FILTER_NAME_FULL,                      // filter name
     .dwMerit = MERIT_DO_NOT_USE + 1,                  // filter merit
     .nPins = sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count
     .lpPin = REG_PINS                                 // pin information
@@ -90,19 +90,19 @@ static auto RegisterFilter() -> HRESULT {
 }
 
 CFactoryTemplate g_Templates[] = {
-    { .m_Name = FILTER_NAME_WIDE
+    { .m_Name = FILTER_NAME_FULL
     , .m_ClsID = &AvsFilter::CLSID_AviSynthFilter
     , .m_lpfnNew = AvsFilter::CreateInstance<AvsFilter::CAviSynthFilter>
     , .m_lpfnInit = nullptr
     , .m_pAMovieSetup_Filter = &AvsFilter::REG_FILTER
     },
 
-    { .m_Name = SETTINGS_WIDE
+    { .m_Name = SETTINGS_NAME_FULL
     , .m_ClsID = &AvsFilter::CLSID_AvsPropSettings
     , .m_lpfnNew = AvsFilter::CreateInstance<AvsFilter::CAvsFilterPropSettings>
     },
 
-    { .m_Name = STATUS_WIDE
+    { .m_Name = STATUS_NAME_FULL
     , .m_ClsID = &AvsFilter::CLSID_AvsPropStatus
     , .m_lpfnNew = AvsFilter::CreateInstance<AvsFilter::CAvsFilterPropStatus>
     },

@@ -276,7 +276,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
 
 [[ noreturn ]] auto AvsHandler::ShowFatalError(const WCHAR *errorMessage) const -> void {
     g_env.Log(L"%s", errorMessage);
-    MessageBoxW(nullptr, errorMessage, FILTER_NAME_WIDE, MB_ICONERROR);
+    MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     FreeLibrary(_avsModule);
     throw;
 }

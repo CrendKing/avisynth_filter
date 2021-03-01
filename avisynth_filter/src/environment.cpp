@@ -23,7 +23,7 @@ Environment::Environment()
     if (GetModuleFileNameW(nullptr, processPathStr.data(), static_cast<DWORD>(processPathStr.size())) != 0) {
         _iniPath = std::filesystem::path(processPathStr.data());
         processName = _iniPath.filename();
-        _iniPath.replace_filename(Widen(FILTER_FILENAME_BASE)).replace_extension(L"ini");
+        _iniPath.replace_filename(FILTER_FILENAME_BASE).replace_extension(L"ini");
         _useIni = _ini.LoadFile(_iniPath.c_str()) == SI_OK;
     }
 
@@ -32,7 +32,7 @@ Environment::Environment()
     } else if (_registry.Initialize()) {
         LoadSettingsFromRegistry();
     } else {
-        MessageBoxW(nullptr, L"Unload to load settings", FILTER_NAME_WIDE, MB_ICONERROR);
+        MessageBoxW(nullptr, L"Unload to load settings", FILTER_NAME_FULL, MB_ICONERROR);
     }
 
     if (!_logPath.empty()) {
