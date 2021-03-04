@@ -4,9 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "avisynth_filter", "avisynth_filter\avisynth_filter.vcxproj", "{C84DE615-CF6F-441C-99B8-E30F5046CF9F}"
-	ProjectSection(ProjectDependencies) = postProject
-		{6D6FABA3-51A7-4162-B5A8-ADA838387D60} = {6D6FABA3-51A7-4162-B5A8-ADA838387D60}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "baseclasses", "baseclasses\baseclasses.vcxproj", "{6D6FABA3-51A7-4162-B5A8-ADA838387D60}"
 EndProject

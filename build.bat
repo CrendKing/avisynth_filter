@@ -26,4 +26,4 @@ if "%ds_platform%" == "x86" (
     set ds_platform=Win32
 )
 
-MSBuild.exe -property:Configuration=Release;Platform=%filter_platform%;ForceImportAfterCppProps="%~dp0build.props" -maxCpuCount -nologo avisynth_filter.sln
+MSBuild.exe -property:Configuration=Release;Platform=%filter_platform% -maxCpuCount -nologo avisynth_filter.sln
