@@ -1,4 +1,8 @@
-if "%VSINSTALLDIR%"=="" for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -find **\vcvars64.bat') do call "%%i"
+if "%VSINSTALLDIR%"=="" for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -version [16.8, -latest -find **\vcvars64.bat') do call "%%i"
+if "%VSINSTALLDIR%"=="" (
+    echo "Unable to activate Visual Studio environment"
+    exit /b 1
+)
 
 cd /d "%~dp0"
 

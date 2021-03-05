@@ -69,14 +69,14 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         SetDlgItemTextW(hwnd, IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler.GetOutputBufferSize()).c_str());
 
         SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
-                        std::to_wstring(_filter->frameHandler.GetSourceFrameNb())
-                        .append(L" -> ")
-                        .append(std::to_wstring(_filter->frameHandler.GetOutputFrameNb()))
-                        .append(L" -> ")
-                        .append(std::to_wstring(_filter->frameHandler.GetDeliveryFrameNb()))
+                        (std::to_wstring(_filter->frameHandler.GetSourceFrameNb())
+                        + L" -> "
+                        + std::to_wstring(_filter->frameHandler.GetOutputFrameNb())
+                        + L" -> "
+                        + std::to_wstring(_filter->frameHandler.GetDeliveryFrameNb()))
                         .c_str());
 
-        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, inputFrameRateStr.append(L" -> ").append(outputFrameRateStr).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, (inputFrameRateStr + L" -> " + outputFrameRateStr).c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_WORKER_THREAD_COUNT_VALUE, std::to_wstring(_filter->frameHandler.GetOutputWorkerThreadCount()).c_str());
 
@@ -89,7 +89,7 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             _isSourcePathSet = true;
         }
 
-        const std::wstring infoStr = std::to_wstring(format.bmi.biWidth).append(L" x ").append(std::to_wstring(abs(format.bmi.biHeight))).append(L" ").append(format.name);
+        const std::wstring infoStr = std::to_wstring(format.bmi.biWidth) + L" x "+ std::to_wstring(abs(format.bmi.biHeight)) + L" " + format.name;
         SetDlgItemTextW(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
         return 0;

@@ -20,7 +20,6 @@
 #include <unordered_map>
 #include <vector>
 
-#define STRICT
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 

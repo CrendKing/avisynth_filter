@@ -51,7 +51,7 @@ static constexpr AMOVIESETUP_FILTER REG_FILTER = {
 };
 
 template <typename T>
-constexpr static auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+static constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
     if constexpr (std::is_same_v<T, CAviSynthFilter>) {
         if (!g_avs) {
             g_avs = new AvsHandler();

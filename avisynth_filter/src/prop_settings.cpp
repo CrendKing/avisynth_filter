@@ -46,7 +46,7 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
         CheckDlgButton(m_Dlg, definition.resourceId, g_env.IsInputFormatEnabled(formatName));
     }
 
-    const std::string title = std::string("<a>").append(FILTER_NAME_BASE).append(" v").append(FILTER_VERSION_STRING).append("</a> with ").append(g_avs->GetVersionString());
+    const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a> with " + g_avs->GetVersionString();
     SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
