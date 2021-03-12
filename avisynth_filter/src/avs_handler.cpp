@@ -5,7 +5,6 @@
 #include "api.h"
 #include "constants.h"
 #include "environment.h"
-#include "format.h"
 #include "source_clip.h"
 #include "util.h"
 
@@ -61,17 +60,16 @@ auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
 }
 
 /**
- * Create media type based on a template while changing its subtype. Also change fields in definition if necessary.
+ * Create media type based on a template while changing its subtype. Also change fields in format if necessary.
  *
  * For example, when the original subtype has 8-bit samples and new subtype has 16-bit,
  * all "size" and FourCC values will be adjusted.
  */
-auto AvsHandler::GenerateMediaType(const std::wstring &formatName, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
-    const Format::Definition &def = Format::FORMATS.at(formatName);
-    FOURCCMap fourCC(&def.mediaSubtype);
+auto AvsHandler::GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
+    FOURCCMap fourCC(&pixelFormat.mediaSubtype);
 
     CMediaType newMediaType(*templateMediaType);
-    newMediaType.SetSubtype(&def.mediaSubtype);
+    newMediaType.SetSubtype(&pixelFormat.mediaSubtype);
 
     VIDEOINFOHEADER *newVih = reinterpret_cast<VIDEOINFOHEADER *>(newMediaType.Format());
     BITMAPINFOHEADER *newBmi;
@@ -99,11 +97,11 @@ auto AvsHandler::GenerateMediaType(const std::wstring &formatName, const AM_MEDI
 
     newBmi->biWidth = _scriptVideoInfo.width;
     newBmi->biHeight = _scriptVideoInfo.height;
-    newBmi->biBitCount = def.bitCount;
+    newBmi->biBitCount = pixelFormat.bitCount;
     newBmi->biSizeImage = GetBitmapSize(newBmi);
     newMediaType.SetSampleSize(newBmi->biSizeImage);
 
-    if (fourCC == def.mediaSubtype) {
+    if (fourCC == pixelFormat.mediaSubtype) {
         // uncompressed formats (such as RGB32) have different GUIDs
         newBmi->biCompression = fourCC.GetFOURCC();
     } else {

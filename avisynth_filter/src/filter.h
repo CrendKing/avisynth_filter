@@ -4,6 +4,7 @@
 
 #include "pch.h"
 #include "api.h"
+#include "avs_handler.h"
 #include "format.h"
 #include "frame_handler.h"
 #include "remote_control.h"
@@ -62,8 +63,14 @@ private:
         CMediaType output;
     };
 
-    static auto MediaTypeToFormatName(const AM_MEDIA_TYPE *mediaType) -> std::optional<std::wstring>;
-    static auto GetInputFormatName(const AM_MEDIA_TYPE *mediaType) -> std::optional<std::wstring>;
+    static constexpr auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
+        return Format::LookupAvsType(g_avs->GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
+            return g_avs->GenerateMediaType(pixelFormat, mtIn);
+        });
+    }
+
+    static auto MediaTypeToPixelFormat(const AM_MEDIA_TYPE *mediaType) -> const Format::PixelFormat *;
+    static auto GetInputPixelFormat(const AM_MEDIA_TYPE *mediaType) -> const Format::PixelFormat *;
     static auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *>;
 
     auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;
@@ -76,9 +83,9 @@ private:
     std::vector<MediaTypePair> _compatibleMediaTypes;
     int _mediaTypeReconnectionWatermark;
 
-    Format::VideoFormat _inputFormat;
-    Format::VideoFormat _outputFormat;
-    bool _sendOutputFormatInNextSample;
+    Format::VideoFormat _inputVideoFormat;
+    Format::VideoFormat _outputVideoFormat;
+    bool _sendOutputVideoFormatInNextSample;
 
     bool _reloadAvsSource;
 

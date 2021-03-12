@@ -10,7 +10,8 @@ namespace AvsFilter {
 
 class Format {
 public:
-    struct Definition {
+    struct PixelFormat {
+        std::wstring name;
         const CLSID &mediaSubtype;
         int avsType;
 
@@ -29,7 +30,7 @@ public:
     };
 
     struct VideoFormat {
-        std::wstring name;
+        const PixelFormat *pixelFormat;
         VideoInfo videoInfo;
         int pixelAspectRatio;
         int hdrType;
@@ -41,11 +42,15 @@ public:
     };
 
     static auto Init() -> void;
-    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> std::optional<std::wstring>;
-    static auto LookupAvsType(int avsType) -> std::vector<std::wstring>;
+    static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat *;
+    static constexpr auto LookupAvsType(int avsType) {
+        return PIXEL_FORMATS | std::views::filter([avsType](const PixelFormat &pixelFormat) -> bool {
+            return avsType == pixelFormat.avsType;
+        });
+    }
 
     template<typename T, typename = std::enable_if_t<std::is_base_of_v<AM_MEDIA_TYPE, std::decay_t<T>>>>
-    static auto GetBitmapInfo(T &mediaType) -> BITMAPINFOHEADER * {
+    static constexpr auto GetBitmapInfo(T &mediaType) -> BITMAPINFOHEADER * {
         if (SUCCEEDED(CheckVideoInfoType(&mediaType))) {
             return HEADER(mediaType.pbFormat);
         }
@@ -58,12 +63,12 @@ public:
     }
 
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat;
-    static auto WriteSample(const VideoFormat &format, PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void;
-    static auto CreateFrame(const VideoFormat &format, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> PVideoFrame;
-    static auto CopyFromInput(const VideoFormat &format, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
-    static auto CopyToOutput(const VideoFormat &format, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto WriteSample(const VideoFormat &videoFormat, PVideoFrame srcFrame, BYTE *dstBuffer, IScriptEnvironment *avsEnv) -> void;
+    static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer, IScriptEnvironment *avsEnv) -> PVideoFrame;
+    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
+    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height, IScriptEnvironment *avsEnv) -> void;
 
-    static const std::map<std::wstring, Definition> FORMATS;
+    static const std::vector<PixelFormat> PIXEL_FORMATS;
 
     /*
      * When (de-)interleaving the data from the buffers for U and V planes, if the stride is

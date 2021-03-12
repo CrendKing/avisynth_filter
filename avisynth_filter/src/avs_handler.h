@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pch.h"
+#include "format.h"
 #include "frame_handler.h"
 #include "rc_ptr.h"
 
@@ -15,7 +16,7 @@ public:
     virtual ~AvsHandler();
 
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
-    auto GenerateMediaType(const std::wstring &formatName, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
+    auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     auto StopScript() -> void;

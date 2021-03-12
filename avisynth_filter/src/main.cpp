@@ -70,8 +70,8 @@ static constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> C
 
 static auto RegisterFilter() -> HRESULT {
     std::vector<REGPINTYPES> pinTypes;
-    for (const auto &[formatName, definition] : Format::FORMATS) {
-        pinTypes.emplace_back(&MEDIATYPE_Video, &definition.mediaSubtype);
+    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+        pinTypes.emplace_back(&MEDIATYPE_Video, &pixelFormat.mediaSubtype);
     }
 
     REG_PINS[0].lpMediaType = pinTypes.data();

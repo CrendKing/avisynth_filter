@@ -42,8 +42,8 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
-    for (const auto &[formatName, definition] : Format::FORMATS) {
-        CheckDlgButton(m_Dlg, definition.resourceId, g_env.IsInputFormatEnabled(formatName));
+    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+        CheckDlgButton(m_Dlg, pixelFormat.resourceId, g_env.IsInputFormatEnabled(pixelFormat.name));
     }
 
     const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a> with " + g_avs->GetVersionString();
@@ -62,8 +62,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
         MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONERROR);
     }
 
-    for (const auto &[formatName, definition] : Format::FORMATS) {
-        g_env.SetInputFormatEnabled(formatName, IsDlgButtonChecked(m_Dlg, definition.resourceId) == BST_CHECKED);
+    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+        g_env.SetInputFormatEnabled(pixelFormat.name, IsDlgButtonChecked(m_Dlg, pixelFormat.resourceId) == BST_CHECKED);
     }
 
     g_env.SaveSettings();

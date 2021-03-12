@@ -80,8 +80,8 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAll
 auto CAviSynthFilterInputPin::Active() -> HRESULT {
     const CAutoLock lock(m_pLock);
 
-    _filter._inputFormat = Format::GetVideoFormat(CurrentMediaType());
-    _filter._outputFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType());
+    _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType());
+    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType());
 
     _filter.TraverseFiltersInGraph();
 

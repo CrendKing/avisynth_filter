@@ -76,7 +76,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return hr;
     }
 
-    srcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputFormat, sampleBuffer, g_avs->GetEnv());
+    srcFrameInfo.avsFrame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer, g_avs->GetEnv());
 
     {
         const ATL::CComQIPtr<IMediaSideData> inSampleSideData(inSample);
@@ -84,12 +84,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
             srcFrameInfo.hdrSideData.Read(inSampleSideData);
 
             if (const std::optional<const BYTE *> optHdr = srcFrameInfo.hdrSideData.GetHDRData()) {
-                _filter._inputFormat.hdrType = 1;
+                _filter._inputVideoFormat.hdrType = 1;
 
                 if (const std::optional<const BYTE *> optHdrCll = srcFrameInfo.hdrSideData.GetHDRContentLightLevelData()) {
-                    _filter._inputFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*optHdrCll)->MaxCLL;
+                    _filter._inputVideoFormat.hdrLuminance = reinterpret_cast<const MediaSideDataHDRContentLightLevel *>(*optHdrCll)->MaxCLL;
                 } else {
-                    _filter._inputFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
+                    _filter._inputVideoFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
                 }
             }
         }
@@ -372,11 +372,11 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             if (FAILED(outSample->GetPointer(&outBuffer))) {
                 goto BEGIN_OF_DELIVERY;
             }
-            Format::WriteSample(_filter._outputFormat, scriptFrame, outBuffer, g_avs->GetEnv());
+            Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, g_avs->GetEnv());
         }
 
-        if (_filter._sendOutputFormatInNextSample && SUCCEEDED(outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType()))) {
-            _filter._sendOutputFormatInNextSample = false;
+        if (_filter._sendOutputVideoFormatInNextSample && SUCCEEDED(outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType()))) {
+            _filter._sendOutputVideoFormatInNextSample = false;
         }
 
         {

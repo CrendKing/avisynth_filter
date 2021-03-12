@@ -138,9 +138,9 @@ auto Environment::IsSupportSSSE3() const -> bool {
 auto Environment::LoadSettingsFromIni() -> void {
     _avsPath = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
 
-    for (const auto &[formatName, definition] : Format::FORMATS) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
-        _inputFormats[formatName] = _ini.GetBoolValue(L"", settingName.c_str(), true);
+    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
+        _inputFormats[pixelFormat.name] = _ini.GetBoolValue(L"", settingName.c_str(), true);
     }
 
     _outputThreads = _ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
@@ -152,9 +152,9 @@ auto Environment::LoadSettingsFromIni() -> void {
 auto Environment::LoadSettingsFromRegistry() -> void {
     _avsPath = _registry.ReadString(SETTING_NAME_AVS_FILE);
 
-    for (const auto &[formatName, definition] : Format::FORMATS) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
-        _inputFormats[formatName] = _registry.ReadNumber(settingName.c_str(), 1) != 0;
+    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
+        _inputFormats[pixelFormat.name] = _registry.ReadNumber(settingName.c_str(), 1) != 0;
     }
 
     _outputThreads = _registry.ReadNumber(SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);

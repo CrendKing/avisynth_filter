@@ -56,14 +56,14 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         break;
 
     case WM_TIMER:
-        const Format::VideoFormat format = _filter->GetInputFormat();
+        const Format::VideoFormat videoFormat = _filter->GetInputFormat();
 
         const int frameRatePrecision = static_cast<int>(log10(FRAME_RATE_SCALE_FACTOR));
         const int parPrecision = static_cast<int>(log10(PAR_SCALE_FACTOR));
 
-        std::wstring inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::wstring inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
         const std::wstring outputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
-        const std::wstring outputParStr = DoubleToString(static_cast<double>(format.pixelAspectRatio) / PAR_SCALE_FACTOR, parPrecision);
+        const std::wstring outputParStr = DoubleToString(static_cast<double>(videoFormat.pixelAspectRatio) / PAR_SCALE_FACTOR, parPrecision);
 
         SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler.GetInputBufferSize()).c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_OUTPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler.GetOutputBufferSize()).c_str());
@@ -89,7 +89,7 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
             _isSourcePathSet = true;
         }
 
-        const std::wstring infoStr = std::to_wstring(format.bmi.biWidth) + L" x "+ std::to_wstring(abs(format.bmi.biHeight)) + L" " + format.name;
+        const std::wstring infoStr = std::to_wstring(videoFormat.bmi.biWidth) + L" x "+ std::to_wstring(abs(videoFormat.bmi.biHeight)) + L" " + videoFormat.pixelFormat->name;
         SetDlgItemTextW(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
         return 0;
