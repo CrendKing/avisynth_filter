@@ -44,8 +44,8 @@ Environment::Environment()
 
             Log(L"Configured script file: %s", _avsPath.filename().c_str());
 
-            for (const auto &[formatName, enabled] : _inputFormats) {
-                Log(L"Configured input format %s: %i", formatName.c_str(), enabled);
+            for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+                Log(L"Configured input format %s: %i", pixelFormat.name.c_str(), _enabledInputFormats.contains(pixelFormat.name));
             }
 
             Log(L"Configured output threads: %i", _outputThreads);
@@ -103,11 +103,11 @@ auto Environment::SetAvsPath(const std::filesystem::path &avsPath) -> void {
 }
 
 auto Environment::IsInputFormatEnabled(const std::wstring &formatName) const -> bool {
-    return _inputFormats.at(formatName);
+    return _enabledInputFormats.contains(formatName);
 }
 
 auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void {
-    _inputFormats[formatName] = enabled;
+    _enabledInputFormats.emplace(formatName);
 
     if (_useIni) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
@@ -140,7 +140,9 @@ auto Environment::LoadSettingsFromIni() -> void {
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
-        _inputFormats[pixelFormat.name] = _ini.GetBoolValue(L"", settingName.c_str(), true);
+        if (_ini.GetBoolValue(L"", settingName.c_str(), true)) {
+            _enabledInputFormats.emplace(pixelFormat.name);
+        }
     }
 
     _outputThreads = _ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
@@ -154,7 +156,9 @@ auto Environment::LoadSettingsFromRegistry() -> void {
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
-        _inputFormats[pixelFormat.name] = _registry.ReadNumber(settingName.c_str(), 1) != 0;
+        if (_registry.ReadNumber(settingName.c_str(), 1) != 0) {
+            _enabledInputFormats.emplace(pixelFormat.name);
+        }
     }
 
     _outputThreads = _registry.ReadNumber(SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
@@ -170,9 +174,9 @@ auto Environment::SaveSettingsToIni() const -> void {
 auto Environment::SaveSettingsToRegistry() const -> void {
     _registry.WriteString(SETTING_NAME_AVS_FILE, _avsPath);
 
-    for (const auto &[formatName, enabled] : _inputFormats) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
-        _registry.WriteNumber(settingName.c_str(), enabled);
+    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
+        _registry.WriteNumber(settingName.c_str(), _enabledInputFormats.contains(pixelFormat.name));
     }
 }
 

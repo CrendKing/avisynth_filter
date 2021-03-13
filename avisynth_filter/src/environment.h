@@ -39,7 +39,7 @@ private:
     Registry _registry;
 
     std::filesystem::path _avsPath;
-    std::unordered_map<std::wstring, bool> _inputFormats;
+    std::unordered_set<std::wstring> _enabledInputFormats;
     int _outputThreads;
     bool _isRemoteControlEnabled;
     int _extraSourceBuffer;
