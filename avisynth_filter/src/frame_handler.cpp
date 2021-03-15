@@ -185,6 +185,8 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 }
 
 auto FrameHandler::BeginFlush() -> void {
+    std::unique_lock lock(_flushMutex);
+
     g_env.Log(L"Frame handler start BeginFlush()");
 
     _isFlushing = true;
@@ -230,6 +232,8 @@ auto FrameHandler::BeginFlush() -> void {
 }
 
 auto FrameHandler::EndFlush() -> void {
+    std::unique_lock lock(_flushMutex);
+
     g_env.Log(L"Frame handler EndFlush()");
 
     _isFlushing = false;

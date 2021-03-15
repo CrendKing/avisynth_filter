@@ -67,6 +67,7 @@ private:
     mutable std::shared_mutex _sourceFramesMutex;
     mutable std::shared_mutex _outputFramesMutex;
     std::mutex _deliveryMutex;
+    std::mutex _flushMutex;
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;

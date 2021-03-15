@@ -31,6 +31,9 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 
 CAviSynthFilter::~CAviSynthFilter() {
     g_env.Log(L"Destroy CAviSynthFilter: %p", this);
+
+    // RemoteControl depends on AvsHandler. destroy in order
+    _remoteControl.reset();
     g_avs.Release();
 }
 
@@ -134,6 +137,7 @@ auto CAviSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRE
     }
 
     *pMediaType = _compatibleMediaTypes[iPosition].output;
+    g_env.Log(L"GetMediaType() offer media type %d with %s", iPosition, MediaTypeToPixelFormat(pMediaType)->name.c_str());
 
     return S_OK;
 }
