@@ -17,13 +17,9 @@ public:
 
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
-
-    auto BeginFlush() -> void;
-    auto EndFlush() -> void;
-
+    auto Flush(bool isStopping, const std::function<void ()> &interim) -> void;
     auto StartWorkerThreads() -> void;
     auto StopWorkerThreads() -> void;
-
     auto GetInputBufferSize() const -> int;
     auto GetOutputBufferSize() const -> int;
     auto GetSourceFrameNb() const -> int;
@@ -47,6 +43,12 @@ private:
         REFERENCE_TIME startTime;
         REFERENCE_TIME stopTime;
         SourceFrameInfo *srcFrameInfo;
+    };
+
+    enum class State {
+        Normal,
+        Flushing,
+        Stopping
     };
 
     static auto RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
@@ -83,8 +85,7 @@ private:
     std::vector<std::thread> _outputThreads;
 
     Gatekeeper _flushGatekeeper;
-    bool _stopThreads;
-    bool _isFlushing;
+    State _state;
 
     int _frameRateCheckpointInputSampleNb;
     REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;
