@@ -18,16 +18,13 @@ public:
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
     auto Flush(bool isStopping, const std::function<void ()> &interim) -> void;
-    auto StartWorkerThreads() -> void;
+    auto StartWorkerThread() -> void;
     auto StopWorkerThreads() -> void;
     auto GetInputBufferSize() const -> int;
-    auto GetOutputBufferSize() const -> int;
     auto GetSourceFrameNb() const -> int;
     auto GetOutputFrameNb() const -> int;
-    auto GetDeliveryFrameNb() const -> int;
     auto GetCurrentInputFrameRate() const -> int;
     auto GetCurrentOutputFrameRate() const -> int;
-    auto GetOutputWorkerThreadCount() const -> int;
 
 private:
     struct SourceFrameInfo {
@@ -35,14 +32,6 @@ private:
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
         HDRSideData hdrSideData;
-        int refCount;
-    };
-
-    struct OutputFrameInfo {
-        int frameNb;
-        REFERENCE_TIME startTime;
-        REFERENCE_TIME stopTime;
-        SourceFrameInfo *srcFrameInfo;
     };
 
     enum class State {
@@ -56,36 +45,34 @@ private:
                                           int &currentFrameRate) -> void;
 
     auto Reset() -> void;
+    auto PrepareForDelivery(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME outputStartTime, REFERENCE_TIME outputStopTime) const -> bool;
     auto ProcessOutputSamples() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
-    auto RefreshInputFrameRates(const SourceFrameInfo &info) -> void;
-    auto RefreshOutputFrameRates(const OutputFrameInfo &info) -> void;
+    auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
+    auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
+
+    static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 3;
 
     CAviSynthFilter &_filter;
 
     std::map<int, SourceFrameInfo> _sourceFrames;
-    std::deque<OutputFrameInfo> _outputFrames;
 
     mutable std::shared_mutex _sourceFramesMutex;
-    mutable std::shared_mutex _outputFramesMutex;
-    std::mutex _deliveryMutex;
     std::mutex _flushMutex;
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
-    std::condition_variable_any _outputFramesCv;
-    std::condition_variable _deliveryCv;
 
     int _maxRequestedFrameNb;
     int _nextSourceFrameNb;
+    int _nextProcessSrcFrameNb;
     int _nextOutputFrameNb;
-    int _nextDeliverFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
 
-    std::vector<std::thread> _outputThreads;
+    std::thread _outputThread;
 
     Gatekeeper _flushGatekeeper;
-    State _state;
+    std::atomic<State> _state;
 
     int _frameRateCheckpointInputSampleNb;
     REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;

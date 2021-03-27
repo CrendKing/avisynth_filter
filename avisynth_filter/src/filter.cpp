@@ -174,7 +174,7 @@ auto CAviSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *m
 auto CAviSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
     HRESULT hr;
 
-    pProperties->cBuffers = max(g_env.GetOutputThreads() + 1, pProperties->cBuffers);
+    pProperties->cBuffers = max(2, pProperties->cBuffers);
 
     BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
     pProperties->cbBuffer = max(static_cast<long>(bmi->biSizeImage + Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING), pProperties->cbBuffer);
@@ -265,11 +265,9 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
     AM_MEDIA_TYPE *pmtIn;
     pSample->GetMediaType(&pmtIn);
-    const UniqueMediaTypePtr pmtInPtr(pmtIn);
-
     const bool inputFormatChanged = (pmtIn != nullptr && pmtIn->pbFormat != nullptr);
 
-    if (inputFormatChanged || _reloadAvsSource) {
+    if (const UniqueMediaTypePtr pmtInPtr(pmtIn); inputFormatChanged || _reloadAvsSource) {
         StopStreaming();
 
         if (inputFormatChanged) {
@@ -297,11 +295,10 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
     AM_MEDIA_TYPE *pmtOut;
     pOutSample->GetMediaType(&pmtOut);
-    const UniqueMediaTypePtr pmtOutPtr(pmtOut);
 
     pOutSample->Release();
 
-    if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
+    if (const UniqueMediaTypePtr pmtOutPtr(pmtOut); pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         StopStreaming();
         m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
 
@@ -452,12 +449,9 @@ auto CAviSynthFilter::FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::opti
             break;
         }
 
-        if (dir == PINDIR_OUTPUT) {
-            CMediaType mediaType;
-            if (SUCCEEDED(currPin->ConnectionMediaType(&mediaType)) &&
-                (*mediaType.Type() == MEDIATYPE_Video || *mediaType.Type() == MEDIATYPE_Stream)) {
-                return currPin;
-            }
+        if (CMediaType mediaType; dir == PINDIR_OUTPUT && SUCCEEDED(currPin->ConnectionMediaType(&mediaType)) &&
+            (*mediaType.Type() == MEDIATYPE_Video || *mediaType.Type() == MEDIATYPE_Stream)) {
+            return currPin;
         }
     }
 
@@ -528,8 +522,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
         if (hr == S_OK) {
             ATL::CComQIPtr<IFileSourceFilter> source(currFilter);
             if (source != nullptr) {
-                LPOLESTR filename;
-                if (SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
+                if (LPOLESTR filename; SUCCEEDED(source->GetCurFile(&filename, nullptr))) {
                     _videoSourcePath = filename;
                 }
             }
@@ -547,8 +540,7 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
     }
 
     while (true) {
-        FILTER_INFO filterInfo;
-        if (SUCCEEDED(currFilter->QueryFilterInfo(&filterInfo))) {
+        if (FILTER_INFO filterInfo; SUCCEEDED(currFilter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
             _videoFilterNames.emplace_back(filterInfo.achName);
             g_env.Log(L"Filter in graph: %s", filterInfo.achName);
@@ -558,15 +550,13 @@ auto CAviSynthFilter::TraverseFiltersInGraph() -> void {
         if (!optOutputPin) {
             break;
         }
-        ATL::CComPtr<IPin> outputPin = *optOutputPin;
 
         ATL::CComPtr<IPin> nextInputPin;
-        if (FAILED(outputPin->ConnectedTo(&nextInputPin))) {
+        if (ATL::CComPtr<IPin> outputPin = *optOutputPin; FAILED(outputPin->ConnectedTo(&nextInputPin))) {
             break;
         }
 
-        PIN_INFO pinInfo;
-        if (SUCCEEDED(nextInputPin->QueryPinInfo(&pinInfo))) {
+        if (PIN_INFO pinInfo; SUCCEEDED(nextInputPin->QueryPinInfo(&pinInfo))) {
             QueryPinInfoReleaseFilter(pinInfo);
             currFilter = pinInfo.pFilter;
         }

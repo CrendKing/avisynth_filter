@@ -104,8 +104,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
     };
 
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
-        if (vih2->dwPictAspectRatioY > 0) {
+        if (const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat); vih2->dwPictAspectRatioY > 0) {
             /*
              * pixel aspect ratio = display aspect ratio (DAR) / storage aspect ratio (SAR)
              * DAR comes from VIDEOINFOHEADER2.dwPictAspectRatioX / VIDEOINFOHEADER2.dwPictAspectRatioY

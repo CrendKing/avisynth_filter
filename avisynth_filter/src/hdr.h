@@ -13,8 +13,8 @@ public:
     auto STDMETHODCALLTYPE StoreSideData(GUID guidType, const BYTE *pData, size_t size) -> HRESULT;
     auto STDMETHODCALLTYPE RetrieveSideData(GUID guidType, const BYTE **pData, size_t *pSize) const -> HRESULT;
 
-    auto Read(IMediaSideData *from) -> void;
-    auto Write(IMediaSideData *to) const -> void;
+    auto ReadFrom(IMediaSideData *from) -> void;
+    auto WriteTo(IMediaSideData *to) const -> void;
 
     auto GetHDRData() const -> std::optional<const BYTE *>;
     auto GetHDRContentLightLevelData() const -> std::optional<const BYTE *>;

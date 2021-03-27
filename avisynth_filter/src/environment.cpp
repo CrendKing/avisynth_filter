@@ -11,7 +11,6 @@ namespace AvsFilter {
 Environment::Environment()
     : _useIni(false)
     , _ini(true)
-    , _outputThreads(0)
     , _isRemoteControlEnabled(false)
     , _logFile(nullptr)
     , _logStartTime(0)
@@ -48,7 +47,6 @@ Environment::Environment()
                 Log(L"Configured input format %s: %i", pixelFormat.name.c_str(), _enabledInputFormats.contains(pixelFormat.name));
             }
 
-            Log(L"Configured output threads: %i", _outputThreads);
             Log(L"Loading process: %s", processName.c_str());
         }
     }
@@ -115,10 +113,6 @@ auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool ena
     }
 }
 
-auto Environment::GetOutputThreads() const -> int {
-    return _outputThreads;
-}
-
 auto Environment::IsRemoteControlEnabled() const -> bool {
     return _isRemoteControlEnabled;
 }
@@ -145,7 +139,6 @@ auto Environment::LoadSettingsFromIni() -> void {
         }
     }
 
-    _outputThreads = _ini.GetLongValue(L"", SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
     _extraSourceBuffer = _ini.GetLongValue(L"", SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
     _logPath = _ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
@@ -161,7 +154,6 @@ auto Environment::LoadSettingsFromRegistry() -> void {
         }
     }
 
-    _outputThreads = _registry.ReadNumber(SETTING_NAME_OUTPUT_THREADS, DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT);
     _isRemoteControlEnabled = _registry.ReadNumber(SETTING_NAME_REMOTE_CONTROL, 0) != 0;
     _extraSourceBuffer = _registry.ReadNumber(SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
     _logPath = _registry.ReadString(SETTING_NAME_LOG_FILE);

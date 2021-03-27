@@ -33,7 +33,7 @@ auto STDMETHODCALLTYPE HDRSideData::RetrieveSideData(GUID guidType, const BYTE *
     return S_OK;
 }
 
-auto HDRSideData::Read(IMediaSideData *from) -> void {
+auto HDRSideData::ReadFrom(IMediaSideData *from) -> void {
     const BYTE *data;
     size_t dataSize;
 
@@ -54,7 +54,7 @@ auto HDRSideData::Read(IMediaSideData *from) -> void {
     }
 }
 
-auto HDRSideData::Write(IMediaSideData *to) const -> void {
+auto HDRSideData::WriteTo(IMediaSideData *to) const -> void {
     if (!_hdrData.empty()) {
         to->SetSideData(IID_MediaSideDataHDR, _hdrData.data(), _hdrData.size());
     }

@@ -46,7 +46,7 @@ static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION   = 7;
  * Extra number of frames received before blocking upstream from flooding the input queue.
  * Once reached, it must wait until the output thread delivers and GC source frames.
  */
-static constexpr const int EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY     = 3;
+static constexpr const int EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY     = 0;
 
 /*
  * If an output frame's stop time is this value close to the the next source frame's
@@ -55,8 +55,6 @@ static constexpr const int EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY     = 3;
  * Unit is 100ns. 10 = 1ms.
  */
 static constexpr const int MAX_OUTPUT_FRAME_DURATION_PADDING         = 10;
-
-static constexpr const int DEFAULT_OUTPUT_SAMPLE_WORKER_THREAD_COUNT = 1;
 
 /*
  * Some source filter may not set the VIDEOINFOHEADER::AvgTimePerFrame field.
@@ -78,7 +76,6 @@ static constexpr const WCHAR *REGISTRY_KEY_NAME                      = L"Softwar
 static constexpr const WCHAR *SETTING_NAME_AVS_FILE                  = L"AvsFile";
 static constexpr const WCHAR *SETTING_NAME_LOG_FILE                  = L"LogFile";
 static constexpr const WCHAR *SETTING_NAME_INPUT_FORMAT_PREFIX       = L"InputFormat_";
-static constexpr const WCHAR *SETTING_NAME_OUTPUT_THREADS            = L"OutputThreads";
 static constexpr const WCHAR *SETTING_NAME_REMOTE_CONTROL            = L"RemoteControl";
 static constexpr const WCHAR *SETTING_NAME_EXTRA_SOURCE_BUFFER       = L"ExtraSourceBuffer";
 

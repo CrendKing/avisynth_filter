@@ -19,7 +19,6 @@ public:
     auto SetAvsPath(const std::filesystem::path &avsPath) -> void;
     auto IsInputFormatEnabled(const std::wstring &formatName) const -> bool;
     auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
-    auto GetOutputThreads() const -> int;
     auto IsRemoteControlEnabled() const -> bool;
     auto GetExtraSourceBuffer() const -> int;
     auto IsSupportAVXx() const -> bool;
@@ -40,7 +39,6 @@ private:
 
     std::filesystem::path _avsPath;
     std::unordered_set<std::wstring> _enabledInputFormats;
-    int _outputThreads;
     bool _isRemoteControlEnabled;
     int _extraSourceBuffer;
 

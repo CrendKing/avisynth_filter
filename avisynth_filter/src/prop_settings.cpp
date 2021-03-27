@@ -83,9 +83,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
     switch (uMsg) {
     case WM_COMMAND:
         if (HIWORD(wParam) == EN_CHANGE) {
-            const WORD eventTarget = LOWORD(wParam);
-
-            if (eventTarget == IDC_EDIT_AVS_FILE) {
+            if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_EDIT_AVS_FILE) {
                 std::array<WCHAR, STR_MAX_LENGTH> buffer;
                 GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buffer.data(), static_cast<int>(buffer.size()));
                 const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str();
@@ -98,9 +96,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                 return 0;
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
-            const WORD eventTarget = LOWORD(wParam);
-
-            if (eventTarget == IDC_BUTTON_EDIT && !_configAvsPath.empty()) {
+            if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_BUTTON_EDIT && !_configAvsPath.empty()) {
                 ShellExecuteW(hwnd, L"edit", _configAvsPath.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
                 _filter->ReloadAvsFile(g_avs->GetScriptPath());
@@ -137,9 +133,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         break;
 
     case WM_NOTIFY: {
-        const LPNMHDR notifyHeader = reinterpret_cast<LPNMHDR>(lParam);
-
-        if (notifyHeader->idFrom == IDC_SYSLINK_TITLE) {
+        if (const LPNMHDR notifyHeader = reinterpret_cast<LPNMHDR>(lParam); notifyHeader->idFrom == IDC_SYSLINK_TITLE) {
             switch (notifyHeader->code) {
             case NM_CLICK:
             case NM_RETURN:
