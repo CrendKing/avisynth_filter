@@ -147,6 +147,7 @@ auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconn
         const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
         const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
 
+        StopScript();
         try {
             invokeResult = _env->Invoke("Import", AVSValue(args.data(), static_cast<int>(args.size())), argNames.data());
         } catch (AvisynthError &err) {
