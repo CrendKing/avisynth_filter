@@ -274,7 +274,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
             m_pInput->SetMediaType(static_cast<CMediaType *>(pmtIn));
         }
 
-        frameHandler.Flush(false, [this]() -> void {
+        frameHandler.Flush([this]() -> void {
             g_avs->ReloadScript(m_pInput->CurrentMediaType(), true);
         });
         _reloadAvsSource = false;
@@ -341,7 +341,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
-        frameHandler.Flush(false, [this]() -> void {
+        frameHandler.Flush([this]() -> void {
             g_avs->ReloadScript(m_pInput->CurrentMediaType(), true);
         });
     }

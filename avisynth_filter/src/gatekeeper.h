@@ -17,22 +17,21 @@ public:
     /**
      * called by the particpant threads to decrement the expected count by one and block until the controller unblocks them
      */
-    auto ArriveAndWait() -> void;
+    auto ArriveAndWait(std::unique_lock<std::mutex> &lock) -> void;
 
     /**
      * called by the controller thread to be blocked until the expected count to reaches zero
      */
-    auto WaitForCount() -> void;
+    auto WaitForCount(std::unique_lock<std::mutex> &lock) -> void;
 
     /**
      * called by the controller thread to unblock all participant threads
      */
-    auto Unlock() -> void;
+    auto OpenGate() -> void;
 
 private:
     int _initialCount;
     int _currentCount;
-    std::shared_mutex _mutex;
     std::condition_variable_any _arriveCv;
     std::condition_variable_any _waitCv;
 };

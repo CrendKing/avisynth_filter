@@ -14,7 +14,8 @@ namespace AvsFilter {
 FrameHandler::FrameHandler(CAviSynthFilter &filter)
     : _filter(filter)
     , _flushGatekeeper(1)
-    , _state(State::Normal) {
+    , _isFlushing(false)
+    , _isStopping(false) {
     Reset();
 }
 
@@ -22,7 +23,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     std::unique_lock srcLock(_sourceFramesMutex);
 
     _addInputSampleCv.wait(srcLock, [this]() -> bool {
-        if (_state != State::Normal) {
+        if (_isFlushing) {
             return true;
         }
 
@@ -39,7 +40,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return false;
     });
 
-    if (_state != State::Normal) {
+    if (_isFlushing) {
         return S_OK;
     }
 
@@ -114,7 +115,7 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 
     std::map<int, SourceFrameInfo>::const_iterator iter;
     _newSourceFrameCv.wait(srcLock, [this, &iter, frameNb]() -> bool {
-        if (_state != State::Normal) {
+        if (_isFlushing) {
             return true;
         }
 
@@ -123,8 +124,8 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
         return iter != _sourceFrames.cend();
     });
 
-    if (_state != State::Normal || iter->second.avsFrame == nullptr) {
-        if (_state != State::Normal) {
+    if (_isFlushing || iter->second.avsFrame == nullptr) {
+        if (_isFlushing) {
             g_env.Log(L"Drain for frame %6i", frameNb);
         } else {
             g_env.Log(L"Bad frame %6i", frameNb);
@@ -138,31 +139,17 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     return iter->second.avsFrame;
 }
 
-auto FrameHandler::Flush(bool isStopping, const std::function<void ()> &interim) -> void {
+auto FrameHandler::Flush(const std::function<void ()> &interim) -> void {
     std::unique_lock flushLock(_flushMutex);
 
-    g_env.Log(L"Frame handler start BeginFlush()");
+    g_env.Log(L"Frame handler start Flush()");
 
-    if (isStopping) {
-        _state = State::Stopping;
-    } else {
-        _state = State::Flushing;
-    }
-
+    _isFlushing = true;
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
 
-    if (_state == State::Stopping) {
-        g_env.Log(L"Frame handler cleanup after stop threads");
-
-        if (_outputThread.joinable()) {
-            _outputThread.join();
-        }
-    } else {
-        g_env.Log(L"Frame handler wait for barriers");
-
-        _flushGatekeeper.WaitForCount();
-    }
+    g_env.Log(L"Frame handler wait for barriers");
+    _flushGatekeeper.WaitForCount(flushLock);
 
     /*
      * The reason to stop avs script AFTER threads are paused is because otherwise some cached frames
@@ -189,10 +176,19 @@ auto FrameHandler::Flush(bool isStopping, const std::function<void ()> &interim)
 
     g_env.Log(L"Frame handler after calling interim");
 
-    _state = State::Normal;
-    _flushGatekeeper.Unlock();
+    _isFlushing = false;
+    flushLock.unlock();
+    _flushGatekeeper.OpenGate();
 
-    g_env.Log(L"Frame handler finish BeginFlush()");
+    if (_isStopping) {
+        g_env.Log(L"Frame handler cleanup after stop threads");
+
+        if (_outputThread.joinable()) {
+            _outputThread.join();
+        }
+    }
+
+    g_env.Log(L"Frame handler finish Flush()");
 }
 
 auto FrameHandler::GetInputBufferSize() const -> int {
@@ -218,11 +214,13 @@ auto FrameHandler::GetCurrentOutputFrameRate() const -> int {
 }
 
 auto FrameHandler::StartWorkerThread() -> void {
+    _isStopping = false;
     _outputThread = std::thread(&FrameHandler::ProcessOutputSamples, this);
 }
 
 auto FrameHandler::StopWorkerThreads() -> void {
-    Flush(true, nullptr);
+    _isStopping = true;
+    Flush(nullptr);
 }
 
 auto FrameHandler::Reset() -> void {
@@ -280,18 +278,23 @@ auto FrameHandler::ProcessOutputSamples() -> void {
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Output Worker");
 #endif
 
-    while (_state != State::Stopping) {
-        if (_state != State::Normal) {
+    while (true) {
+        if (_isFlushing) {
             g_env.Log(L"Output worker thread wait for flush");
 
-            _flushGatekeeper.ArriveAndWait();
+            std::unique_lock flushLock(_flushMutex);
+            _flushGatekeeper.ArriveAndWait(flushLock);
+
+            if (_isStopping) {
+                break;
+            }
         }
 
         std::shared_lock srcLock(_sourceFramesMutex);
 
         std::array<const SourceFrameInfo *, NUM_SRC_FRAMES_PER_PROCESSING> processSrcFrames;
         _newSourceFrameCv.wait(srcLock, [this, &processSrcFrames]() -> bool {
-            if (_state != State::Normal) {
+            if (_isFlushing) {
                 return true;
             }
 
@@ -311,7 +314,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             return true;
         });
 
-        if (_state != State::Normal) {
+        if (_isFlushing) {
             continue;
         }
 
@@ -353,7 +356,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
                     }
                 }
 
-                if (_state == State::Normal) {
+                if (!_isFlushing) {
                     _filter.m_pOutput->Deliver(outSample);
                     g_env.Log(L"Delivered frame %6i", _nextOutputFrameNb);
                 }
