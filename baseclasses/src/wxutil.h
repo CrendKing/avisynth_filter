@@ -53,6 +53,10 @@ public:
         LeaveCriticalSection(&m_CritSec);
     };
 #endif
+
+    void lock() { Lock(); }
+    void unlock() { Unlock(); }
+    BOOL try_lock() { return TryEnterCriticalSection(&m_CritSec); }
 };
 
 //

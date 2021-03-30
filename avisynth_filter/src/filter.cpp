@@ -19,9 +19,7 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     , _disconnectFilter(false)
     , _mediaTypeReconnectionWatermark(0)
     , _inputVideoFormat()
-    , _outputVideoFormat()
-    , _sendOutputVideoFormatInNextSample(false)
-	, _reloadAvsSource(false) {
+    , _outputVideoFormat() {
     g_env.Log(L"CAviSynthFilter(): %p", this);
 
     if (g_env.IsRemoteControlEnabled()) {
@@ -263,69 +261,21 @@ auto CAviSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin
 auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     HRESULT hr;
 
-    AM_MEDIA_TYPE *pmtIn;
-    pSample->GetMediaType(&pmtIn);
-    const bool inputFormatChanged = (pmtIn != nullptr && pmtIn->pbFormat != nullptr);
-
-    if (const UniqueMediaTypePtr pmtInPtr(pmtIn); inputFormatChanged || _reloadAvsSource) {
-        StopStreaming();
-
-        if (inputFormatChanged) {
-            m_pInput->SetMediaType(static_cast<CMediaType *>(pmtIn));
-        }
-
-        frameHandler.Flush([this]() -> void {
-            g_avs->ReloadScript(m_pInput->CurrentMediaType(), true);
-        });
-        _reloadAvsSource = false;
-
-        m_csReceive.Unlock();
-        hr = UpdateOutputFormat(m_pInput->CurrentMediaType());
-        m_csReceive.Lock();
-
-        if (FAILED(hr)) {
-            return AbortPlayback(hr);
-        }
-
-        StartStreaming();
-    }
-
-    IMediaSample *pOutSample;
-    CheckHr(m_pOutput->GetDeliveryBuffer(&pOutSample, nullptr, nullptr, 0));
-
-    AM_MEDIA_TYPE *pmtOut;
-    pOutSample->GetMediaType(&pmtOut);
-
-    pOutSample->Release();
-
-    if (const UniqueMediaTypePtr pmtOutPtr(pmtOut); pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
-        StopStreaming();
-        m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
-
-        HandleOutputFormatChange(*pmtOut);
-        _sendOutputVideoFormatInNextSample = true;
-
-        StartStreaming();
-        m_nWaitForKey = 30;
-    }
-
     if (pSample->IsDiscontinuity() == S_OK) {
         m_nWaitForKey = 30;
     }
 
-    if (SUCCEEDED(hr)) {
-        hr = frameHandler.AddInputSample(pSample);
+    hr = frameHandler.AddInputSample(pSample);
 
-        if (m_nWaitForKey) {
-            m_nWaitForKey--;
-        }
-        if (m_nWaitForKey && pSample->IsSyncPoint() == S_OK) {
-            m_nWaitForKey = 0;
-        }
+    if (m_nWaitForKey) {
+        m_nWaitForKey--;
+    }
+    if (m_nWaitForKey && pSample->IsSyncPoint() == S_OK) {
+        m_nWaitForKey = 0;
+    }
 
-        if (m_nWaitForKey) {
-            hr = S_FALSE;
-        }
+    if (m_nWaitForKey) {
+        hr = S_FALSE;
     }
 
     if (S_FALSE == hr) {

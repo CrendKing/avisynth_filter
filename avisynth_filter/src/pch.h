@@ -7,7 +7,6 @@
 #include <array>
 #include <clocale>
 #include <condition_variable>
-#include <deque>
 #include <filesystem>
 #include <functional>
 #include <map>

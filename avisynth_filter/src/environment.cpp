@@ -74,7 +74,7 @@ auto Environment::Log(const WCHAR *format, ...) -> void {
         return;
     }
 
-    std::unique_lock lock(_logMutex);
+    const std::unique_lock logLock(_logMutex);
 
     fwprintf_s(_logFile, L"T %6lu @ %8lu: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
 

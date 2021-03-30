@@ -3,8 +3,8 @@
 #pragma once
 
 #include "pch.h"
-#include "gatekeeper.h"
 #include "hdr.h"
+#include "util.h"
 
 
 namespace AvsFilter {
@@ -27,10 +27,37 @@ public:
     auto GetCurrentOutputFrameRate() const -> int;
 
 private:
+    template <typename ...Mutexes>
+    class MultiLock {
+    public:
+        explicit MultiLock(Mutexes &...mutexes)
+            : _mutexes(mutexes...) {
+        }
+
+        MultiLock(const MultiLock &) = delete;
+        MultiLock &operator=(const MultiLock &) = delete;
+
+        auto lock() const noexcept -> void {
+            std::apply([](Mutexes &...mutexes) {
+                std::lock(mutexes...);
+            }, _mutexes);
+        }
+
+        auto unlock() const noexcept -> void {
+            std::apply([](Mutexes &...mutexes) {
+                (..., mutexes.unlock());
+            }, _mutexes);
+        }
+
+    private:
+        std::tuple<Mutexes &...> _mutexes;
+    };
+
     struct SourceFrameInfo {
         int frameNb;
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
+        UniqueMediaTypePtr mediaTypePtr;
         HDRSideData hdrSideData;
     };
 
@@ -44,13 +71,15 @@ private:
                                           int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
                                           int &currentFrameRate) -> void;
 
-    auto Reset() -> void;
-    auto PrepareForDelivery(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME outputStartTime, REFERENCE_TIME outputStopTime) const -> bool;
+    auto ResetInputProperties() -> void;
+    auto ResetOutputProperties() -> void;
+    auto PrepareForDelivery(PVideoFrame scriptFrame, ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME outputStartTime, REFERENCE_TIME outputStopTime) const -> bool;
     auto ProcessOutputSamples() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
     auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
 
+    static constexpr const REFERENCE_TIME INVALID_REF_TIME = -1;
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 3;
 
     CAviSynthFilter &_filter;
@@ -58,12 +87,12 @@ private:
     std::map<int, SourceFrameInfo> _sourceFrames;
 
     mutable std::shared_mutex _sourceFramesMutex;
-    std::mutex _flushMutex;
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
+    std::condition_variable_any _flushMasterCv;
 
-    int _maxRequestedFrameNb;
+    std::atomic<int> _maxRequestedFrameNb;
     int _nextSourceFrameNb;
     int _nextProcessSrcFrameNb;
     int _nextOutputFrameNb;
@@ -71,9 +100,9 @@ private:
 
     std::thread _outputThread;
 
-    Gatekeeper _flushGatekeeper;
-    bool _isFlushing;
-    bool _isStopping;
+    std::atomic<bool> _isFlushing;
+    std::atomic<bool> _isStopping;
+    std::atomic<bool> _isOutputThreadPaused;
 
     int _frameRateCheckpointInputSampleNb;
     REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;

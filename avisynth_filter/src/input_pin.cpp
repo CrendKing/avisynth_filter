@@ -22,9 +22,9 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
     HRESULT hr;
 
-    const CAutoLock lock(m_pLock);
-
     const HRESULT receiveConnectionHr = __super::ReceiveConnection(pConnector, pmt);
+
+    const std::unique_lock lock(*m_pLock);
 
     if (receiveConnectionHr == VFW_E_ALREADY_CONNECTED) {
         ASSERT(m_pAllocator != nullptr);
@@ -59,7 +59,7 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAllocator **ppAllocator) -> HRESULT {
     CheckPointer(ppAllocator, E_POINTER);
     ValidateReadWritePtr(ppAllocator, sizeof(IMemAllocator *));
-    const CAutoLock lock(m_pLock);
+    const std::unique_lock lock(*m_pLock);
 
     if (m_pAllocator == nullptr) {
         HRESULT hr = S_OK;
@@ -78,8 +78,6 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::GetAllocator(__deref_out IMemAll
 }
 
 auto CAviSynthFilterInputPin::Active() -> HRESULT {
-    const CAutoLock lock(m_pLock);
-
     _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType());
     _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType());
 
@@ -98,8 +96,6 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
 }
 
 auto CAviSynthFilterInputPin::Inactive() -> HRESULT {
-    const CAutoLock lock(m_pLock);
-
     _filter.frameHandler.StopWorkerThreads();
 
     return __super::Inactive();

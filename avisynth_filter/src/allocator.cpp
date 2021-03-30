@@ -14,7 +14,7 @@ CAviSynthFilterAllocator::CAviSynthFilterAllocator(HRESULT *phr, CAviSynthFilter
 
 // allocate CAviSynthFilterMediaSample instead of CMediaSample
 auto CAviSynthFilterAllocator::Alloc() -> HRESULT {
-    CAutoLock lock(this);
+    const std::unique_lock lock(*this);
 
     HRESULT hr = CBaseAllocator::Alloc();
     if (FAILED(hr)) {

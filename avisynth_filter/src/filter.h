@@ -51,13 +51,6 @@ public:
     FrameHandler frameHandler;
 
 private:
-    struct MediaTypeDeleter {
-        auto operator()(AM_MEDIA_TYPE *mediaType) const -> void {
-            DeleteMediaType(mediaType);
-        }
-    };
-    using UniqueMediaTypePtr = std::unique_ptr<AM_MEDIA_TYPE, MediaTypeDeleter>;
-
     struct MediaTypePair {
         CMediaType input;
         CMediaType output;
@@ -85,9 +78,8 @@ private:
 
     Format::VideoFormat _inputVideoFormat;
     Format::VideoFormat _outputVideoFormat;
-    bool _sendOutputVideoFormatInNextSample;
 
-    bool _reloadAvsSource;
+    std::atomic<bool> _reloadAvsSource;
 
     std::filesystem::path _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;
