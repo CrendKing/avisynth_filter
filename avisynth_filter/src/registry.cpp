@@ -52,16 +52,12 @@ auto Registry::ReadNumber(const WCHAR *valueName, int defaultValue) const -> DWO
     return ret;
 }
 
-auto Registry::WriteString(const WCHAR *valueName, const std::wstring &valueString) const -> void {
-    if (_registryKey) {
-        RegSetValueExW(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), static_cast<DWORD>(valueString.size()*2+2));
-    }
+auto Registry::WriteString(const WCHAR *valueName, const std::wstring &valueString) const -> bool {
+    return _registryKey && RegSetValueExW(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), static_cast<DWORD>(valueString.size() * 2 + 2)) == ERROR_SUCCESS;
 }
 
-auto Registry::WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> void {
-    if (_registryKey) {
-        RegSetValueExW(_registryKey, valueName, 0, REG_DWORD, reinterpret_cast<const BYTE *>(&valueNumber), sizeof(valueNumber));
-    }
+auto Registry::WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> bool {
+    return _registryKey && RegSetValueExW(_registryKey, valueName, 0, REG_DWORD, reinterpret_cast<const BYTE *>(&valueNumber), sizeof(valueNumber)) == ERROR_SUCCESS;
 }
 
 }

@@ -56,11 +56,10 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
-    if (std::filesystem::exists(_configAvsPath)) {
-        g_env.SetAvsPath(_configAvsPath);
-    } else {
-        MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONERROR);
+    if (!_configAvsPath.empty() && !std::filesystem::exists(_configAvsPath)) {
+        MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONWARNING);
     }
+    g_env.SetAvsPath(_configAvsPath);
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         g_env.SetInputFormatEnabled(pixelFormat.name, IsDlgButtonChecked(m_Dlg, pixelFormat.resourceId) == BST_CHECKED);

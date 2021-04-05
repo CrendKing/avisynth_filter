@@ -105,7 +105,11 @@ auto Environment::IsInputFormatEnabled(const std::wstring &formatName) const -> 
 }
 
 auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void {
-    _enabledInputFormats.emplace(formatName);
+    if (enabled) {
+        _enabledInputFormats.emplace(formatName);
+    } else {
+        _enabledInputFormats.erase(formatName);
+    }
 
     if (_useIni) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
@@ -168,7 +172,7 @@ auto Environment::SaveSettingsToRegistry() const -> void {
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
-        _registry.WriteNumber(settingName.c_str(), _enabledInputFormats.contains(pixelFormat.name));
+        _registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(pixelFormat.name));
     }
 }
 

@@ -17,8 +17,8 @@ public:
 
     auto ReadString(const WCHAR *valueName) const -> std::wstring;
     auto ReadNumber(const WCHAR *valueName, int defaultValue) const -> DWORD;
-    auto WriteString(const WCHAR *valueName, const std::wstring &valueString) const -> void;
-    auto WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> void;
+    auto WriteString(const WCHAR *valueName, const std::wstring &valueString) const -> bool;
+    auto WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> bool;
 
 private:
     HKEY _registryKey;
