@@ -5,7 +5,6 @@
 #include "api.h"
 #include "constants.h"
 #include "environment.h"
-#include "source_clip.h"
 #include "util.h"
 
 
@@ -22,41 +21,142 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
     return AVSValue();
 }
 
-AvsHandler::AvsHandler()
-    : _avsModule(LoadAvsModule())
-    , _env(CreateEnv())
-    , _versionString(_env->Invoke("Eval", AVSValue("VersionString()")).AsString())
-    , _scriptPath(g_env.GetAvsPath())
-    , _sourceVideoInfo()
-    , _scriptVideoInfo()
-    , _sourceClip(new SourceClip(_sourceVideoInfo))
+AvsHandler::ScriptInstance::ScriptInstance(AvsHandler &handler)
+    : _handler(handler)
+    , _env(handler.CreateEnv())
     , _scriptClip(nullptr)
-    , _sourceDrainFrame(nullptr)
-    , _sourceAvgFrameDuration(0)
-    , _scriptAvgFrameDuration(0)
-    , _sourceAvgFrameRate(0) {
-    g_env.Log(L"AvsHandler()");
-    g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
-    g_env.Log(L"AviSynth version: %S", GetVersionString());
+    , _scriptVideoInfo()
+    , _scriptAvgFrameDuration(0) {
+}
 
-    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
+/**
+ * Create new AviSynth script clip with specified media type.
+ */
+auto AvsHandler::ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+    g_env.Log(L"ReloadAviSynthScript");
+
+    StopScript();
+
+    _handler._sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
+
+    /*
+     * When reloading AviSynth, there are two alternative approaches:
+     *     Reload everything (the environment, the scripts, which also flushes avs frame cache).
+     *     Only reload the scripts (which does not flush frame cache).
+     * And for seeking, we could either reload or not reload.
+     *
+     * Recreating the AviSynth environment guarantees a clean start, free of picture artifacts or bugs,
+     * at the cost of noticable lag.
+     *
+     * Usually we do not recreate to favor performance. There are cases where recreating is necessary:
+     *
+     * 1) Dynamic format change. This happens after playback has started, thus there will be cached frames in
+     * the avs environment. After format change, reusing the cached frames may either cause artifacts or outright crash
+     * (due to buffer size change).
+     *
+     * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
+     */
+
+    _errorString.clear();
+    AVSValue invokeResult;
+
+    if (!_handler._scriptPath.empty()) {
+        const std::string utf8Filename = ConvertWideToUtf8(_handler._scriptPath);
+        const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
+        const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
+
+        try {
+            invokeResult = _env->Invoke("Import", AVSValue(args.data(), static_cast<int>(args.size())), argNames.data());
+        } catch (AvisynthError &err) {
+            _errorString = err.msg;
+        }
+    }
+
+    if (_errorString.empty()) {
+        if (!invokeResult.Defined()) {
+            if (!ignoreDisconnect) {
+                return false;
+            }
+
+            invokeResult = _handler._sourceClip;
+        } else if (!invokeResult.IsClip()) {
+            _errorString = "Error: Script does not return a clip.";
+        }
+    }
+
+    if (!_errorString.empty()) {
+        // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
+        // add trailing '\n' to pad size because snprintf() does not count the terminating null
+        const char *errorFormat =
+            "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n";
+
+        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str());
+        const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
+        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str());
+        invokeResult = _env->Invoke("Eval", AVSValue(errorScript.get()));
+    }
+
+    _scriptClip = invokeResult.AsClip();
+    _scriptVideoInfo = _scriptClip->GetVideoInfo();
+    _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
+
+    return true;
+}
+
+auto AvsHandler::ScriptInstance::StopScript() -> void {
+    if (_scriptClip != nullptr) {
+        _scriptClip = nullptr;
+    }
+}
+
+auto AvsHandler::ScriptInstance::Init() const -> void {
+    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _handler._sourceClip);
     _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 }
 
-AvsHandler::~AvsHandler() {
-    g_env.Log(L"~AvsHandler()");
-
+auto AvsHandler::ScriptInstance::Destroy() -> void {
     _scriptClip = nullptr;
-    _sourceClip = nullptr;
-    _sourceDrainFrame = nullptr;
-
     _env->DeleteScriptEnvironment();
-    AVS_linkage = nullptr;
-    FreeLibrary(_avsModule);
 }
 
-auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
-    reinterpret_cast<SourceClip *>(_sourceClip.operator->())->SetFrameHandler(frameHandler);
+AvsHandler::MainScriptInstance::MainScriptInstance(AvsHandler &handler)
+    : ScriptInstance(handler) {
+}
+
+auto AvsHandler::MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+    if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
+        _handler._sourceAvgFrameRate = static_cast<int>(llMulDiv(_handler._sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
+        _handler._sourceAvgFrameDuration = llMulDiv(_handler._sourceVideoInfo.fps_denominator, UNITS, _handler._sourceVideoInfo.fps_numerator, 0);
+        _handler._sourceDrainFrame = _env->NewVideoFrame(_handler._sourceVideoInfo);
+
+        return true;
+    }
+
+    return false;
+}
+
+auto AvsHandler::MainScriptInstance::GetEnv() const -> IScriptEnvironment * {
+    return _env;
+}
+
+auto AvsHandler::MainScriptInstance::GetScriptClip() -> PClip & {
+    return _scriptClip;
+}
+
+auto AvsHandler::MainScriptInstance::GetScriptAvgFrameDuration() const -> REFERENCE_TIME {
+    return _scriptAvgFrameDuration;
+}
+
+auto AvsHandler::MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
+    if (_errorString.empty()) {
+        return std::nullopt;
+    }
+
+    return _errorString;
+}
+
+AvsHandler::CheckingScriptInstance::CheckingScriptInstance(AvsHandler &handler)
+    : ScriptInstance(handler) {
 }
 
 /**
@@ -65,7 +165,7 @@ auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
  * For example, when the original subtype has 8-bit samples and new subtype has 16-bit,
  * all "size" and FourCC values will be adjusted.
  */
-auto AvsHandler::GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
+auto AvsHandler::CheckingScriptInstance::GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
     FOURCCMap fourCC(&pixelFormat.mediaSubtype);
 
     CMediaType newMediaType(*templateMediaType);
@@ -111,95 +211,48 @@ auto AvsHandler::GenerateMediaType(const Format::PixelFormat &pixelFormat, const
     return newMediaType;
 }
 
-/**
- * Create new AviSynth script clip with specified media type.
- */
-auto AvsHandler::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    g_env.Log(L"ReloadAviSynthScript");
+auto AvsHandler::CheckingScriptInstance::GetScriptPixelType() const -> int {
+    return _scriptVideoInfo.pixel_type;
+}
 
-    _sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
-    _sourceDrainFrame = _env->NewVideoFrame(_sourceVideoInfo);
+AvsHandler::AvsHandler()
+    : _avsModule(LoadAvsModule())
+    , _mainScriptInstance(*this)
+    , _checkingScriptInstance(*this)
+    , _versionString(_mainScriptInstance._env->Invoke("Eval", AVSValue("VersionString()")).AsString())
+    , _scriptPath(g_env.GetAvsPath())
+    , _sourceVideoInfo()
+    , _sourceClip(new SourceClip(_sourceVideoInfo))
+    , _sourceDrainFrame(nullptr)
+    , _sourceAvgFrameDuration(0)
+    , _sourceAvgFrameRate(0) {
+    g_env.Log(L"AvsHandler()");
+    g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
+    g_env.Log(L"AviSynth version: %S", GetVersionString());
 
-    /*
-     * When reloading AviSynth, there are two alternative approaches:
-     *     Reload everything (the environment, the scripts, which also flushes avs frame cache).
-     *     Only reload the scripts (which does not flush frame cache).
-     * And for seeking, we could either reload or not reload.
-     *
-     * Recreating the AviSynth environment guarantees a clean start, free of picture artifacts or bugs,
-     * at the cost of noticable lag.
-     *
-     * Usually we do not recreate to favor performance. There are cases where recreating is necessary:
-     *
-     * 1) Dynamic format change. This happens after playback has started, thus there will be cached frames in
-     * the avs environment. After format change, reusing the cached frames may either cause artifacts or outright crash
-     * (due to buffer size change).
-     *
-     * 2) Certain AviSynth filters and functions are not compatible, such as SVP's SVSmoothFps_NVOF().
-     */
+    _mainScriptInstance.Init();
+    _checkingScriptInstance.Init();
+}
 
-    _errorString.clear();
+AvsHandler::~AvsHandler() {
+    g_env.Log(L"~AvsHandler()");
 
-    AVSValue invokeResult;
+    _sourceClip = nullptr;
+    _sourceDrainFrame = nullptr;
 
-    if (!_scriptPath.empty()) {
-        const std::string utf8Filename = ConvertWideToUtf8(_scriptPath);
-        const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
-        const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
+    _checkingScriptInstance.Destroy();
+    _mainScriptInstance.Destroy();
 
-        StopScript();
-        try {
-            invokeResult = _env->Invoke("Import", AVSValue(args.data(), static_cast<int>(args.size())), argNames.data());
-        } catch (AvisynthError &err) {
-            _errorString = err.msg;
-        }
-    }
+    AVS_linkage = nullptr;
+    FreeLibrary(_avsModule);
+}
 
-    if (_errorString.empty()) {
-        if (!invokeResult.Defined()) {
-            if (!ignoreDisconnect) {
-                return false;
-            }
-
-            invokeResult = _sourceClip;
-        } else if (!invokeResult.IsClip()) {
-            _errorString = "Error: Script does not return a clip.";
-        }
-    }
-
-    if (!_errorString.empty()) {
-        // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
-        // add trailing '\n' to pad size because snprintf() does not count the terminating null
-        const char *errorFormat =
-            "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n";
-
-        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str());
-        const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
-        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str());
-        invokeResult = _env->Invoke("Eval", AVSValue(errorScript.get()));
-    }
-
-    _scriptClip = invokeResult.AsClip();
-    _scriptVideoInfo = _scriptClip->GetVideoInfo();
-    _sourceAvgFrameRate = static_cast<int>(llMulDiv(_sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
-    _sourceAvgFrameDuration = llMulDiv(_sourceVideoInfo.fps_denominator, UNITS, _sourceVideoInfo.fps_numerator, 0);
-    _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
-
-    return true;
+auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
+    GetSourceClip()->SetFrameHandler(frameHandler);
 }
 
 auto AvsHandler::SetScriptPath(const std::filesystem::path &scriptPath) -> void {
     _scriptPath = scriptPath;
-}
-
-auto AvsHandler::StopScript() -> void {
-    if (_scriptClip != nullptr) {
-        _scriptClip = nullptr;
-    }
-}
-
-auto AvsHandler::GetEnv() const -> IScriptEnvironment * {
-    return _env;
 }
 
 auto AvsHandler::GetVersionString() const -> const char * {
@@ -210,14 +263,6 @@ auto AvsHandler::GetScriptPath() const -> const std::filesystem::path & {
     return _scriptPath;
 }
 
-auto AvsHandler::GetScriptPixelType() const -> int {
-    return _scriptVideoInfo.pixel_type;
-}
-
-auto AvsHandler::GetScriptClip() -> PClip & {
-    return _scriptClip;
-}
-
 auto AvsHandler::GetSourceDrainFrame() -> PVideoFrame & {
     return _sourceDrainFrame;
 }
@@ -226,20 +271,16 @@ auto AvsHandler::GetSourceAvgFrameDuration() const -> REFERENCE_TIME {
     return _sourceAvgFrameDuration;
 }
 
-auto AvsHandler::GetScriptAvgFrameDuration() const -> REFERENCE_TIME {
-    return _scriptAvgFrameDuration;
-}
-
 auto AvsHandler::GetSourceAvgFrameRate() const -> int {
     return _sourceAvgFrameRate;
 }
 
-auto AvsHandler::GetErrorString() const -> std::optional<std::string> {
-    if (_errorString.empty()) {
-        return std::nullopt;
-    }
+auto AvsHandler::GetMainScriptInstance() -> MainScriptInstance & {
+    return _mainScriptInstance;
+}
 
-    return _errorString;
+auto AvsHandler::GetCheckingScriptInstance() -> CheckingScriptInstance & {
+    return _checkingScriptInstance;
 }
 
 auto AvsHandler::LoadAvsModule() const -> HMODULE {
@@ -257,7 +298,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
     We don't use any new feature from IScriptEnvironment2 anyway.
     */
-    using CreateScriptEnvironment_Func = auto (AVSC_CC *) (int version)->IScriptEnvironment *;
+    using CreateScriptEnvironment_Func = auto (AVSC_CC *) (int version) -> IScriptEnvironment *;
     const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
     if (CreateScriptEnvironment == nullptr) {
         ShowFatalError(L"Unable to locate CreateScriptEnvironment()");
@@ -278,6 +319,10 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     FreeLibrary(_avsModule);
     throw;
+}
+
+auto AvsHandler::GetSourceClip() const -> SourceClip * {
+    return reinterpret_cast<SourceClip *>(_sourceClip.operator->());
 }
 
 }

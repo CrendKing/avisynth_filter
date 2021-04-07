@@ -88,7 +88,7 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
     }
 
     // need reload here instead of CompleteConnect() so that switching video works
-    g_avs->ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    g_avs->GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     g_avs->LinkFrameHandler(&_filter.frameHandler);
     _filter.frameHandler.StartWorkerThread();
 

@@ -32,6 +32,10 @@ auto SourceClip::GetAudio(void *buf, int64_t start, int64_t count, IScriptEnviro
 }
 
 auto SourceClip::SetCacheHints(int cachehints, int frame_range) -> int {
+    if (cachehints == CACHE_GET_MTMODE) {
+        return MT_NICE_FILTER;
+    }
+
     return 0;
 }
 

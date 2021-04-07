@@ -80,7 +80,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return hr;
     }
 
-    const PVideoFrame avsFrame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer, g_avs->GetEnv());
+    const PVideoFrame avsFrame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer, g_avs->GetMainScriptInstance().GetEnv());
 
     HDRSideData hdrSideData;
     {
@@ -118,6 +118,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
+    g_env.Log(L"Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
+
     std::shared_lock sharedFrameLock(_sourceFramesMutex);
 
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb.load());
@@ -146,13 +148,14 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
         return g_avs->GetSourceDrainFrame();
     }
 
-    g_env.Log(L"Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
-
     return iter->second.avsFrame;
 }
 
 auto FrameHandler::Flush(const std::function<void ()> &interim) -> void {
-    _isFlushing = true;
+    {
+        const std::unique_lock uniqueLock(_sourceFramesMutex);
+        _isFlushing = true;
+    }
 
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
@@ -173,25 +176,6 @@ auto FrameHandler::Flush(const std::function<void ()> &interim) -> void {
         });
     }
 
-    g_env.Log(L"Frame handler flush ready to reset");
-
-    /*
-     * The reason to stop avs script AFTER threads are paused is because otherwise some cached frames
-     * might already be released while the threads are trying to get frame.
-     *
-     * The concern could be that prefetcher threads be stuck at trying to get frame but since threads
-     * are paused, no new frame is allowed to be add in AddInputSample(). To unstuck, GetSourceFrame()
-     * just returns a empty new frame during flush.
-     */
-    g_avs->StopScript();
-
-    {
-        const std::unique_lock uniqueLock(_sourceFramesMutex);
-
-        _sourceFrames.clear();
-        ResetInputProperties();
-    }
-
     g_env.Log(L"Frame handler flush before calling interim");
 
     if (interim) {
@@ -199,6 +183,13 @@ auto FrameHandler::Flush(const std::function<void ()> &interim) -> void {
     }
 
     g_env.Log(L"Frame handler flush after calling interim");
+
+    {
+        const std::unique_lock uniqueLock(_sourceFramesMutex);
+
+        _sourceFrames.clear();
+        ResetInputProperties();
+    }
 
     _isFlushing = false;
     _isFlushing.notify_all();
@@ -211,7 +202,17 @@ auto FrameHandler::StartWorkerThread() -> void {
 
 auto FrameHandler::StopWorkerThreads() -> void {
     _isStopping = true;
-    Flush(nullptr);
+    Flush([]() -> void {
+        /*
+         * The reason to stop avs script AFTER threads are paused is because otherwise some cached frames
+         * might already be released while the threads are trying to get frame.
+         *
+         * The concern could be that prefetcher threads be stuck at trying to get frame but since threads
+         * are paused, no new frame is allowed to be add in AddInputSample(). To unstuck, GetSourceFrame()
+         * just returns a empty new frame during flush.
+         */
+        g_avs->GetMainScriptInstance().StopScript();
+    });
 
     if (_outputThread.joinable()) {
         // temporarily unlock the critical section to unblock the worker thread to finish
@@ -292,7 +293,7 @@ auto FrameHandler::PrepareForDelivery(PVideoFrame scriptFrame, ATL::CComPtr<IMed
     if (BYTE *outBuffer; FAILED(outSample->GetPointer(&outBuffer))) {
         return false;
     } else {
-        Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, g_avs->GetEnv());
+        Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, g_avs->GetMainScriptInstance().GetEnv());
     }
 
     return true;
@@ -370,7 +371,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             }
 
             Flush([this]() -> void {
-                g_avs->ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+                g_avs->GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
             });
             ResetOutputProperties();
             _filter._reloadAvsSource = false;
@@ -390,8 +391,8 @@ auto FrameHandler::ProcessOutputSamples() -> void {
          * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
          */
 
-        const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(processSrcFrames[2]->startTime - processSrcFrames[1]->startTime, g_avs->GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
-        const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(processSrcFrames[1]->startTime - processSrcFrames[0]->startTime, g_avs->GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
+        const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(processSrcFrames[2]->startTime - processSrcFrames[1]->startTime, g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
+        const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(processSrcFrames[1]->startTime - processSrcFrames[0]->startTime, g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
 
         while (true) {
             const REFERENCE_TIME outFrameDurationBeforeEdgePortion = min(processSrcFrames[1]->startTime - _nextOutputFrameStartTime, outputFrameDurationBeforeEdge);
@@ -415,7 +416,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
             try {
                 // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
-                const PVideoFrame scriptFrame = g_avs->GetScriptClip()->GetFrame(_nextOutputFrameNb, g_avs->GetEnv());
+                const PVideoFrame scriptFrame = g_avs->GetMainScriptInstance().GetScriptClip()->GetFrame(_nextOutputFrameNb, g_avs->GetMainScriptInstance().GetEnv());
 
                 if (ATL::CComPtr<IMediaSample> outSample; PrepareForDelivery(scriptFrame, outSample, outputStartTime, outputStopTime)) {
                     {

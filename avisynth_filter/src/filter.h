@@ -57,8 +57,8 @@ private:
     };
 
     static constexpr auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
-        return Format::LookupAvsType(g_avs->GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
-            return g_avs->GenerateMediaType(pixelFormat, mtIn);
+        return Format::LookupAvsType(g_avs->GetCheckingScriptInstance().GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
+            return g_avs->GetCheckingScriptInstance().GenerateMediaType(pixelFormat, mtIn);
         });
     }
 
