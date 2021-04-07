@@ -87,6 +87,7 @@ private:
     std::map<int, SourceFrameInfo> _sourceFrames;
 
     mutable std::shared_mutex _sourceFramesMutex;
+    std::shared_mutex _flushMutex;
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;

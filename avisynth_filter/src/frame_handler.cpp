@@ -24,7 +24,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
     {
         std::shared_lock sharedFrameLock(_sourceFramesMutex);
-        const MultiLock multiLock(_filter.m_csReceive, sharedFrameLock);
+        std::shared_lock sharedFlushLock(_flushMutex);
+        const MultiLock multiLock(_filter.m_csReceive, sharedFrameLock, sharedFlushLock);
 
         _addInputSampleCv.wait(multiLock, [this]() -> bool {
             if (_isFlushing) {
@@ -121,12 +122,14 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
     g_env.Log(L"Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedFrameLock(_sourceFramesMutex);
+    std::shared_lock sharedFlushLock(_flushMutex);
+    const MultiLock multiLock(sharedFrameLock, sharedFlushLock);
 
     _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb.load());
     _addInputSampleCv.notify_one();
 
     std::map<int, SourceFrameInfo>::const_iterator iter;
-    _newSourceFrameCv.wait(sharedFrameLock, [this, &iter, frameNb]() -> bool {
+    _newSourceFrameCv.wait(multiLock, [this, &iter, frameNb]() -> bool {
         if (_isFlushing) {
             return true;
         }
@@ -153,7 +156,8 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 
 auto FrameHandler::Flush(const std::function<void ()> &interim) -> void {
     {
-        const std::unique_lock uniqueLock(_sourceFramesMutex);
+        const std::unique_lock uniqueFlushLock(_flushMutex);
+
         _isFlushing = true;
     }
 
@@ -328,8 +332,10 @@ auto FrameHandler::ProcessOutputSamples() -> void {
 
         {
             std::shared_lock sharedFrameLock(_sourceFramesMutex);
+            std::shared_lock sharedFlushLock(_flushMutex);
+            const MultiLock multiLock(sharedFrameLock, sharedFlushLock);
 
-            _newSourceFrameCv.wait(sharedFrameLock, [this, &processSrcFrames]() -> bool {
+            _newSourceFrameCv.wait(multiLock, [this, &processSrcFrames]() -> bool {
                 if (_isFlushing) {
                     return true;
                 }
@@ -354,10 +360,10 @@ auto FrameHandler::ProcessOutputSamples() -> void {
                 _nextProcessSrcFrameNb += 1;
                 return true;
             });
-        }
 
-        if (_isFlushing) {
-            continue;
+            if (_isFlushing) {
+                continue;
+            }
         }
 
         if (const bool inputFormatChanged = (processSrcFrames[0]->mediaTypePtr != nullptr && processSrcFrames[0]->mediaTypePtr->pbFormat != nullptr); inputFormatChanged || _filter._reloadAvsSource) {
@@ -426,11 +432,9 @@ auto FrameHandler::ProcessOutputSamples() -> void {
                         }
                     }
 
-                    if (!_isFlushing) {
-                        const std::unique_lock filterLock(_filter.m_csFilter);
-                        _filter.m_pOutput->Deliver(outSample);
-                        g_env.Log(L"Delivered frame %6i", _nextOutputFrameNb);
-                    }
+                    const std::unique_lock filterLock(_filter.m_csFilter);
+                    _filter.m_pOutput->Deliver(outSample);
+                    g_env.Log(L"Delivered frame %6i", _nextOutputFrameNb);
                 }
             } catch (AvisynthError) {
             }
