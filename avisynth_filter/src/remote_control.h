@@ -25,7 +25,7 @@ private:
     auto HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *copyData) const -> LRESULT;
 
     std::thread _msgThread;
-    HWND _hWnd;
+    HWND _hWnd = nullptr;
 
     CAviSynthFilter &_filter;
 };

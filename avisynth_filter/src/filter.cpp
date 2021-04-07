@@ -15,11 +15,7 @@ namespace AvsFilter {
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME_FULL, pUnk, CLSID_AviSynthFilter)
-    , frameHandler(*this)
-    , _disconnectFilter(false)
-    , _mediaTypeReconnectionWatermark(0)
-    , _inputVideoFormat()
-    , _outputVideoFormat() {
+    , frameHandler(*this) {
     g_env.Log(L"CAviSynthFilter(): %p", this);
 
     if (g_env.IsRemoteControlEnabled()) {
@@ -319,25 +315,9 @@ auto STDMETHODCALLTYPE CAviSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> H
     return S_OK;
 }
 
-auto CAviSynthFilter::GetInputFormat() const -> Format::VideoFormat {
-    return _inputVideoFormat;
-}
-
-auto CAviSynthFilter::GetOutputFormat() const -> Format::VideoFormat {
-    return _outputVideoFormat;
-}
-
 auto CAviSynthFilter::ReloadAvsFile(const std::filesystem::path &avsPath) -> void {
     g_avs->SetScriptPath(avsPath);
     _reloadAvsSource = true;
-}
-
-auto CAviSynthFilter::GetVideoSourcePath() const -> const std::filesystem::path & {
-    return _videoSourcePath;
-}
-
-auto CAviSynthFilter::GetVideoFilterNames() const -> std::vector<std::wstring> {
-    return _videoFilterNames;
 }
 
 auto CAviSynthFilter::GetAvsState() const -> AvsState {

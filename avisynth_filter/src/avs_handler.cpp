@@ -23,10 +23,7 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 AvsHandler::ScriptInstance::ScriptInstance(AvsHandler &handler)
     : _handler(handler)
-    , _env(handler.CreateEnv())
-    , _scriptClip(nullptr)
-    , _scriptVideoInfo()
-    , _scriptAvgFrameDuration(0) {
+    , _env(handler.CreateEnv()) {
 }
 
 /**
@@ -135,24 +132,8 @@ auto AvsHandler::MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType
     return false;
 }
 
-auto AvsHandler::MainScriptInstance::GetEnv() const -> IScriptEnvironment * {
-    return _env;
-}
-
-auto AvsHandler::MainScriptInstance::GetScriptClip() -> PClip & {
-    return _scriptClip;
-}
-
-auto AvsHandler::MainScriptInstance::GetScriptAvgFrameDuration() const -> REFERENCE_TIME {
-    return _scriptAvgFrameDuration;
-}
-
 auto AvsHandler::MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
-    if (_errorString.empty()) {
-        return std::nullopt;
-    }
-
-    return _errorString;
+    return _errorString.empty() ? std::nullopt : std::make_optional(_errorString);
 }
 
 AvsHandler::CheckingScriptInstance::CheckingScriptInstance(AvsHandler &handler)
@@ -211,21 +192,11 @@ auto AvsHandler::CheckingScriptInstance::GenerateMediaType(const Format::PixelFo
     return newMediaType;
 }
 
-auto AvsHandler::CheckingScriptInstance::GetScriptPixelType() const -> int {
-    return _scriptVideoInfo.pixel_type;
-}
-
 AvsHandler::AvsHandler()
     : _avsModule(LoadAvsModule())
     , _mainScriptInstance(*this)
     , _checkingScriptInstance(*this)
-    , _versionString(_mainScriptInstance._env->Invoke("Eval", AVSValue("VersionString()")).AsString())
-    , _scriptPath(g_env.GetAvsPath())
-    , _sourceVideoInfo()
-    , _sourceClip(new SourceClip(_sourceVideoInfo))
-    , _sourceDrainFrame(nullptr)
-    , _sourceAvgFrameDuration(0)
-    , _sourceAvgFrameRate(0) {
+    , _versionString(_mainScriptInstance._env->Invoke("Eval", AVSValue("VersionString()")).AsString()) {
     g_env.Log(L"AvsHandler()");
     g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
     g_env.Log(L"AviSynth version: %S", GetVersionString());
@@ -253,34 +224,6 @@ auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
 
 auto AvsHandler::SetScriptPath(const std::filesystem::path &scriptPath) -> void {
     _scriptPath = scriptPath;
-}
-
-auto AvsHandler::GetVersionString() const -> const char * {
-    return _versionString == nullptr ? "unknown AviSynth version" : _versionString;
-}
-
-auto AvsHandler::GetScriptPath() const -> const std::filesystem::path & {
-    return _scriptPath;
-}
-
-auto AvsHandler::GetSourceDrainFrame() -> PVideoFrame & {
-    return _sourceDrainFrame;
-}
-
-auto AvsHandler::GetSourceAvgFrameDuration() const -> REFERENCE_TIME {
-    return _sourceAvgFrameDuration;
-}
-
-auto AvsHandler::GetSourceAvgFrameRate() const -> int {
-    return _sourceAvgFrameRate;
-}
-
-auto AvsHandler::GetMainScriptInstance() -> MainScriptInstance & {
-    return _mainScriptInstance;
-}
-
-auto AvsHandler::GetCheckingScriptInstance() -> CheckingScriptInstance & {
-    return _checkingScriptInstance;
 }
 
 auto AvsHandler::LoadAvsModule() const -> HMODULE {

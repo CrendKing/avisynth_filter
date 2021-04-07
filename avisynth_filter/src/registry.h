@@ -9,11 +9,10 @@ namespace AvsFilter {
 
 class Registry {
 public:
-    Registry();
     virtual ~Registry();
 
     auto Initialize() -> bool;
-    explicit operator bool() const;
+    constexpr explicit operator bool() const { return _registryKey != nullptr; }
 
     auto ReadString(const WCHAR *valueName) const -> std::wstring;
     auto ReadNumber(const WCHAR *valueName, int defaultValue) const -> DWORD;
@@ -21,7 +20,7 @@ public:
     auto WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> bool;
 
 private:
-    HKEY _registryKey;
+    HKEY _registryKey = nullptr;
 };
 
 }

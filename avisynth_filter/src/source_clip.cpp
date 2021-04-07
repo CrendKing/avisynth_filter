@@ -8,8 +8,7 @@
 namespace AvsFilter {
 
 SourceClip::SourceClip(const VideoInfo &videoInfo)
-    : _videoInfo(videoInfo)
-    , _frameHandler(nullptr) {
+    : _videoInfo(videoInfo) {
 }
 
 auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
@@ -24,23 +23,12 @@ auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     return _frameHandler->GetSourceFrame(frameNb, env);
 }
 
-auto SourceClip::GetParity(int frameNb) -> bool {
-    return false;
-}
-
-auto SourceClip::GetAudio(void *buf, int64_t start, int64_t count, IScriptEnvironment *env) -> void {
-}
-
 auto SourceClip::SetCacheHints(int cachehints, int frame_range) -> int {
     if (cachehints == CACHE_GET_MTMODE) {
         return MT_NICE_FILTER;
     }
 
     return 0;
-}
-
-auto SourceClip::GetVideoInfo() -> const VideoInfo & {
-    return _videoInfo;
 }
 
 }

@@ -41,11 +41,11 @@ public:
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;
 
-    auto GetInputFormat() const -> Format::VideoFormat;
-    auto GetOutputFormat() const -> Format::VideoFormat;
+    constexpr auto GetInputFormat() const -> Format::VideoFormat { return _inputVideoFormat; }
+    constexpr auto GetOutputFormat() const -> Format::VideoFormat { return _outputVideoFormat; }
     auto ReloadAvsFile(const std::filesystem::path &avsPath) -> void;
-    auto GetVideoSourcePath() const -> const std::filesystem::path &;
-    auto GetVideoFilterNames() const -> std::vector<std::wstring>;
+    constexpr auto GetVideoSourcePath() const -> const std::filesystem::path & { return _videoSourcePath; }
+    constexpr auto GetVideoFilterNames() const -> const std::vector<std::wstring> & { return _videoFilterNames; }
     auto GetAvsState() const -> AvsState;
 
     FrameHandler frameHandler;
@@ -72,9 +72,9 @@ private:
 
     std::optional<RemoteControl> _remoteControl;
 
-    bool _disconnectFilter;
+    bool _disconnectFilter = false;
     std::vector<MediaTypePair> _compatibleMediaTypes;
-    int _mediaTypeReconnectionWatermark;
+    int _mediaTypeReconnectionWatermark = 0;
 
     Format::VideoFormat _inputVideoFormat;
     Format::VideoFormat _outputVideoFormat;

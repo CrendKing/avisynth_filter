@@ -7,10 +7,6 @@
 
 namespace AvsFilter {
 
-Registry::Registry()
-    : _registryKey(nullptr) {
-}
-
 Registry::~Registry() {
     if (_registryKey) {
         RegCloseKey(_registryKey);
@@ -19,10 +15,6 @@ Registry::~Registry() {
 
 auto Registry::Initialize() -> bool {
     return RegCreateKeyExW(HKEY_CURRENT_USER, REGISTRY_KEY_NAME, 0, nullptr, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, nullptr, &_registryKey, nullptr) == ERROR_SUCCESS;
-}
-
-Registry::operator bool() const {
-    return _registryKey != nullptr;
 }
 
 auto Registry::ReadString(const WCHAR *valueName) const -> std::wstring {

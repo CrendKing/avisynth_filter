@@ -21,36 +21,36 @@ public:
     auto StartWorkerThread() -> void;
     auto StopWorkerThreads() -> void;
     auto GetInputBufferSize() const -> int;
-    auto GetSourceFrameNb() const -> int;
-    auto GetOutputFrameNb() const -> int;
-    auto GetCurrentInputFrameRate() const -> int;
-    auto GetCurrentOutputFrameRate() const -> int;
+    constexpr auto GetSourceFrameNb() const -> int { return _nextSourceFrameNb; }
+    constexpr auto GetOutputFrameNb() const -> int { return _nextOutputFrameNb; }
+    constexpr auto GetCurrentInputFrameRate() const -> int { return _currentInputFrameRate; }
+    constexpr auto GetCurrentOutputFrameRate() const -> int { return _currentOutputFrameRate; }
 
 private:
-    template <typename ...Mutexes>
+    template <typename... Mutexes>
     class MultiLock {
     public:
-        explicit MultiLock(Mutexes &...mutexes)
+        explicit MultiLock(Mutexes&... mutexes)
             : _mutexes(mutexes...) {
         }
 
         MultiLock(const MultiLock &) = delete;
         MultiLock &operator=(const MultiLock &) = delete;
 
-        auto lock() const noexcept -> void {
-            std::apply([](Mutexes &...mutexes) {
+        constexpr auto lock() const noexcept -> void {
+            std::apply([](Mutexes&... mutexes) {
                 std::lock(mutexes...);
             }, _mutexes);
         }
 
         auto unlock() const noexcept -> void {
-            std::apply([](Mutexes &...mutexes) {
+            std::apply([](Mutexes&... mutexes) {
                 (..., mutexes.unlock());
             }, _mutexes);
         }
 
     private:
-        std::tuple<Mutexes &...> _mutexes;
+        std::tuple<Mutexes&...> _mutexes;
     };
 
     struct SourceFrameInfo {

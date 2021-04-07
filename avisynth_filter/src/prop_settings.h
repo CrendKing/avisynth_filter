@@ -21,9 +21,9 @@ private:
 
     auto SetDirty() -> void;
 
-    CAviSynthFilter *_filter;
+    CAviSynthFilter *_filter = nullptr;
     std::filesystem::path _configAvsPath;
-    bool _avsFileManagedByRC;
+    bool _avsFileManagedByRC = false;
 };
 
 }

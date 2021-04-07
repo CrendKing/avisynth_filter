@@ -12,9 +12,7 @@
 namespace AvsFilter {
 
 CAvsFilterPropSettings::CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(SETTINGS_NAME_FULL, pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS)
-    , _filter(nullptr)
-    , _avsFileManagedByRC(false) {
+    : CBasePropertyPage(SETTINGS_NAME_FULL, pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS) {
 }
 
 auto CAvsFilterPropSettings::OnConnect(IUnknown *pUnk) -> HRESULT {

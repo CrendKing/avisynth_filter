@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pch.h"
+#include "environment.h"
 #include "format.h"
 #include "frame_handler.h"
 #include "rc_ptr.h"
@@ -25,9 +26,9 @@ private:
     protected:
         AvsHandler &_handler;
         IScriptEnvironment *_env;
-        PClip _scriptClip;
+        PClip _scriptClip = nullptr;
         VideoInfo _scriptVideoInfo;
-        REFERENCE_TIME _scriptAvgFrameDuration;
+        REFERENCE_TIME _scriptAvgFrameDuration = 0;
         std::string _errorString;
 
     private:
@@ -41,9 +42,9 @@ public:
         explicit MainScriptInstance(AvsHandler &handler);
 
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
-        auto GetEnv() const -> IScriptEnvironment *;
-        auto GetScriptClip() -> PClip &;
-        auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME;
+        constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
+        constexpr auto GetScriptClip() -> PClip & { return _scriptClip; }
+        constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration;}
         auto GetErrorString() const -> std::optional<std::string>;
     };
 
@@ -52,7 +53,7 @@ public:
         explicit CheckingScriptInstance(AvsHandler &handler);
 
         auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
-        auto GetScriptPixelType() const -> int;
+        constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type;}
     };
 
     AvsHandler();
@@ -60,13 +61,13 @@ public:
 
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
-    auto GetVersionString() const -> const char *;
-    auto GetScriptPath() const -> const std::filesystem::path &;
-    auto GetSourceDrainFrame() -> PVideoFrame &;
-    auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME;
-    auto GetSourceAvgFrameRate() const -> int;
-    auto GetMainScriptInstance() -> MainScriptInstance &;
-    auto GetCheckingScriptInstance() -> CheckingScriptInstance &;
+    constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
+    constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
+    constexpr auto GetSourceDrainFrame() -> PVideoFrame &  { return _sourceDrainFrame; }
+    constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME  { return _sourceAvgFrameDuration; }
+    constexpr auto GetSourceAvgFrameRate() const -> int  { return _sourceAvgFrameRate; }
+    constexpr auto GetMainScriptInstance() -> MainScriptInstance &  { return _mainScriptInstance; }
+    constexpr auto GetCheckingScriptInstance() -> CheckingScriptInstance & { return _checkingScriptInstance; }
 
 private:
     auto LoadAvsModule() const -> HMODULE;
@@ -79,12 +80,12 @@ private:
     CheckingScriptInstance _checkingScriptInstance;
     const char *_versionString;
 
-    std::filesystem::path _scriptPath;
+    std::filesystem::path _scriptPath = g_env.GetAvsPath();
     VideoInfo _sourceVideoInfo;
-    PClip _sourceClip;
-    PVideoFrame _sourceDrainFrame;
-    REFERENCE_TIME _sourceAvgFrameDuration;
-    int _sourceAvgFrameRate;
+    PClip _sourceClip = new SourceClip(_sourceVideoInfo);
+    PVideoFrame _sourceDrainFrame = nullptr;
+    REFERENCE_TIME _sourceAvgFrameDuration = 0;
+    int _sourceAvgFrameRate = 0;
 };
 
 extern ReferenceCountPointer<AvsHandler> g_avs;

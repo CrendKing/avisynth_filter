@@ -19,8 +19,8 @@ private:
     auto OnApplyChanges() -> HRESULT override;
     auto OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR override;
 
-    CAviSynthFilter *_filter;
-    bool _isSourcePathSet;
+    CAviSynthFilter *_filter = nullptr;
+    bool _isSourcePathSet = false;
 };
 
 }

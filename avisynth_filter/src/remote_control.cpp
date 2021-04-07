@@ -13,8 +13,7 @@
 namespace AvsFilter {
 
 RemoteControl::RemoteControl(CAviSynthFilter &filter)
-    : _hWnd(nullptr)
-    , _filter(filter) {
+    : _filter(filter) {
 }
 
 RemoteControl::~RemoteControl() {

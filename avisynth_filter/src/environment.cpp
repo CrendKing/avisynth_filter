@@ -9,13 +9,7 @@
 namespace AvsFilter {
 
 Environment::Environment()
-    : _useIni(false)
-    , _ini(true)
-    , _isRemoteControlEnabled(false)
-    , _logFile(nullptr)
-    , _logStartTime(0)
-    , _isSupportAVXx(false)
-    , _isSupportSSSE3(false) {
+    : _ini(true) {
     std::array<WCHAR, MAX_PATH> processPathStr {};
     std::filesystem::path processName;
 
@@ -88,10 +82,6 @@ auto Environment::Log(const WCHAR *format, ...) -> void {
     fflush(_logFile);
 }
 
-auto Environment::GetAvsPath() const -> const std::filesystem::path & {
-    return _avsPath;
-}
-
 auto Environment::SetAvsPath(const std::filesystem::path &avsPath) -> void {
     _avsPath = avsPath;
 
@@ -115,22 +105,6 @@ auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool ena
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
         _ini.SetBoolValue(L"", settingName.c_str(), enabled);
     }
-}
-
-auto Environment::IsRemoteControlEnabled() const -> bool {
-    return _isRemoteControlEnabled;
-}
-
-auto Environment::GetExtraSourceBuffer() const -> int {
-    return _extraSourceBuffer;
-}
-
-auto Environment::IsSupportAVXx() const -> bool {
-    return _isSupportAVXx;
-}
-
-auto Environment::IsSupportSSSE3() const -> bool {
-    return _isSupportSSSE3;
 }
 
 auto Environment::LoadSettingsFromIni() -> void {

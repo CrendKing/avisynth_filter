@@ -232,22 +232,6 @@ auto FrameHandler::GetInputBufferSize() const -> int {
     return static_cast<int>(_sourceFrames.size());
 }
 
-auto FrameHandler::GetSourceFrameNb() const -> int {
-    return _nextSourceFrameNb;
-}
-
-auto FrameHandler::GetOutputFrameNb() const -> int {
-    return _nextOutputFrameNb;
-}
-
-auto FrameHandler::GetCurrentInputFrameRate() const -> int {
-    return _currentInputFrameRate;
-}
-
-auto FrameHandler::GetCurrentOutputFrameRate() const -> int {
-    return _currentOutputFrameRate;
-}
-
 auto FrameHandler::ResetInputProperties() -> void {
     _maxRequestedFrameNb = 0;
     _nextSourceFrameNb = 0;
