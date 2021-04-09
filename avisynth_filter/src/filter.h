@@ -8,6 +8,7 @@
 #include "format.h"
 #include "frame_handler.h"
 #include "remote_control.h"
+#include "util.h"
 
 
 namespace AvsFilter {
@@ -21,7 +22,7 @@ class CAviSynthFilter
 
 public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
-    virtual ~CAviSynthFilter();
+    ~CAviSynthFilter() override;
 
     DECLARE_IUNKNOWN
 
@@ -52,11 +53,15 @@ public:
 
 private:
     struct MediaTypePair {
-        CMediaType input;
-        CMediaType output;
+        const SharedMediaTypePtr &inputType;
+        const Format::PixelFormat *inputFormat;
+
+        CMediaType outputType;
+        const Format::PixelFormat *outputFormat;
     };
 
-    static constexpr auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
+    static auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
+        g_avs->GetCheckingScriptInstance().ReloadScript(*mtIn, true);
         return Format::LookupAvsType(g_avs->GetCheckingScriptInstance().GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
             return g_avs->GetCheckingScriptInstance().GenerateMediaType(pixelFormat, mtIn);
         });

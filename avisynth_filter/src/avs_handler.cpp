@@ -140,6 +140,16 @@ AvsHandler::CheckingScriptInstance::CheckingScriptInstance(AvsHandler &handler)
     : ScriptInstance(handler) {
 }
 
+auto AvsHandler::CheckingScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+    if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
+        StopScript();
+
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * Create media type based on a template while changing its subtype. Also change fields in format if necessary.
  *

@@ -159,8 +159,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         return;
     }
 
-    const int srcUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio;
-    if (videoFormat.pixelFormat->areUVPlanesInterleaved) {
+    if (const int srcUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio; videoFormat.pixelFormat->areUVPlanesInterleaved) {
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
@@ -226,8 +225,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         return;
     }
 
-    const int dstUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio;
-    if (videoFormat.pixelFormat->areUVPlanesInterleaved) {
+    if (const int dstUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio; videoFormat.pixelFormat->areUVPlanesInterleaved) {
         BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;

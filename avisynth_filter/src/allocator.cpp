@@ -42,8 +42,7 @@ auto CAviSynthFilterAllocator::Alloc() -> HRESULT {
     }
 
     if (m_lAlignment > 1) {
-        const LONG lRemainder = lAlignedSize % m_lAlignment;
-        if (lRemainder != 0) {
+        if (const LONG lRemainder = lAlignedSize % m_lAlignment; lRemainder != 0) {
             const LONG lNewSize = lAlignedSize + m_lAlignment - lRemainder;
             if (lNewSize < lAlignedSize) {
                 return E_OUTOFMEMORY;
@@ -68,12 +67,10 @@ auto CAviSynthFilterAllocator::Alloc() -> HRESULT {
         return E_OUTOFMEMORY;
     }
 
-    LPBYTE pNext = m_pBuffer;
-    CMediaSample *pSample;
-
     ASSERT(m_lAllocated == 0);
 
-    for (; m_lAllocated < m_lCount; m_lAllocated++, pNext += lAlignedSize) {
+    LPBYTE pNext = m_pBuffer;
+    for (CMediaSample *pSample; m_lAllocated < m_lCount; m_lAllocated++, pNext += lAlignedSize) {
         pSample = new CAviSynthFilterMediaSample(
             NAME("AviSynthFilter memory media sample"),
             this,

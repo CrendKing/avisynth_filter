@@ -85,8 +85,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
     HDRSideData hdrSideData;
     {
-        const ATL::CComQIPtr<IMediaSideData> inSampleSideData(inSample);
-        if (inSampleSideData != nullptr) {
+        if (const ATL::CComQIPtr<IMediaSideData> inSampleSideData(inSample); inSampleSideData != nullptr) {
             hdrSideData.ReadFrom(inSampleSideData);
 
             if (const std::optional<const BYTE *> optHdr = hdrSideData.GetHDRData()) {
@@ -106,7 +105,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, UniqueMediaTypePtr(pmtIn), hdrSideData));
+                              std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, SharedMediaTypePtr(pmtIn, MediaTypeDeleter), hdrSideData));
 
         g_env.Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i",
                   _nextSourceFrameNb, inSampleStartTime, inSampleStopTime, inSampleStopTime - inSampleStartTime, _nextSourceFrameNb);
@@ -241,6 +240,7 @@ auto FrameHandler::ResetInputProperties() -> void {
 }
 
 auto FrameHandler::ResetOutputProperties() -> void {
+    // to ensure these non-atomic properties are only modified by their sole consumer the worker thread
     ASSERT(!_outputThread.joinable() || std::this_thread::get_id() == _outputThread.get_id());
 
     _nextProcessSrcFrameNb = 0;
@@ -260,7 +260,7 @@ auto FrameHandler::PrepareForDelivery(PVideoFrame scriptFrame, ATL::CComPtr<IMed
     AM_MEDIA_TYPE *pmtOut;
     outSample->GetMediaType(&pmtOut);
 
-    if (const UniqueMediaTypePtr pmtOutPtr(pmtOut); pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
+    if (const SharedMediaTypePtr pmtOutPtr(pmtOut, MediaTypeDeleter); pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         _filter.StopStreaming();
         _filter.m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
 
@@ -366,8 +366,7 @@ auto FrameHandler::ProcessOutputSamples() -> void {
             ResetOutputProperties();
             _filter._reloadAvsSource = false;
 
-            const HRESULT hr = _filter.UpdateOutputFormat(_filter.m_pInput->CurrentMediaType());
-            if (FAILED(hr)) {
+            if (const HRESULT hr = _filter.UpdateOutputFormat(_filter.m_pInput->CurrentMediaType()); FAILED(hr)) {
                 _filter.AbortPlayback(hr);
             }
 
@@ -409,11 +408,8 @@ auto FrameHandler::ProcessOutputSamples() -> void {
                 const PVideoFrame scriptFrame = g_avs->GetMainScriptInstance().GetScriptClip()->GetFrame(_nextOutputFrameNb, g_avs->GetMainScriptInstance().GetEnv());
 
                 if (ATL::CComPtr<IMediaSample> outSample; PrepareForDelivery(scriptFrame, outSample, outputStartTime, outputStopTime)) {
-                    {
-                        const ATL::CComQIPtr<IMediaSideData> outSampleSideData(outSample);
-                        if (outSampleSideData != nullptr) {
-                            processSrcFrames[0]->hdrSideData.WriteTo(outSampleSideData);
-                        }
+                    if (const ATL::CComQIPtr<IMediaSideData> outSampleSideData(outSample); outSampleSideData != nullptr) {
+                        processSrcFrames[0]->hdrSideData.WriteTo(outSampleSideData);
                     }
 
                     const std::unique_lock filterLock(_filter.m_csFilter);

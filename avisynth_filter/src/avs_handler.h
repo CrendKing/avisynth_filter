@@ -27,7 +27,7 @@ private:
         AvsHandler &_handler;
         IScriptEnvironment *_env;
         PClip _scriptClip = nullptr;
-        VideoInfo _scriptVideoInfo;
+        VideoInfo _scriptVideoInfo = {};
         REFERENCE_TIME _scriptAvgFrameDuration = 0;
         std::string _errorString;
 
@@ -52,6 +52,7 @@ public:
     public:
         explicit CheckingScriptInstance(AvsHandler &handler);
 
+        auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
         auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
         constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type;}
     };
@@ -81,7 +82,7 @@ private:
     const char *_versionString;
 
     std::filesystem::path _scriptPath = g_env.GetAvsPath();
-    VideoInfo _sourceVideoInfo;
+    VideoInfo _sourceVideoInfo = {};
     PClip _sourceClip = new SourceClip(_sourceVideoInfo);
     PVideoFrame _sourceDrainFrame = nullptr;
     REFERENCE_TIME _sourceAvgFrameDuration = 0;

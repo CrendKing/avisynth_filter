@@ -24,8 +24,8 @@ auto Registry::ReadString(const WCHAR *valueName) const -> std::wstring {
         std::array<WCHAR, MAX_PATH> buffer;
         DWORD bufferSize = static_cast<DWORD>(buffer.size());
 
-        const LSTATUS registryStatus = RegGetValueW(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer.data(), &bufferSize);
-        if (registryStatus == ERROR_SUCCESS) {
+        if (const LSTATUS registryStatus = RegGetValueW(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer.data(), &bufferSize);
+            registryStatus == ERROR_SUCCESS) {
             ret.assign(buffer.data(), bufferSize / sizeof(WCHAR) - 1);
         }
     }

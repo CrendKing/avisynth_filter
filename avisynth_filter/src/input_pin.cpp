@@ -24,12 +24,12 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
 
     const HRESULT receiveConnectionHr = __super::ReceiveConnection(pConnector, pmt);
 
-    const std::unique_lock lock(*m_pLock);
-
     if (receiveConnectionHr == VFW_E_ALREADY_CONNECTED) {
         ASSERT(m_pAllocator != nullptr);
 
         if (CheckMediaType(static_cast<const CMediaType *>(pmt)) == S_OK) {
+            const std::unique_lock lock(*m_pLock);
+
             ALLOCATOR_PROPERTIES props, actual;
 
             CheckHr(m_pAllocator->Decommit());

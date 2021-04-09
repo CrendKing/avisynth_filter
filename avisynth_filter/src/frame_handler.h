@@ -57,7 +57,7 @@ private:
         int frameNb;
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
-        UniqueMediaTypePtr mediaTypePtr;
+        SharedMediaTypePtr mediaTypePtr;
         HDRSideData hdrSideData;
     };
 

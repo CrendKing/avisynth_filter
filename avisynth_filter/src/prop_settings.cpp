@@ -83,9 +83,8 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_EDIT_AVS_FILE) {
                 std::array<WCHAR, STR_MAX_LENGTH> buffer;
                 GetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, buffer.data(), static_cast<int>(buffer.size()));
-                const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str();
 
-                if (newValue != _configAvsPath) {
+                if (const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str(); newValue != _configAvsPath) {
                     _configAvsPath = newValue;
                     SetDirty();
                 }
