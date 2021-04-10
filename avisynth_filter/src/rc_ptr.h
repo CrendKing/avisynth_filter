@@ -10,11 +10,6 @@ namespace AvsFilter {
 template <typename T>
 class ReferenceCountPointer {
 public:
-    constexpr ReferenceCountPointer()
-        : _ptr(nullptr)
-        , _ref(0) {
-    }
-
     constexpr auto operator=(T *ptr) -> ReferenceCountPointer<T> & {
         if (_ptr != nullptr) {
             throw std::invalid_argument("already has stored pointer");
@@ -34,19 +29,19 @@ public:
     }
 
     constexpr auto AddRef() -> void {
-        InterlockedIncrement(&_ref);
+        _ref.fetch_add(1);
     }
 
     constexpr auto Release() -> void {
-        if (InterlockedDecrement(&_ref) == 0) {
+        if (_ref.fetch_add(-1) == 0) {
             std::default_delete<T>()(_ptr);
             _ptr = nullptr;
         }
     }
 
 private:
-    T *_ptr;
-    long _ref;
+    T *_ptr = nullptr;
+    std::atomic<long> _ref = 0;
 };
 
 }

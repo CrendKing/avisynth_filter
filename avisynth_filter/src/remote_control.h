@@ -12,9 +12,11 @@ class CAviSynthFilter;
 class RemoteControl {
 public:
     explicit RemoteControl(CAviSynthFilter &filter);
-    virtual ~RemoteControl();
+    ~RemoteControl();
 
     auto Start() -> void;
+    auto Stop() -> void;
+    auto IsRunning() const -> bool;
 
 private:
     static auto CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT;
@@ -25,7 +27,7 @@ private:
     auto HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *copyData) const -> LRESULT;
 
     std::thread _msgThread;
-    HWND _hWnd = nullptr;
+    std::atomic<HWND> _hWnd = nullptr;
 
     CAviSynthFilter &_filter;
 };

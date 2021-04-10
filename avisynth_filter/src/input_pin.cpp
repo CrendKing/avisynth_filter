@@ -83,8 +83,8 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
 
     _filter.TraverseFiltersInGraph();
 
-    if (_filter._remoteControl) {
-        _filter._remoteControl->Start();
+    if (g_env.IsRemoteControlEnabled()) {
+        _filter._remoteControl.Start();
     }
 
     // need reload here instead of CompleteConnect() so that switching video works
@@ -96,6 +96,7 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
 }
 
 auto CAviSynthFilterInputPin::Inactive() -> HRESULT {
+    _filter._remoteControl.Stop();
     _filter.frameHandler.StopWorkerThreads();
 
     return __super::Inactive();

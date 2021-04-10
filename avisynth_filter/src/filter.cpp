@@ -15,19 +15,16 @@ namespace AvsFilter {
 
 CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME_FULL, pUnk, CLSID_AviSynthFilter)
-    , frameHandler(*this) {
+    , frameHandler(*this)
+    , _remoteControl(*this) {
     g_env.Log(L"CAviSynthFilter(): %p", this);
-
-    if (g_env.IsRemoteControlEnabled()) {
-        _remoteControl.emplace(*this);
-    }
 }
 
 CAviSynthFilter::~CAviSynthFilter() {
     g_env.Log(L"Destroy CAviSynthFilter: %p", this);
 
-    // RemoteControl depends on AvsHandler. destroy in order
-    _remoteControl.reset();
+    ASSERT(!_remoteControl.IsRunning());
+
     g_avs.Release();
 }
 
@@ -83,7 +80,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
                 if (const Format::PixelFormat *optInputPixelFormat = GetInputPixelFormat(nextType);
                     optInputPixelFormat && std::ranges::find(_compatibleMediaTypes, optInputPixelFormat, &MediaTypePair::inputFormat) == _compatibleMediaTypes.cend()) {
                     // invoke AviSynth script with each supported input pixel format, and observe the output avs type
-                    if (!g_avs->GetCheckingScriptInstance().ReloadScript(*nextType, _remoteControl.has_value())) {
+                    if (!g_avs->GetCheckingScriptInstance().ReloadScript(*nextType, g_env.IsRemoteControlEnabled())) {
                         g_env.Log(L"Disconnect due to AvsFilterDisconnect()");
                         _disconnectFilter = true;
                         return VFW_E_TYPE_NOT_ACCEPTED;

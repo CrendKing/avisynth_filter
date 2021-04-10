@@ -20,6 +20,7 @@ public:
     auto IsInputFormatEnabled(const std::wstring &formatName) const -> bool;
     auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
     auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
+    auto SetRemoteControlEnabled(bool enabled) -> void;
     auto GetExtraSourceBuffer() const -> int { return _extraSourceBuffer; }
     auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
     auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }

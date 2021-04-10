@@ -90,6 +90,14 @@ auto Environment::SetAvsPath(const std::filesystem::path &avsPath) -> void {
     }
 }
 
+auto Environment::SetRemoteControlEnabled(bool enabled) -> void {
+    _isRemoteControlEnabled = enabled;
+
+    if (_useIni) {
+        _ini.SetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, enabled);
+    }
+}
+
 auto Environment::IsInputFormatEnabled(const std::wstring &formatName) const -> bool {
     return _enabledInputFormats.contains(formatName);
 }
@@ -143,6 +151,7 @@ auto Environment::SaveSettingsToIni() const -> void {
 
 auto Environment::SaveSettingsToRegistry() const -> void {
     _registry.WriteString(SETTING_NAME_AVS_FILE, _avsPath);
+    _registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled);
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;

@@ -75,7 +75,7 @@ private:
     auto HandleOutputFormatChange(const AM_MEDIA_TYPE &outputMediaType) -> HRESULT;
     auto TraverseFiltersInGraph() -> void;
 
-    std::optional<RemoteControl> _remoteControl;
+    RemoteControl _remoteControl;
 
     bool _disconnectFilter = false;
     std::vector<MediaTypePair> _compatibleMediaTypes;

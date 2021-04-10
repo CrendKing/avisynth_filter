@@ -33,12 +33,14 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
     _configAvsPath = g_env.GetAvsPath();
     _avsFileManagedByRC = _configAvsPath != g_avs->GetScriptPath();
     if (_avsFileManagedByRC) {
-        ShowWindow(GetDlgItem(m_Dlg, IDC_TEXT_RC_CONTROLLING), SW_SHOW);
+        ShowWindow(GetDlgItem(m_Dlg, IDC_REMOTE_CONTROL_STATUS), SW_SHOW);
     }
 
     SetDlgItemTextW(m_Dlg, IDC_EDIT_AVS_FILE, _configAvsPath.c_str());
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
+
+    CheckDlgButton(m_Dlg, IDC_ENABLE_REMOTE_CONTROL, g_env.IsRemoteControlEnabled());
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         CheckDlgButton(m_Dlg, pixelFormat.resourceId, g_env.IsInputFormatEnabled(pixelFormat.name));
@@ -58,6 +60,8 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
         MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONWARNING);
     }
     g_env.SetAvsPath(_configAvsPath);
+
+    g_env.SetRemoteControlEnabled(IsDlgButtonChecked(m_Dlg, IDC_ENABLE_REMOTE_CONTROL) == BST_CHECKED);
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         g_env.SetInputFormatEnabled(pixelFormat.name, IsDlgButtonChecked(m_Dlg, pixelFormat.resourceId) == BST_CHECKED);
@@ -110,7 +114,8 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                     SetDlgItemTextW(hwnd, IDC_EDIT_AVS_FILE, ofn.lpstrFile);
                     SetDirty();
                 }
-            } else if (eventTarget > IDC_INPUT_FORMAT_START && eventTarget < IDC_INPUT_FORMAT_END) {
+            } else if (eventTarget == IDC_ENABLE_REMOTE_CONTROL ||
+                       (eventTarget > IDC_INPUT_FORMAT_START && eventTarget < IDC_INPUT_FORMAT_END)) {
                 SetDirty();
             }
 
@@ -119,7 +124,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         break;
 
     case WM_CTLCOLORSTATIC:
-        if (GetWindowLongW(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_TEXT_RC_CONTROLLING) {
+        if (GetWindowLongW(reinterpret_cast<HWND>(lParam), GWL_ID) == IDC_REMOTE_CONTROL_STATUS) {
             const HDC hdc = reinterpret_cast<HDC>(wParam);
             SetBkMode(hdc, TRANSPARENT);
             // make the color of the text control (IDC_TEXT_RC_CONTROLLING) blue to catch attention

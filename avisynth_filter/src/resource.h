@@ -12,8 +12,10 @@
 #define IDC_BUTTON_RELOAD                  1002
 #define IDC_BUTTON_BROWSE                  1003
 #define IDC_EDIT_AVS_FILE                  1004
-#define IDC_TEXT_RC_CONTROLLING            1005
-#define IDC_SYSLINK_TITLE                  1006
+#define IDC_ENABLE_REMOTE_CONTROL          1005
+#define IDC_REMOTE_CONTROL_STATUS          1006
+#define IDC_SYSLINK_TITLE                  1007
+
 #define IDC_INPUT_FORMATS                  1100
 #define IDC_INPUT_FORMAT_8BIT              1101
 #define IDC_INPUT_FORMAT_10BIT             1102

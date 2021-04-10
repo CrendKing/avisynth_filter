@@ -17,8 +17,19 @@ RemoteControl::RemoteControl(CAviSynthFilter &filter)
 }
 
 RemoteControl::~RemoteControl() {
+    Stop();
+}
+
+auto RemoteControl::Start() -> void {
+    if (!_msgThread.joinable()) {
+        _msgThread = std::thread(&RemoteControl::Run, this);
+    }
+}
+
+auto RemoteControl::Stop() -> void {
     if (_hWnd) {
         PostMessageW(_hWnd, WM_CLOSE, 0, 0);
+        _hWnd = nullptr;
     }
 
     if (_msgThread.joinable()) {
@@ -26,10 +37,8 @@ RemoteControl::~RemoteControl() {
     }
 }
 
-auto RemoteControl::Start() -> void {
-    if (!_msgThread.joinable()) {
-        _msgThread = std::thread(&RemoteControl::Run, this);
-    }
+auto RemoteControl::IsRunning() const -> bool {
+    return _msgThread.joinable();
 }
 
 auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
@@ -94,7 +103,7 @@ auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std:
 	}
 
 	const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.c_str()) };
-	SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd), reinterpret_cast<LPARAM>(&copyData),
+	SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd.load()), reinterpret_cast<LPARAM>(&copyData),
 					    SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
 }
 
