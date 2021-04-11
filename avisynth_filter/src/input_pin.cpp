@@ -44,8 +44,6 @@ auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnect
             if (props.cBuffers > actual.cBuffers || props.cbBuffer > actual.cbBuffer) {
                 return E_FAIL;
             }
-
-            CheckHr(_filter.UpdateOutputFormat(*pmt));
         }
     }
 

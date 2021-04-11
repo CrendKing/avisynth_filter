@@ -17,7 +17,8 @@ public:
 
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
-    auto Flush(const std::function<void ()> &interim) -> void;
+    auto BeginFlush() -> void;
+    auto EndFlush() -> void;
     auto StartWorkerThread() -> void;
     auto StopWorkerThreads() -> void;
     auto GetInputBufferSize() const -> int;
@@ -58,23 +59,17 @@ private:
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
         SharedMediaTypePtr mediaTypePtr;
-        HDRSideData hdrSideData;
-    };
-
-    enum class State {
-        Normal,
-        Flushing,
-        Stopping
+        std::shared_ptr<HDRSideData> hdrSideData;
     };
 
     static auto RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
                                           int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
                                           int &currentFrameRate) -> void;
 
-    auto ResetInputProperties() -> void;
-    auto ResetOutputProperties() -> void;
-    auto PrepareForDelivery(PVideoFrame scriptFrame, ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME outputStartTime, REFERENCE_TIME outputStopTime) const -> bool;
-    auto ProcessOutputSamples() -> void;
+    auto ResetInput() -> void;
+    auto ResetOutput() -> void;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) const -> bool;
+    auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
     auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
@@ -86,8 +81,7 @@ private:
 
     std::map<int, SourceFrameInfo> _sourceFrames;
 
-    mutable std::shared_mutex _sourceFramesMutex;
-    std::shared_mutex _flushMutex;
+    mutable std::shared_mutex _mutex;
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
@@ -103,7 +97,7 @@ private:
 
     std::atomic<bool> _isFlushing;
     std::atomic<bool> _isStopping;
-    std::atomic<bool> _isOutputThreadPaused;
+    std::atomic<bool> _isWorkerThreadPaused;
 
     int _frameRateCheckpointInputSampleNb;
     REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;

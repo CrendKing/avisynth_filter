@@ -30,8 +30,6 @@ AvsHandler::ScriptInstance::ScriptInstance(AvsHandler &handler)
  * Create new AviSynth script clip with specified media type.
  */
 auto AvsHandler::ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    g_env.Log(L"ReloadAviSynthScript");
-
     StopScript();
 
     _handler._sourceVideoInfo = Format::GetVideoFormat(mediaType).videoInfo;
@@ -121,6 +119,8 @@ AvsHandler::MainScriptInstance::MainScriptInstance(AvsHandler &handler)
 }
 
 auto AvsHandler::MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+    g_env.Log(L"ReloadAviSynthScript from main instance");
+
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         _handler._sourceAvgFrameRate = static_cast<int>(llMulDiv(_handler._sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
         _handler._sourceAvgFrameDuration = llMulDiv(_handler._sourceVideoInfo.fps_denominator, UNITS, _handler._sourceVideoInfo.fps_numerator, 0);
@@ -141,6 +141,8 @@ AvsHandler::CheckingScriptInstance::CheckingScriptInstance(AvsHandler &handler)
 }
 
 auto AvsHandler::CheckingScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+    g_env.Log(L"ReloadAviSynthScript from checking instance");
+
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         StopScript();
 

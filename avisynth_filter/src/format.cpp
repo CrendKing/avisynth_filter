@@ -111,9 +111,9 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat {
              * SAR comes from info.videoInfo.width / info.videoInfo.height
              */
             ret.pixelAspectRatio = static_cast<int>(llMulDiv(static_cast<LONGLONG>(vih2->dwPictAspectRatioX) * ret.videoInfo.height,
-                                                       PAR_SCALE_FACTOR,
-                                                       static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * ret.videoInfo.width,
-                                                       0));
+                                                    PAR_SCALE_FACTOR,
+                                                    static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * ret.videoInfo.width,
+                                                    0));
         }
     }
 

@@ -59,7 +59,7 @@ public:
             return &reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat)->bmiHeader;
         }
 
-        return static_cast<BITMAPINFOHEADER *>(nullptr);
+        return nullptr;
     }
 
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType) -> VideoFormat;

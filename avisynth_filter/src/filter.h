@@ -37,6 +37,7 @@ public:
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
     auto Receive(IMediaSample *pSample) -> HRESULT override;
+    auto BeginFlush() -> HRESULT override;
     auto EndFlush() -> HRESULT override;
 
     // ISpecifyPropertyPages
@@ -53,11 +54,11 @@ public:
 
 private:
     struct MediaTypePair {
-        const SharedMediaTypePtr &inputType;
-        const Format::PixelFormat *inputFormat;
+        const SharedMediaTypePtr inputMediaType;
+        const Format::PixelFormat *inputPixelFormat;
 
-        CMediaType outputType;
-        const Format::PixelFormat *outputFormat;
+        CMediaType outputMediaType;
+        const Format::PixelFormat *outputPixelFormat;
     };
 
     static auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
@@ -71,8 +72,6 @@ private:
     static auto GetInputPixelFormat(const AM_MEDIA_TYPE *mediaType) -> const Format::PixelFormat *;
     static auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *>;
 
-    auto UpdateOutputFormat(const AM_MEDIA_TYPE &inputMediaType) -> HRESULT;
-    auto HandleOutputFormatChange(const AM_MEDIA_TYPE &outputMediaType) -> HRESULT;
     auto TraverseFiltersInGraph() -> void;
 
     RemoteControl _remoteControl;
@@ -84,7 +83,8 @@ private:
     Format::VideoFormat _inputVideoFormat;
     Format::VideoFormat _outputVideoFormat;
 
-    std::atomic<bool> _reloadAvsSource;
+    std::atomic<int> _changeOutputMediaType = false;
+    std::atomic<bool> _reloadAvsSource = false;
 
     std::filesystem::path _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;
