@@ -2,8 +2,11 @@
 
 #pragma once
 
+#include "git_hash.h"
+
 
 namespace AvsFilter {
+
 
 #define STRINGIZE_HELPER(x)             #x
 #define STRINGIZE(x)                    STRINGIZE_HELPER(x)
@@ -16,6 +19,6 @@ namespace AvsFilter {
 #define FILTER_VERSION_MAJOR            0
 #define FILTER_VERSION_MINOR            9
 #define FILTER_VERSION_PATCH            4
-#define FILTER_VERSION_STRING           STRINGIZE(FILTER_VERSION_MAJOR) "." STRINGIZE(FILTER_VERSION_MINOR) "." STRINGIZE(FILTER_VERSION_PATCH)
+#define FILTER_VERSION_STRING           STRINGIZE(FILTER_VERSION_MAJOR) "." STRINGIZE(FILTER_VERSION_MINOR) "." STRINGIZE(FILTER_VERSION_PATCH) " # " STRINGIZE(AVSF_GIT_HASH)
 
 }

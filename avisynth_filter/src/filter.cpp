@@ -315,8 +315,9 @@ auto CAviSynthFilter::BeginFlush() -> HRESULT {
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
-        g_avs->GetMainScriptInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
-        frameHandler.EndFlush();
+        frameHandler.EndFlush([this]() -> void {
+            g_avs->GetMainScriptInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
+        });
     }
 
     return __super::EndFlush();

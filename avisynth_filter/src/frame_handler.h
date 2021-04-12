@@ -4,7 +4,6 @@
 
 #include "pch.h"
 #include "hdr.h"
-#include "util.h"
 
 
 namespace AvsFilter {
@@ -18,7 +17,7 @@ public:
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
     auto BeginFlush() -> void;
-    auto EndFlush() -> void;
+    auto EndFlush(const std::function<void ()> &interim) -> void;
     auto StartWorkerThread() -> void;
     auto StopWorkerThreads() -> void;
     auto GetInputBufferSize() const -> int;
@@ -58,7 +57,6 @@ private:
         int frameNb;
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
-        SharedMediaTypePtr mediaTypePtr;
         std::shared_ptr<HDRSideData> hdrSideData;
     };
 
@@ -85,7 +83,6 @@ private:
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
-    std::condition_variable_any _flushMasterCv;
 
     std::atomic<int> _maxRequestedFrameNb;
     int _nextSourceFrameNb;
@@ -93,11 +90,11 @@ private:
     int _nextOutputFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
 
-    std::thread _outputThread;
+    std::thread _workerThread;
 
     std::atomic<bool> _isFlushing;
-    std::atomic<bool> _isStopping;
-    std::atomic<bool> _isWorkerThreadPaused;
+    std::atomic<bool> _isStoppingWorker;
+    std::atomic<bool> _isWorkerLatched;
 
     int _frameRateCheckpointInputSampleNb;
     REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;

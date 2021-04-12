@@ -11,8 +11,8 @@ SourceClip::SourceClip(const VideoInfo &videoInfo)
     : _videoInfo(videoInfo) {
 }
 
-auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
-    _frameHandler = frameHandler;
+auto SourceClip::SetFrameHandler(FrameHandler &frameHandler) -> void {
+    _frameHandler = &frameHandler;
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {

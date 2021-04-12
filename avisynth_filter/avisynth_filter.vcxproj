@@ -70,6 +70,9 @@
     <TargetExt>.ax</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup>
+    <PreBuildEvent>
+      <Command>FOR /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define AVSF_GIT_HASH %%H > "$(ProjectDir)src\git_hash.h"</Command>
+    </PreBuildEvent>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

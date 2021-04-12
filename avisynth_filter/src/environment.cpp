@@ -146,16 +146,16 @@ auto Environment::LoadSettingsFromRegistry() -> void {
 }
 
 auto Environment::SaveSettingsToIni() const -> void {
-    (void) _ini.SaveFile(_iniPath.c_str());
+    static_cast<void>(_ini.SaveFile(_iniPath.c_str()));
 }
 
 auto Environment::SaveSettingsToRegistry() const -> void {
-    _registry.WriteString(SETTING_NAME_AVS_FILE, _avsPath);
-    _registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled);
+    static_cast<void>(_registry.WriteString(SETTING_NAME_AVS_FILE, _avsPath));
+    static_cast<void>(_registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled));
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
-        _registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(pixelFormat.name));
+        static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(pixelFormat.name)));
     }
 }
 

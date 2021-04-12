@@ -58,9 +58,9 @@ public:
     };
 
     AvsHandler();
-    virtual ~AvsHandler();
+    ~AvsHandler();
 
-    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
+    auto LinkFrameHandler(FrameHandler &frameHandler) const -> void;
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }

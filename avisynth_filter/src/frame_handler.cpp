@@ -20,7 +20,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     HRESULT hr;
     REFERENCE_TIME inSampleStartTime;
     REFERENCE_TIME inSampleStopTime = 0;
-    AM_MEDIA_TYPE *pmtIn = nullptr;
+    REFERENCE_TIME lastSampleStartTime;
 
     {
         std::shared_lock sharedLock(_mutex);
@@ -44,40 +44,34 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
             return false;
         });
 
-        if (_isFlushing) {
-            return S_OK;
-        }
-
-        hr = inSample->GetMediaType(&pmtIn);
-        if (FAILED(hr)) {
-            return hr;
-        }
-        if (hr != S_OK) {
-            pmtIn = nullptr;
-        }
-
-        if (inSample->GetTime(&inSampleStartTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
-            // for samples without start time, always treat as fixed frame rate
-            inSampleStartTime = _nextSourceFrameNb * g_avs->GetSourceAvgFrameDuration();
-        }
-
-        // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-        if (!_sourceFrames.empty() && inSampleStartTime <= _sourceFrames.crbegin()->second.startTime) {
-            g_env.Log(L"Rejecting source sample due to start time not going forward: %10lli", inSampleStartTime);
-            return VFW_E_SAMPLE_REJECTED;
-        }
-
-        if (_nextSourceFrameNb == 0) {
-            _frameRateCheckpointInputSampleStartTime = inSampleStartTime;
-        }
-
-        RefreshInputFrameRates(_nextSourceFrameNb, inSampleStartTime);
+        lastSampleStartTime = _sourceFrames.empty() ? 0 : _sourceFrames.crbegin()->second.startTime;
     }
+
+    if (_isFlushing) {
+        return S_FALSE;
+    }
+
+    if (inSample->GetTime(&inSampleStartTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
+        // for samples without start time, always treat as fixed frame rate
+        inSampleStartTime = _nextSourceFrameNb * g_avs->GetSourceAvgFrameDuration();
+    }
+
+    // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
+    if (inSampleStartTime < lastSampleStartTime) {
+        g_env.Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inSampleStartTime, lastSampleStartTime);
+        return S_FALSE;
+    }
+
+    if (_nextSourceFrameNb == 0) {
+        _frameRateCheckpointInputSampleStartTime = inSampleStartTime;
+    }
+
+    RefreshInputFrameRates(_nextSourceFrameNb, inSampleStartTime);
 
     BYTE *sampleBuffer;
     hr = inSample->GetPointer(&sampleBuffer);
     if (FAILED(hr)) {
-        return hr;
+        return S_FALSE;
     }
 
     const PVideoFrame avsFrame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer, g_avs->GetMainScriptInstance().GetEnv());
@@ -104,7 +98,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, SharedMediaTypePtr(pmtIn, MediaTypeDeleter), hdrSideData));
+                              std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, hdrSideData));
 
         g_env.Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i",
                   _nextSourceFrameNb, inSampleStartTime, inSampleStopTime, inSampleStopTime - inSampleStartTime, _nextSourceFrameNb);
@@ -151,13 +145,17 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 }
 
 auto FrameHandler::BeginFlush() -> void {
+    g_env.Log(L"FrameHandler start BeginFlush()");
+
     _isFlushing = true;
 
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
+
+    g_env.Log(L"FrameHandler finish BeginFlush()");
 }
 
-auto FrameHandler::EndFlush() -> void {
+auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     g_env.Log(L"FrameHandler start EndFlush()");
 
     /*
@@ -166,11 +164,19 @@ auto FrameHandler::EndFlush() -> void {
      * when called by former, we need to synchronize with the worker thread
      * when called by latter, current thread ID should be same as the worker thread, and no need for sync
      */
-    if (std::this_thread::get_id() != _outputThread.get_id()) {
-        _isWorkerThreadPaused.wait(false);
+    if (std::this_thread::get_id() != _workerThread.get_id()) {
+        _isWorkerLatched.wait(false);
     }
 
-    ResetInput();
+    if (interim) {
+        interim();
+    }
+
+    {
+        const std::unique_lock uniqueLock(_mutex);
+
+        ResetInput();
+    }
 
     _isFlushing = false;
     _isFlushing.notify_all();
@@ -179,20 +185,28 @@ auto FrameHandler::EndFlush() -> void {
 }
 
 auto FrameHandler::StartWorkerThread() -> void {
-    _isStopping = false;
-    _isFlushing = false;
-
-    _outputThread = std::thread(&FrameHandler::WorkerProc, this);
+    _workerThread = std::thread(&FrameHandler::WorkerProc, this);
 }
 
 auto FrameHandler::StopWorkerThreads() -> void {
-    _isStopping = true;
-
-    if (_outputThread.joinable()) {
-        _outputThread.join();
-    }
+    _isStoppingWorker = true;
 
     BeginFlush();
+    EndFlush([]() -> void {
+        /*
+         * Stop the Avs script after worker threads are paused and before flushing is done so that no new frame request (GetSourceFrame()) happens.
+         * And since _isFlushing is still on, existing frame request should also just drain instead of block.
+         *
+         * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
+         */
+        g_avs->GetMainScriptInstance().StopScript();
+    });
+
+    if (_workerThread.joinable()) {
+        _workerThread.join();
+    }
+
+    _isStoppingWorker = false;
 }
 
 auto FrameHandler::GetInputBufferSize() const -> int {
@@ -202,8 +216,6 @@ auto FrameHandler::GetInputBufferSize() const -> int {
 }
 
 auto FrameHandler::ResetInput() -> void {
-    const std::unique_lock uniqueLock(_mutex);
-
     _sourceFrames.clear();
 
     _maxRequestedFrameNb = 0;
@@ -215,7 +227,7 @@ auto FrameHandler::ResetInput() -> void {
 
 auto FrameHandler::ResetOutput() -> void {
     // to ensure these non-atomic properties are only modified by their sole consumer the worker thread
-    ASSERT(!_outputThread.joinable() || std::this_thread::get_id() == _outputThread.get_id());
+    ASSERT(std::this_thread::get_id() == _workerThread.get_id());
 
     _nextProcessSrcFrameNb = 0;
     _nextOutputFrameNb = 0;
@@ -272,20 +284,24 @@ auto FrameHandler::WorkerProc() -> void {
     g_env.Log(L"Start output worker thread");
 
 #ifdef _DEBUG
-    SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Output Worker");
+    SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Worker");
 #endif
 
     ResetOutput();
+    _isWorkerLatched = false;
 
-    while (!_isStopping) {
+    while (true) {
         if (_isFlushing) {
-            _isWorkerThreadPaused = true;
-            _isWorkerThreadPaused.notify_one();
-
+            _isWorkerLatched = true;
+            _isWorkerLatched.notify_one();
             _isFlushing.wait(true);
 
+            if (_isStoppingWorker) {
+                break;
+            }
+
             ResetOutput();
-            _isWorkerThreadPaused = false;
+            _isWorkerLatched = false;
         }
 
         if (_filter._changeOutputMediaType || _filter._reloadAvsSource) {
@@ -298,8 +314,9 @@ auto FrameHandler::WorkerProc() -> void {
                 _filter.StopStreaming();
 
                 BeginFlush();
-                g_avs->GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-                EndFlush();
+                EndFlush([this]() -> void {
+                    g_avs->GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+                });
 
                 ResetOutput();
 
@@ -341,7 +358,7 @@ auto FrameHandler::WorkerProc() -> void {
                 }
 
                 // use map.lower_bound() in case the exact frame is removed by the script
-                std::map<int, SourceFrameInfo>::const_iterator iter = _sourceFrames.lower_bound(_nextProcessSrcFrameNb);
+                auto iter = _sourceFrames.lower_bound(_nextProcessSrcFrameNb);
 
                 for (int i = 0; i < NUM_SRC_FRAMES_PER_PROCESSING; ++i) {
                     if (iter == _sourceFrames.cend()) {
@@ -356,14 +373,10 @@ auto FrameHandler::WorkerProc() -> void {
                     _nextOutputFrameStartTime = processSrcFrames[0].startTime;
                     _frameRateCheckpointOutputFrameStartTime = processSrcFrames[0].startTime;
                 }
-
                 _nextProcessSrcFrameNb += 1;
+
                 return true;
             });
-
-            if (_isFlushing) {
-                continue;
-            }
         }
 
         /*
@@ -374,7 +387,7 @@ auto FrameHandler::WorkerProc() -> void {
         const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(processSrcFrames[2].startTime - processSrcFrames[1].startTime, g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
         const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(processSrcFrames[1].startTime - processSrcFrames[0].startTime, g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
 
-        while (true) {
+        while (!_isFlushing) {
             const REFERENCE_TIME outFrameDurationBeforeEdgePortion = min(processSrcFrames[1].startTime - _nextOutputFrameStartTime, outputFrameDurationBeforeEdge);
             if (outFrameDurationBeforeEdgePortion <= 0) {
                 g_env.Log(L"Frame time drift: %10lli", -outFrameDurationBeforeEdgePortion);
@@ -409,6 +422,8 @@ auto FrameHandler::WorkerProc() -> void {
         GarbageCollect(processSrcFrames[0].frameNb);
     }
 
+    _isWorkerLatched = true;
+
     g_env.Log(L"Stop output worker thread");
 }
 
@@ -419,8 +434,9 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
     // search for all previous frames in case of some source frames are never used
     // this could happen by plugins that decrease frame rate
-    while (!_sourceFrames.empty() && _sourceFrames.begin()->first <= srcFrameNb) {
-        _sourceFrames.erase(_sourceFrames.begin());
+    const auto sourceEnd = _sourceFrames.cend();
+    for (auto iter = _sourceFrames.begin(); iter != sourceEnd && iter->first <= srcFrameNb; iter = _sourceFrames.begin()) {
+        _sourceFrames.erase(iter);
     }
 
     _addInputSampleCv.notify_one();

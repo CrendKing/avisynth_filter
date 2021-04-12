@@ -230,7 +230,7 @@ AvsHandler::~AvsHandler() {
     FreeLibrary(_avsModule);
 }
 
-auto AvsHandler::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
+auto AvsHandler::LinkFrameHandler(FrameHandler &frameHandler) const -> void {
     GetSourceClip()->SetFrameHandler(frameHandler);
 }
 

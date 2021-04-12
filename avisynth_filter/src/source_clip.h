@@ -14,7 +14,7 @@ class SourceClip : public IClip {
 public:
     explicit SourceClip(const VideoInfo &videoInfo);
 
-    auto SetFrameHandler(FrameHandler *frameHandler) -> void;
+    auto SetFrameHandler(FrameHandler &frameHandler) -> void;
 
     auto __stdcall GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame override;
     constexpr auto __stdcall GetParity(int frameNb) -> bool override { return false; }
