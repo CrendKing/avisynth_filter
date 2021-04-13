@@ -71,7 +71,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <PreBuildEvent>
-      <Command>FOR /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH %%H > "$(ProjectDir)src\git_hash.h"</Command>
+      <Command>for /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH "%%H"> "$(ProjectDir)src\git_hash.h"</Command>
     </PreBuildEvent>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>

@@ -7,6 +7,16 @@ namespace AvsFilter {
 
 #include "git_hash.h"
 
+#ifdef _DEBUG
+#define FILTER_VARIANT                  " [Debug]"
+#else
+#define FILTER_VARIANT
+#endif // DEBUG
+
+#ifndef FILTER_GIT_HASH
+#define FILTER_GIT_HASH "?"
+#endif
+
 #define STRINGIZE_HELPER(x)             #x
 #define STRINGIZE(x)                    STRINGIZE_HELPER(x)
 #define WIDEN_HELPER(s)                 L ## s
@@ -18,6 +28,6 @@ namespace AvsFilter {
 #define FILTER_VERSION_MAJOR            0
 #define FILTER_VERSION_MINOR            9
 #define FILTER_VERSION_PATCH            4
-#define FILTER_VERSION_STRING           STRINGIZE(FILTER_VERSION_MAJOR) "." STRINGIZE(FILTER_VERSION_MINOR) "." STRINGIZE(FILTER_VERSION_PATCH) " # " STRINGIZE(FILTER_GIT_HASH)
+#define FILTER_VERSION_STRING           STRINGIZE(FILTER_VERSION_MAJOR) "." STRINGIZE(FILTER_VERSION_MINOR) "." STRINGIZE(FILTER_VERSION_PATCH) FILTER_VARIANT " # " FILTER_GIT_HASH
 
 }
