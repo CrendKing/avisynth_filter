@@ -50,7 +50,7 @@ public:
     constexpr auto GetVideoFilterNames() const -> const std::vector<std::wstring> & { return _videoFilterNames; }
     auto GetAvsState() const -> AvsState;
 
-    FrameHandler frameHandler;
+    FrameHandler frameHandler = FrameHandler(*this);
 
 private:
     struct MediaTypePair {
@@ -74,7 +74,7 @@ private:
 
     auto TraverseFiltersInGraph() -> void;
 
-    RemoteControl _remoteControl;
+    RemoteControl _remoteControl = RemoteControl(*this);
 
     bool _disconnectFilter = false;
     std::vector<MediaTypePair> _compatibleMediaTypes;

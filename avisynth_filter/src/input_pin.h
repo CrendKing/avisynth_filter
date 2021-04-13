@@ -21,7 +21,7 @@ public:
     auto Inactive() -> HRESULT override;
 
 private:
-    CAviSynthFilter &_filter;
+    CAviSynthFilter &_filter = reinterpret_cast<CAviSynthFilter &>(*m_pFilter);
 };
 
 }

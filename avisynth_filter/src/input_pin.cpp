@@ -15,8 +15,7 @@ CAviSynthFilterInputPin::CAviSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
                                                  __inout CTransformFilter *pTransformFilter,
                                                  __inout HRESULT *phr,
                                                  __in_opt LPCWSTR pName)
-    : CTransformInputPin(pObjectName, pTransformFilter, phr, pName)
-    , _filter(reinterpret_cast<CAviSynthFilter &>(*m_pFilter)) {
+    : CTransformInputPin(pObjectName, pTransformFilter, phr, pName) {
 }
 
 auto STDMETHODCALLTYPE CAviSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {

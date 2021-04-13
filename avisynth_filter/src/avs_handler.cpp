@@ -21,9 +21,25 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
     return AVSValue();
 }
 
+auto AvsHandler::ScriptInstance::StopScript() -> void {
+    if (_scriptClip != nullptr) {
+        _scriptClip = nullptr;
+    }
+}
+
 AvsHandler::ScriptInstance::ScriptInstance(AvsHandler &handler)
     : _handler(handler)
     , _env(handler.CreateEnv()) {
+}
+
+AvsHandler::ScriptInstance::~ScriptInstance() {
+    _scriptClip = nullptr;
+    _env->DeleteScriptEnvironment();
+}
+
+auto AvsHandler::ScriptInstance::Init() const -> void {
+    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _handler._sourceClip);
+    _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 }
 
 /**
@@ -96,22 +112,6 @@ auto AvsHandler::ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bo
     _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
 
     return true;
-}
-
-auto AvsHandler::ScriptInstance::StopScript() -> void {
-    if (_scriptClip != nullptr) {
-        _scriptClip = nullptr;
-    }
-}
-
-auto AvsHandler::ScriptInstance::Init() const -> void {
-    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _handler._sourceClip);
-    _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
-}
-
-auto AvsHandler::ScriptInstance::Destroy() -> void {
-    _scriptClip = nullptr;
-    _env->DeleteScriptEnvironment();
 }
 
 AvsHandler::MainScriptInstance::MainScriptInstance(AvsHandler &handler)
@@ -204,17 +204,13 @@ auto AvsHandler::CheckingScriptInstance::GenerateMediaType(const Format::PixelFo
     return newMediaType;
 }
 
-AvsHandler::AvsHandler()
-    : _avsModule(LoadAvsModule())
-    , _mainScriptInstance(*this)
-    , _checkingScriptInstance(*this)
-    , _versionString(_mainScriptInstance._env->Invoke("Eval", AVSValue("VersionString()")).AsString()) {
+AvsHandler::AvsHandler() {
     g_env.Log(L"AvsHandler()");
     g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
     g_env.Log(L"AviSynth version: %S", GetVersionString());
 
-    _mainScriptInstance.Init();
-    _checkingScriptInstance.Init();
+    _mainScriptInstance->Init();
+    _checkingScriptInstance->Init();
 }
 
 AvsHandler::~AvsHandler() {
@@ -223,8 +219,8 @@ AvsHandler::~AvsHandler() {
     _sourceClip = nullptr;
     _sourceDrainFrame = nullptr;
 
-    _checkingScriptInstance.Destroy();
-    _mainScriptInstance.Destroy();
+    _checkingScriptInstance.release();
+    _mainScriptInstance.release();
 
     AVS_linkage = nullptr;
     FreeLibrary(_avsModule);
@@ -236,6 +232,14 @@ auto AvsHandler::LinkFrameHandler(FrameHandler &frameHandler) const -> void {
 
 auto AvsHandler::SetScriptPath(const std::filesystem::path &scriptPath) -> void {
     _scriptPath = scriptPath;
+}
+
+auto AvsHandler::GetMainScriptInstance() const -> MainScriptInstance & {
+    return *_mainScriptInstance;
+}
+
+auto AvsHandler::GetCheckingScriptInstance() const -> CheckingScriptInstance & {
+    return *_checkingScriptInstance;
 }
 
 auto AvsHandler::LoadAvsModule() const -> HMODULE {
@@ -264,7 +268,9 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
         ShowFatalError(L"CreateScriptEnvironment() returns nullptr");
     }
 
-    AVS_linkage = env->GetAVSLinkage();
+    if (AVS_linkage == nullptr) {
+        AVS_linkage = env->GetAVSLinkage();
+    }
 
     return env;
 }
