@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 ### Environment
-- Filter version: [e.g. v0.7.0]
+- Filter version: [e.g. `v0.7.0 # 51f7597`, you can find this in the settings page]
 - AviSynth+ version: [e.g. v3.6.1]
 - OS: [e.g. Windows 10 x64]
 - Video player: [e.g. MPC-BE x64 1.5.5.5433, MPC-HC x86 1.9.7]
