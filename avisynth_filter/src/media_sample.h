@@ -14,6 +14,8 @@ class CAviSynthFilterMediaSample
 public:
     CAviSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator *pAllocator, HRESULT *phr, LPBYTE pBuffer, LONG length);
 
+    DISABLE_COPYING(CAviSynthFilterMediaSample)
+
     // IUnknown
     auto STDMETHODCALLTYPE QueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT override;
     auto STDMETHODCALLTYPE AddRef() -> ULONG override;

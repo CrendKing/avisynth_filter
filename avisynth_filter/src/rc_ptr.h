@@ -10,6 +10,8 @@ namespace AvsFilter {
 template <typename T>
 class ReferenceCountPointer {
 public:
+    CTOR_WITHOUT_COPYING(ReferenceCountPointer)
+
     constexpr auto operator=(T *ptr) -> ReferenceCountPointer<T> & {
         if (_ptr != nullptr) {
             throw std::invalid_argument("already has stored pointer");

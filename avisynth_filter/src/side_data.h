@@ -6,6 +6,7 @@
 
 #include "pch.h"
 
+
 namespace AvsFilter {
 
 // https://github.com/Nevcairiel/LAVFilters/blob/master/common/includes/IMediaSideData.h

@@ -12,6 +12,8 @@ class CAvsFilterPropSettings : public CBasePropertyPage {
 public:
     CAvsFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr);
 
+    DISABLE_COPYING(CAvsFilterPropSettings)
+
 private:
     auto OnConnect(IUnknown *pUnk) -> HRESULT override;
     auto OnDisconnect() -> HRESULT override;

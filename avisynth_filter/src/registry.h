@@ -9,7 +9,9 @@ namespace AvsFilter {
 
 class Registry {
 public:
-    virtual ~Registry();
+    ~Registry();
+
+    CTOR_WITHOUT_COPYING(Registry)
 
     auto Initialize() -> bool;
     constexpr explicit operator bool() const { return _registryKey != nullptr; }

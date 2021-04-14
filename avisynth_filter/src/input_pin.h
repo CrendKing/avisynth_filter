@@ -15,6 +15,8 @@ public:
                             __inout HRESULT *phr,
                             __in_opt LPCWSTR pName);
 
+    DISABLE_COPYING(CAviSynthFilterInputPin)
+
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
     auto STDMETHODCALLTYPE GetAllocator(__deref_out IMemAllocator **ppAllocator) -> HRESULT override;
     auto Active() -> HRESULT override;

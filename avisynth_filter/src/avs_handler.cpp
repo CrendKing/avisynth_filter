@@ -37,7 +37,7 @@ AvsHandler::ScriptInstance::~ScriptInstance() {
     _env->DeleteScriptEnvironment();
 }
 
-auto AvsHandler::ScriptInstance::Init() const -> void {
+auto AvsHandler::ScriptInstance::Initialize() const -> void {
     _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _handler._sourceClip);
     _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 }
@@ -209,8 +209,8 @@ AvsHandler::AvsHandler() {
     g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
     g_env.Log(L"AviSynth version: %S", GetVersionString());
 
-    _mainScriptInstance->Init();
-    _checkingScriptInstance->Init();
+    _mainScriptInstance->Initialize();
+    _checkingScriptInstance->Initialize();
 }
 
 AvsHandler::~AvsHandler() {

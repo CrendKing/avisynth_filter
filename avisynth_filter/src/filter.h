@@ -24,6 +24,8 @@ public:
     CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr);
     ~CAviSynthFilter() override;
 
+    DISABLE_COPYING(CAviSynthFilter)
+
     DECLARE_IUNKNOWN
 
     auto STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT override;

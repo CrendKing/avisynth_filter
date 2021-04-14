@@ -5,12 +5,15 @@
 #include "pch.h"
 #include "registry.h"
 
+
 namespace AvsFilter {
 
 class Environment {
 public:
     Environment();
-    virtual ~Environment();
+    ~Environment();
+
+    DISABLE_COPYING(Environment)
 
     auto SaveSettings() const -> void;
     auto Log(const WCHAR *format, ...) -> void;

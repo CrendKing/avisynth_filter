@@ -14,7 +14,7 @@ namespace AvsFilter {
 #endif // DEBUG
 
 #ifndef FILTER_GIT_HASH
-#define FILTER_GIT_HASH "?"
+#define FILTER_GIT_HASH                 "?"
 #endif
 
 #define STRINGIZE_HELPER(x)             #x

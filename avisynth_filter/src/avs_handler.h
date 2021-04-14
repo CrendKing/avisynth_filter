@@ -24,7 +24,9 @@ private:
         explicit ScriptInstance(AvsHandler &handler);
         virtual ~ScriptInstance();
 
-        auto Init() const -> void;
+        DISABLE_COPYING(ScriptInstance)
+
+        auto Initialize() const -> void;
         virtual auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
 
         AvsHandler &_handler;
@@ -40,6 +42,8 @@ public:
     public:
         explicit MainScriptInstance(AvsHandler &handler);
 
+        DISABLE_COPYING(MainScriptInstance)
+
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
         constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
         constexpr auto GetScriptClip() -> PClip & { return _scriptClip; }
@@ -51,6 +55,8 @@ public:
     public:
         explicit CheckingScriptInstance(AvsHandler &handler);
 
+        DISABLE_COPYING(CheckingScriptInstance)
+
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
         auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
         constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type;}
@@ -58,6 +64,8 @@ public:
 
     AvsHandler();
     ~AvsHandler();
+
+    DISABLE_COPYING(AvsHandler)
 
     auto LinkFrameHandler(FrameHandler &frameHandler) const -> void;
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;

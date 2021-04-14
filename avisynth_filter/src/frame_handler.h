@@ -14,6 +14,8 @@ class FrameHandler {
 public:
     explicit FrameHandler(CAviSynthFilter &filter);
 
+    DISABLE_COPYING(FrameHandler)
+
     auto AddInputSample(IMediaSample *inSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
     auto BeginFlush() -> void;
