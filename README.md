@@ -56,7 +56,7 @@ This function takes no argument.
 
 ## API and Remote Control
 
-Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated by importing **activate_remote_control.reg** file.
+Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated from settings (requires restarting the video player after changing).
 
 For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
 

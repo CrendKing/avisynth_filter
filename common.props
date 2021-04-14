@@ -70,7 +70,7 @@
       <AdditionalLibraryDirectories Condition="'$(Platform)' == 'Win32'">$(MSBuildThisFileDirectory)\dep_directshow\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalLibraryDirectories Condition="'$(Platform)' == 'x64'">$(MSBuildThisFileDirectory)\dep_directshow\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EnableCOMDATFolding Condition="'$(Configuration)' == 'Release'">true</EnableCOMDATFolding>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <OptimizeReferences Condition="'$(Configuration)' == 'Release'">true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
     </Link>

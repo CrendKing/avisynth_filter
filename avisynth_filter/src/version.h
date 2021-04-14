@@ -26,8 +26,8 @@ namespace AvsFilter {
 #define FILTER_NAME_WIDE                WIDEN(FILTER_NAME_BASE)
 #define FILTER_FILENAME_BASE            "avisynth_filter"
 #define FILTER_VERSION_MAJOR            0
-#define FILTER_VERSION_MINOR            9
-#define FILTER_VERSION_PATCH            4
+#define FILTER_VERSION_MINOR            10
+#define FILTER_VERSION_PATCH            0
 #define FILTER_VERSION_STRING           STRINGIZE(FILTER_VERSION_MAJOR) "." STRINGIZE(FILTER_VERSION_MINOR) "." STRINGIZE(FILTER_VERSION_PATCH) FILTER_VARIANT " # " FILTER_GIT_HASH
 
 }
