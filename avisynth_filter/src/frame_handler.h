@@ -94,9 +94,9 @@ private:
 
     std::thread _workerThread;
 
-    std::atomic<bool> _isFlushing;
-    std::atomic<bool> _isStoppingWorker;
-    std::atomic<bool> _isWorkerLatched;
+    std::atomic<bool> _isFlushing = false;
+    std::atomic<bool> _isStoppingWorker = false;
+    std::atomic<bool> _isWorkerLatched = false;
 
     int _frameRateCheckpointInputSampleNb;
     REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;

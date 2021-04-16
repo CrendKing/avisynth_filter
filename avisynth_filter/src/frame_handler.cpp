@@ -18,39 +18,37 @@ FrameHandler::FrameHandler(CAviSynthFilter &filter)
 
 auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     HRESULT hr;
-    REFERENCE_TIME inSampleStartTime;
-    REFERENCE_TIME inSampleStopTime = 0;
-    REFERENCE_TIME lastSampleStartTime;
 
-    {
-        std::shared_lock sharedLock(_mutex);
-        const MultiLock multiLock(_filter.m_csReceive, sharedLock);
+    std::shared_lock sharedLock(_mutex);
+    const MultiLock multiLock(_filter.m_csReceive, sharedLock);
 
-        _addInputSampleCv.wait(multiLock, [this]() -> bool {
-            if (_isFlushing) {
-                return true;
-            }
+    _addInputSampleCv.wait(multiLock, [this]() -> bool {
+        if (_isFlushing) {
+            return true;
+        }
 
-            // at least 3 source frames are needed in queue for stop time calculation
-            if (_sourceFrames.size() < NUM_SRC_FRAMES_PER_PROCESSING) {
-                return true;
-            }
+        // at least 3 source frames are needed in queue for stop time calculation
+        if (_sourceFrames.size() < NUM_SRC_FRAMES_PER_PROCESSING) {
+            return true;
+        }
 
-            // headroom added to make sure at least some frames are in input queue for frame time calculation
-            if (_nextSourceFrameNb <= _maxRequestedFrameNb + g_env.GetExtraSourceBuffer()) {
-                return true;
-            }
+        // headroom added to make sure at least some frames are in input queue for frame time calculation
+        if (_nextSourceFrameNb <= _maxRequestedFrameNb + g_env.GetExtraSourceBuffer()) {
+            return true;
+        }
 
-            return false;
-        });
+        return false;
+    });
 
-        lastSampleStartTime = _sourceFrames.empty() ? 0 : _sourceFrames.crbegin()->second.startTime;
-    }
+    const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? 0 : _sourceFrames.crbegin()->second.startTime;
+    sharedLock.unlock();
 
     if (_isFlushing) {
         return S_FALSE;
     }
 
+    REFERENCE_TIME inSampleStartTime;
+    REFERENCE_TIME inSampleStopTime = 0;
     if (inSample->GetTime(&inSampleStartTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
         inSampleStartTime = _nextSourceFrameNb * g_avs->GetSourceAvgFrameDuration();
@@ -147,6 +145,10 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 auto FrameHandler::BeginFlush() -> void {
     g_env.Log(L"FrameHandler start BeginFlush()");
 
+    // make sure there is at most one flush session active at any time
+    // or else assumptions such as "_isFlushing stays true until end of EndFlush()" will no longer hold
+
+    _isFlushing.wait(true);
     _isFlushing = true;
 
     _addInputSampleCv.notify_all();
@@ -332,6 +334,10 @@ auto FrameHandler::WorkerProc() -> void {
                  * after ReceiveConnection(), the next output sample should carry the new output media type, which is handled in PrepareOutputSample()
                  */
 
+                if (_isFlushing) {
+                    return false;
+                }
+
                 return SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
             });
 
@@ -423,6 +429,7 @@ auto FrameHandler::WorkerProc() -> void {
     }
 
     _isWorkerLatched = true;
+    _isWorkerLatched.notify_one();
 
     g_env.Log(L"Stop output worker thread");
 }

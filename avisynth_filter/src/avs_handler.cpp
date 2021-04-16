@@ -23,6 +23,7 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 auto AvsHandler::ScriptInstance::StopScript() -> void {
     if (_scriptClip != nullptr) {
+        g_env.Log(L"Release script clip: %p", _scriptClip);
         _scriptClip = nullptr;
     }
 }
@@ -108,6 +109,7 @@ auto AvsHandler::ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bo
     }
 
     _scriptClip = invokeResult.AsClip();
+    g_env.Log(L"New script clip: %p", _scriptClip);
     _scriptVideoInfo = _scriptClip->GetVideoInfo();
     _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
 
