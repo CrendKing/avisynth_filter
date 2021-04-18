@@ -134,6 +134,10 @@ auto AvsHandler::MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType
     return false;
 }
 
+auto AvsHandler::MainScriptInstance::GetFrame(int frameNb) const -> PVideoFrame {
+    return _scriptClip->GetFrame(frameNb, _env);
+}
+
 auto AvsHandler::MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
     return _errorString.empty() ? std::nullopt : std::make_optional(_errorString);
 }

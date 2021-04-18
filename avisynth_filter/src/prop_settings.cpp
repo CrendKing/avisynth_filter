@@ -150,7 +150,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
     return CBasePropertyPage::OnReceiveMessage(hwnd, uMsg, wParam, lParam);
 }
 
-void CAvsFilterPropSettings::SetDirty() {
+auto CAvsFilterPropSettings::SetDirty() -> void {
     m_bDirty = TRUE;
     if (m_pPageSite) {
         m_pPageSite->OnStatusChange(PROPPAGESTATUS_DIRTY);

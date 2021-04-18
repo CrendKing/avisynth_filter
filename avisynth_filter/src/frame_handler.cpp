@@ -272,7 +272,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
     } else {
         try {
             // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
-            const PVideoFrame scriptFrame = g_avs->GetMainScriptInstance().GetScriptClip()->GetFrame(_nextOutputFrameNb, g_avs->GetMainScriptInstance().GetEnv());
+            const PVideoFrame scriptFrame = g_avs->GetMainScriptInstance().GetFrame(_nextOutputFrameNb);
             Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, g_avs->GetMainScriptInstance().GetEnv());
         } catch (AvisynthError) {
             return false;

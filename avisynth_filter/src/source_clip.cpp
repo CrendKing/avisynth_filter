@@ -16,19 +16,7 @@ auto SourceClip::SetFrameHandler(FrameHandler &frameHandler) -> void {
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    if (_frameHandler == nullptr) {
-        return g_avs->GetSourceDrainFrame();
-    }
-
-    return _frameHandler->GetSourceFrame(frameNb, env);
-}
-
-auto SourceClip::SetCacheHints(int cachehints, int frame_range) -> int {
-    if (cachehints == CACHE_GET_MTMODE) {
-        return MT_NICE_FILTER;
-    }
-
-    return 0;
+    return _frameHandler == nullptr ? g_avs->GetSourceDrainFrame() : _frameHandler->GetSourceFrame(frameNb, env);
 }
 
 }

@@ -6,7 +6,6 @@
 #include "constants.h"
 #include "environment.h"
 #include "input_pin.h"
-#include "version.h"
 
 
 namespace AvsFilter {
@@ -350,15 +349,14 @@ auto CAviSynthFilter::GetAvsState() const -> AvsState {
         return AvsState::Error;
     }
 
-    if (m_State == State_Stopped || !g_avs->GetMainScriptInstance().GetScriptClip()) {
-        return AvsState::Stopped;
-    }
-
-    if (m_State == State_Running) {
+    switch (m_State) {
+    case State_Running:
         return AvsState::Running;
+    case State_Stopped:
+        return AvsState::Stopped;
+    default:
+        return AvsState::Paused;
     }
-
-    return AvsState::Paused;
 }
 
 /**

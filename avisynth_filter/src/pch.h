@@ -28,9 +28,9 @@
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
 #include <atlbase.h>
 
+#include <cguid.h>
 #include <commctrl.h>
 #include <commdlg.h>
-#include <cguid.h>
 #include <immintrin.h>
 #include <initguid.h>
 #include <intrin.h>

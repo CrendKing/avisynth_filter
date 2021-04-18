@@ -117,7 +117,7 @@ auto STDAPICALLTYPE DllUnregisterServer() -> HRESULT {
     return AMovieDllRegisterServer2(FALSE);
 }
 
-extern "C" DECLSPEC_NOINLINE BOOL WINAPI DllEntryPoint(HINSTANCE hInstance, ULONG ulReason, __inout_opt LPVOID pv);
+extern "C" DECLSPEC_NOINLINE auto WINAPI DllEntryPoint(HINSTANCE hInstance, ULONG ulReason, __inout_opt LPVOID pv) -> BOOL;
 
 auto APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) -> BOOL {
     return DllEntryPoint(hModule, ul_reason_for_call, lpReserved);

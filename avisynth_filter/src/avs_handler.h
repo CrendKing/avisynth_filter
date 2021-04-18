@@ -45,8 +45,8 @@ public:
         DISABLE_COPYING(MainScriptInstance)
 
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
+        auto GetFrame(int frameNb) const -> PVideoFrame;
         constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
-        constexpr auto GetScriptClip() -> PClip & { return _scriptClip; }
         constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration;}
         auto GetErrorString() const -> std::optional<std::string>;
     };

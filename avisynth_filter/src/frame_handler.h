@@ -37,7 +37,7 @@ private:
         }
 
         MultiLock(const MultiLock &) = delete;
-        MultiLock &operator=(const MultiLock &) = delete;
+        auto operator=(const MultiLock &) -> MultiLock & = delete;
 
         constexpr auto lock() const noexcept -> void {
             std::apply([](Mutexes&... mutexes) {
