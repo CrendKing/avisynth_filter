@@ -2,11 +2,7 @@
 
 #include "pch.h"
 #include "prop_settings.h"
-#include "api.h"
-#include "avs_handler.h"
 #include "constants.h"
-#include "environment.h"
-#include "version.h"
 
 
 namespace AvsFilter {

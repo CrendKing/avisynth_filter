@@ -2,10 +2,7 @@
 
 #include "pch.h"
 #include "prop_status.h"
-#include "api.h"
 #include "constants.h"
-#include "format.h"
-#include "util.h"
 
 
 namespace AvsFilter {

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "pch.h"
 #include "environment.h"
 #include "format.h"
 #include "frame_handler.h"

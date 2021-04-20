@@ -4,8 +4,6 @@
 #include "avs_handler.h"
 #include "api.h"
 #include "constants.h"
-#include "environment.h"
-#include "util.h"
 
 
 const AVS_Linkage *AVS_linkage = nullptr;

@@ -2,12 +2,8 @@
 
 #include "pch.h"
 #include "remote_control.h"
-#include "api.h"
-#include "avs_handler.h"
 #include "constants.h"
-#include "environment.h"
 #include "filter.h"
-#include "util.h"
 
 
 namespace AvsFilter {

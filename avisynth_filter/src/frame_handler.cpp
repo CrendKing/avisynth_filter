@@ -2,11 +2,8 @@
 
 #include "pch.h"
 #include "frame_handler.h"
-#include "avs_handler.h"
 #include "constants.h"
-#include "environment.h"
 #include "filter.h"
-#include "format.h"
 
 
 namespace AvsFilter {

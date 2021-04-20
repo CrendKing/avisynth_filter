@@ -5,7 +5,6 @@
 #include "api.h"
 #include "constants.h"
 #include "environment.h"
-#include "resource.h"
 
 
 namespace AvsFilter {

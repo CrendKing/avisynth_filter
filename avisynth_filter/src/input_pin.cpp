@@ -3,8 +3,6 @@
 #include "pch.h"
 #include "input_pin.h"
 #include "allocator.h"
-#include "avs_handler.h"
-#include "format.h"
 
 
 namespace AvsFilter {

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "pch.h"
 #include "input_pin.h"
 
 

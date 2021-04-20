@@ -8,7 +8,6 @@
 #include "format.h"
 #include "frame_handler.h"
 #include "remote_control.h"
-#include "util.h"
 
 
 namespace AvsFilter {
