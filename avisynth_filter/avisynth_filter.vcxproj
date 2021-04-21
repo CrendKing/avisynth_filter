@@ -15,7 +15,7 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\prop_settings.h" />
     <ClInclude Include="src\prop_status.h" />
-    <ClInclude Include="src\rc_ptr.h" />
+    <ClInclude Include="src\rc_singleton.h" />
     <ClInclude Include="src\registry.h" />
     <ClInclude Include="src\remote_control.h" />
     <ClInclude Include="src\resource.h" />
@@ -71,7 +71,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <PreBuildEvent>
-      <Command>for /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH "%%H"> "$(ProjectDir)src\git_hash.h"</Command>
+      <Command>for /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH "%%H"&gt; "$(ProjectDir)src\git_hash.h"</Command>
     </PreBuildEvent>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>

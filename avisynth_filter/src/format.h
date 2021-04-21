@@ -40,7 +40,7 @@ public:
         auto GetCodecFourCC() const -> DWORD;
     };
 
-    static auto Init() -> void;
+    static auto Initialize() -> void;
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat *;
     static constexpr auto LookupAvsType(int avsType) {
         return PIXEL_FORMATS | std::views::filter([avsType](const PixelFormat &pixelFormat) -> bool {
@@ -82,12 +82,12 @@ public:
      *
      * size of data taken by the intrinsics per interation - 2
      */
-    static size_t INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
-    static size_t OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+    static inline size_t INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+    static inline size_t OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
 
 private:
-    static const int _MASK_PERMUTE_V256;
-    static size_t _vectorSize;
+    static constexpr const int _MASK_PERMUTE_V256 = 0b11011000;
+    static inline size_t _vectorSize;
 
     // intrinsicType: 1 = SSSE3, 2 = AVX
     // PixelComponentSize is the size for each YUV pixel component (8-bit, 10-bit, 16-bit, etc.)

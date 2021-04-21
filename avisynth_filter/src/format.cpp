@@ -39,12 +39,6 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS = {
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
 
-size_t Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
-size_t Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
-
-const int Format::_MASK_PERMUTE_V256 = 0b11011000;
-size_t Format::_vectorSize;
-
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
     return pixelFormat!= other.pixelFormat
         || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
@@ -59,10 +53,10 @@ auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
     return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
 }
 
-auto Format::Init() -> void {
-    if (g_env.IsSupportAVXx()) {
+auto Format::Initialize() -> void {
+    if (Environment::GetInstance().IsSupportAVXx()) {
         _vectorSize = sizeof(__m256i);
-    } else if (g_env.IsSupportSSSE3()) {
+    } else if (Environment::GetInstance().IsSupportSSSE3()) {
         _vectorSize = sizeof(__m128i);
     } else {
         _vectorSize = 0;
@@ -165,17 +159,17 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
 
         decltype(Deinterleave<0, 0>)* DeinterleaveFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
-            if (g_env.IsSupportAVXx()) {
+            if (Environment::GetInstance().IsSupportAVXx()) {
                 DeinterleaveFunc = Deinterleave<2, 1>;
-            } else if (g_env.IsSupportSSSE3()) {
+            } else if (Environment::GetInstance().IsSupportSSSE3()) {
                 DeinterleaveFunc = Deinterleave<1, 1>;
             } else {
                 DeinterleaveFunc = Deinterleave<0, 1>;
             }
         } else {
-            if (g_env.IsSupportAVXx()) {
+            if (Environment::GetInstance().IsSupportAVXx()) {
                 DeinterleaveFunc = Deinterleave<2, 2>;
-            } else if (g_env.IsSupportSSSE3()) {
+            } else if (Environment::GetInstance().IsSupportSSSE3()) {
                 DeinterleaveFunc = Deinterleave<1, 2>;
             } else {
                 DeinterleaveFunc = Deinterleave<0, 2>;
@@ -231,13 +225,13 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
 
         decltype(Interleave<0, 0>)* InterleaveFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
-            if (g_env.IsSupportAVXx()) {
+            if (Environment::GetInstance().IsSupportAVXx()) {
                 InterleaveFunc = Interleave<2, 1>;
             } else {
                 InterleaveFunc = Interleave<1, 1>;
             }
         } else {
-            if (g_env.IsSupportAVXx()) {
+            if (Environment::GetInstance().IsSupportAVXx()) {
                 InterleaveFunc = Interleave<2, 2>;
             } else {
                 InterleaveFunc = Interleave<1, 2>;

@@ -21,7 +21,7 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 auto AvsHandler::ScriptInstance::StopScript() -> void {
     if (_scriptClip != nullptr) {
-        g_env.Log(L"Release script clip: %p", _scriptClip);
+        Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
         _scriptClip = nullptr;
     }
 }
@@ -107,7 +107,7 @@ auto AvsHandler::ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bo
     }
 
     _scriptClip = invokeResult.AsClip();
-    g_env.Log(L"New script clip: %p", _scriptClip);
+    Environment::GetInstance().Log(L"New script clip: %p", _scriptClip);
     _scriptVideoInfo = _scriptClip->GetVideoInfo();
     _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fps_denominator, UNITS, _scriptVideoInfo.fps_numerator, 0);
 
@@ -123,7 +123,7 @@ AvsHandler::MainScriptInstance::~MainScriptInstance() {
 }
 
 auto AvsHandler::MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    g_env.Log(L"ReloadAviSynthScript from main instance");
+    Environment::GetInstance().Log(L"ReloadAviSynthScript from main instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         _sourceDrainFrame = _env->NewVideoFrame(_handler._sourceVideoInfo);
@@ -149,7 +149,7 @@ AvsHandler::CheckingScriptInstance::CheckingScriptInstance(AvsHandler &handler)
 }
 
 auto AvsHandler::CheckingScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    g_env.Log(L"ReloadAviSynthScript from checking instance");
+    Environment::GetInstance().Log(L"ReloadAviSynthScript from checking instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         StopScript();
@@ -213,21 +213,21 @@ auto AvsHandler::CheckingScriptInstance::GenerateMediaType(const Format::PixelFo
 }
 
 AvsHandler::AvsHandler() {
-    g_env.Log(L"AvsHandler()");
-    g_env.Log(L"Filter version: %S", FILTER_VERSION_STRING);
-    g_env.Log(L"AviSynth version: %S", GetVersionString());
+    Environment::GetInstance().Log(L"AvsHandler()");
+    Environment::GetInstance().Log(L"Filter version: %S", FILTER_VERSION_STRING);
+    Environment::GetInstance().Log(L"AviSynth version: %S", GetVersionString());
 
     _mainScriptInstance->Initialize();
     _checkingScriptInstance->Initialize();
 }
 
 AvsHandler::~AvsHandler() {
-    g_env.Log(L"~AvsHandler()");
+    Environment::GetInstance().Log(L"~AvsHandler()");
 
     _sourceClip = nullptr;
 
-    _checkingScriptInstance.release();
-    _mainScriptInstance.release();
+    _checkingScriptInstance.reset();
+    _mainScriptInstance.reset();
 
     AVS_linkage = nullptr;
     FreeLibrary(_avsModule);
@@ -264,7 +264,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
     CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
     We don't use any new feature from IScriptEnvironment2 anyway.
     */
-    using CreateScriptEnvironment_Func = auto (AVSC_CC *) (int version) -> IScriptEnvironment *;
+    using CreateScriptEnvironment_Func = auto (AVSC_CC *)(int version) -> IScriptEnvironment *;
     const CreateScriptEnvironment_Func CreateScriptEnvironment = reinterpret_cast<CreateScriptEnvironment_Func>(GetProcAddress(_avsModule, "CreateScriptEnvironment"));
     if (CreateScriptEnvironment == nullptr) {
         ShowFatalError(L"Unable to locate CreateScriptEnvironment()");
@@ -283,7 +283,7 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
 }
 
 [[ noreturn ]] auto AvsHandler::ShowFatalError(const WCHAR *errorMessage) const -> void {
-    g_env.Log(L"%s", errorMessage);
+    Environment::GetInstance().Log(L"%s", errorMessage);
     MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
     FreeLibrary(_avsModule);
     throw;

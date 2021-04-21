@@ -26,8 +26,8 @@ auto CAvsFilterPropSettings::OnDisconnect() -> HRESULT {
 }
 
 auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
-    _configAvsPath = g_env.GetAvsPath();
-    _avsFileManagedByRC = _configAvsPath != g_avs->GetScriptPath();
+    _configAvsPath = Environment::GetInstance().GetAvsPath();
+    _avsFileManagedByRC = _configAvsPath != AvsHandler::GetInstance().GetScriptPath();
     if (_avsFileManagedByRC) {
         ShowWindow(GetDlgItem(m_Dlg, IDC_REMOTE_CONTROL_STATUS), SW_SHOW);
     }
@@ -36,13 +36,13 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
     EnableWindow(GetDlgItem(m_Dlg, IDC_BUTTON_RELOAD), !_avsFileManagedByRC && _filter->GetAvsState() != AvsState::Stopped);
 
-    CheckDlgButton(m_Dlg, IDC_ENABLE_REMOTE_CONTROL, g_env.IsRemoteControlEnabled());
+    CheckDlgButton(m_Dlg, IDC_ENABLE_REMOTE_CONTROL, Environment::GetInstance().IsRemoteControlEnabled());
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
-        CheckDlgButton(m_Dlg, pixelFormat.resourceId, g_env.IsInputFormatEnabled(pixelFormat.name));
+        CheckDlgButton(m_Dlg, pixelFormat.resourceId, Environment::GetInstance().IsInputFormatEnabled(pixelFormat.name));
     }
 
-    const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a>\nwith " + g_avs->GetVersionString();
+    const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a>\nwith " + AvsHandler::GetInstance().GetVersionString();
     SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
@@ -55,15 +55,15 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
     if (!_configAvsPath.empty() && !std::filesystem::exists(_configAvsPath)) {
         MessageBoxW(m_hwnd, L"Configured AviSynth script file does not exist.", FILTER_NAME_FULL, MB_OK | MB_ICONWARNING);
     }
-    g_env.SetAvsPath(_configAvsPath);
+    Environment::GetInstance().SetAvsPath(_configAvsPath);
 
-    g_env.SetRemoteControlEnabled(IsDlgButtonChecked(m_Dlg, IDC_ENABLE_REMOTE_CONTROL) == BST_CHECKED);
+    Environment::GetInstance().SetRemoteControlEnabled(IsDlgButtonChecked(m_Dlg, IDC_ENABLE_REMOTE_CONTROL) == BST_CHECKED);
 
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
-        g_env.SetInputFormatEnabled(pixelFormat.name, IsDlgButtonChecked(m_Dlg, pixelFormat.resourceId) == BST_CHECKED);
+        Environment::GetInstance().SetInputFormatEnabled(pixelFormat.name, IsDlgButtonChecked(m_Dlg, pixelFormat.resourceId) == BST_CHECKED);
     }
 
-    g_env.SaveSettings();
+    Environment::GetInstance().SaveSettings();
 
     if (_avsFileManagedByRC) {
         // TODO: put message in string table when going multi-language
@@ -95,7 +95,7 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_BUTTON_EDIT && !_configAvsPath.empty()) {
                 ShellExecuteW(hwnd, L"edit", _configAvsPath.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
-                _filter->ReloadAvsFile(g_avs->GetScriptPath());
+                _filter->ReloadAvsFile(AvsHandler::GetInstance().GetScriptPath());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
                 std::array<WCHAR, MAX_PATH> szFile = {};
 

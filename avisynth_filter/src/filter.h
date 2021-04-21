@@ -63,15 +63,18 @@ private:
     };
 
     static auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
-        g_avs->GetCheckingScriptInstance().ReloadScript(*mtIn, true);
-        return Format::LookupAvsType(g_avs->GetCheckingScriptInstance().GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
-            return g_avs->GetCheckingScriptInstance().GenerateMediaType(pixelFormat, mtIn);
+        AvsHandler::GetInstance().GetCheckingScriptInstance().ReloadScript(*mtIn, true);
+        return Format::LookupAvsType(AvsHandler::GetInstance().GetCheckingScriptInstance().GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
+            return AvsHandler::GetInstance().GetCheckingScriptInstance().GenerateMediaType(pixelFormat, mtIn);
         });
     }
 
     static auto MediaTypeToPixelFormat(const AM_MEDIA_TYPE *mediaType) -> const Format::PixelFormat *;
     static auto GetInputPixelFormat(const AM_MEDIA_TYPE *mediaType) -> const Format::PixelFormat *;
     static auto FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optional<IPin *>;
+
+    // not thread-safe, but filter instances should be only created by the Graph thread
+    static inline int _numFilterInstances = 0;
 
     auto TraverseFiltersInGraph() -> void;
 

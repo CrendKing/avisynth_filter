@@ -73,13 +73,13 @@ auto RemoteControl::Run() -> void {
 	}
 	SetWindowLongPtrW(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	g_env.Log(L"Remote control started");
+	Environment::GetInstance().Log(L"Remote control started");
 
 	MSG msg;
 	BOOL msgRet;
 	while ((msgRet = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
 		if (msgRet == -1) {
-			g_env.Log(L"Remote control message loop error: %5lu", GetLastError());
+			Environment::GetInstance().Log(L"Remote control message loop error: %5lu", GetLastError());
 			break;
 		}
 
@@ -90,7 +90,7 @@ auto RemoteControl::Run() -> void {
 	DestroyWindow(_hWnd);
 	UnregisterClassA(API_WND_CLASS_NAME, wc.hInstance);
 
-	g_env.Log(L"Remote control stopped");
+	Environment::GetInstance().Log(L"Remote control stopped");
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {
@@ -154,7 +154,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.GetInputFormat().hdrLuminance;
 
     case API_MSG_GET_SOURCE_AVG_FPS:
-        return g_avs->GetMainScriptInstance().GetSourceAvgFrameRate();
+        return AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameRate();
 
     case API_MSG_GET_CURRENT_OUTPUT_FPS:
         return _filter.frameHandler.GetCurrentOutputFrameRate();
@@ -163,7 +163,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return static_cast<LRESULT>(_filter.GetAvsState());
 
     case API_MSG_GET_AVS_ERROR:
-        if (const std::optional<std::string> optAvsError = g_avs->GetMainScriptInstance().GetErrorString()) {
+        if (const std::optional<std::string> optAvsError = AvsHandler::GetInstance().GetMainScriptInstance().GetErrorString()) {
             SendString(hSenderWindow, copyData->dwData, *optAvsError);
             return TRUE;
         }
@@ -171,7 +171,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return FALSE;
 
     case API_MSG_GET_AVS_SOURCE_FILE: {
-        const std::filesystem::path &effectiveAvsPath = g_avs->GetScriptPath();
+        const std::filesystem::path &effectiveAvsPath = AvsHandler::GetInstance().GetScriptPath();
         if (effectiveAvsPath.empty()) {
             return FALSE;
         }

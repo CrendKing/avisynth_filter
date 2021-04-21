@@ -5,13 +5,13 @@
 #include "environment.h"
 #include "format.h"
 #include "frame_handler.h"
-#include "rc_ptr.h"
+#include "rc_singleton.h"
 #include "source_clip.h"
 
 
 namespace AvsFilter {
 
-class AvsHandler {
+class AvsHandler : public RefCountedSingleton<AvsHandler> {
 private:
     class ScriptInstance {
     public:
@@ -92,11 +92,9 @@ private:
     std::unique_ptr<CheckingScriptInstance> _checkingScriptInstance = std::make_unique<CheckingScriptInstance>(*this);
     const char *_versionString = _mainScriptInstance->GetEnv()->Invoke("Eval", AVSValue("VersionString()")).AsString();
 
-    std::filesystem::path _scriptPath = g_env.GetAvsPath();
+    std::filesystem::path _scriptPath = Environment::GetInstance().GetAvsPath();
     VideoInfo _sourceVideoInfo = {};
     PClip _sourceClip = new SourceClip(_sourceVideoInfo);
 };
-
-extern ReferenceCountPointer<AvsHandler> g_avs;
 
 }

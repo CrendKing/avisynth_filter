@@ -78,13 +78,13 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
 
     _filter.TraverseFiltersInGraph();
 
-    if (g_env.IsRemoteControlEnabled()) {
+    if (Environment::GetInstance().IsRemoteControlEnabled()) {
         _filter._remoteControl.Start();
     }
 
     // need reload here instead of CompleteConnect() so that switching video works
-    g_avs->GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-    g_avs->LinkFrameHandler(_filter.frameHandler);
+    AvsHandler::GetInstance().GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    AvsHandler::GetInstance().LinkFrameHandler(_filter.frameHandler);
     _filter.frameHandler.StartWorkerThread();
 
     return __super::Active();

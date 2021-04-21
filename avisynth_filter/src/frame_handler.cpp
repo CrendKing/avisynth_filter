@@ -30,7 +30,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         }
 
         // headroom added to make sure at least some frames are in input queue for frame time calculation
-        if (_nextSourceFrameNb <= _maxRequestedFrameNb + g_env.GetExtraSourceBuffer()) {
+        if (_nextSourceFrameNb <= _maxRequestedFrameNb + Environment::GetInstance().GetExtraSourceBuffer()) {
             return true;
         }
 
@@ -48,12 +48,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     REFERENCE_TIME inSampleStopTime = 0;
     if (inSample->GetTime(&inSampleStartTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
-        inSampleStartTime = _nextSourceFrameNb * g_avs->GetMainScriptInstance().GetSourceAvgFrameDuration();
+        inSampleStartTime = _nextSourceFrameNb * AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameDuration();
     }
 
     // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
     if (inSampleStartTime < lastSampleStartTime) {
-        g_env.Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inSampleStartTime, lastSampleStartTime);
+        Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inSampleStartTime, lastSampleStartTime);
         return S_FALSE;
     }
 
@@ -69,7 +69,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return S_FALSE;
     }
 
-    const PVideoFrame avsFrame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer, g_avs->GetMainScriptInstance().GetEnv());
+    const PVideoFrame avsFrame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer, AvsHandler::GetInstance().GetMainScriptInstance().GetEnv());
 
     std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
     {
@@ -95,7 +95,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
                               std::forward_as_tuple(_nextSourceFrameNb),
                               std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, hdrSideData));
 
-        g_env.Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i",
+        Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i",
                   _nextSourceFrameNb, inSampleStartTime, inSampleStopTime, inSampleStopTime - inSampleStartTime, _nextSourceFrameNb);
 
         _nextSourceFrameNb += 1;
@@ -106,7 +106,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    g_env.Log(L"Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedLock(_mutex);
 
@@ -128,19 +128,19 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
 
     if (_isFlushing || iter->second.avsFrame == nullptr) {
         if (_isFlushing) {
-            g_env.Log(L"Drain for frame %6i", frameNb);
+            Environment::GetInstance().Log(L"Drain for frame %6i", frameNb);
         } else {
-            g_env.Log(L"Bad frame %6i", frameNb);
+            Environment::GetInstance().Log(L"Bad frame %6i", frameNb);
         }
 
-        return g_avs->GetMainScriptInstance().GetSourceDrainFrame();
+        return AvsHandler::GetInstance().GetMainScriptInstance().GetSourceDrainFrame();
     }
 
     return iter->second.avsFrame;
 }
 
 auto FrameHandler::BeginFlush() -> void {
-    g_env.Log(L"FrameHandler start BeginFlush()");
+    Environment::GetInstance().Log(L"FrameHandler start BeginFlush()");
 
     // make sure there is at most one flush session active at any time
     // or else assumptions such as "_isFlushing stays true until end of EndFlush()" will no longer hold
@@ -151,11 +151,11 @@ auto FrameHandler::BeginFlush() -> void {
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
 
-    g_env.Log(L"FrameHandler finish BeginFlush()");
+    Environment::GetInstance().Log(L"FrameHandler finish BeginFlush()");
 }
 
 auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
-    g_env.Log(L"FrameHandler start EndFlush()");
+    Environment::GetInstance().Log(L"FrameHandler start EndFlush()");
 
     /*
      * EndFlush() can be called by either the application or the worker thread
@@ -180,7 +180,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     _isFlushing = false;
     _isFlushing.notify_all();
 
-    g_env.Log(L"FrameHandler finish EndFlush()");
+    Environment::GetInstance().Log(L"FrameHandler finish EndFlush()");
 }
 
 auto FrameHandler::StartWorkerThread() -> void {
@@ -198,7 +198,7 @@ auto FrameHandler::StopWorkerThreads() -> void {
          *
          * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
          */
-        g_avs->GetMainScriptInstance().StopScript();
+        AvsHandler::GetInstance().GetMainScriptInstance().StopScript();
     });
 
     if (_workerThread.joinable()) {
@@ -250,7 +250,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
         _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut);
         sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
 
-        g_env.Log(L"New output format: name %s, width %5li, height %5li",
+        Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
                   _filter._outputVideoFormat.pixelFormat->name.c_str(), _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
 
         DeleteMediaType(pmtOut);
@@ -269,8 +269,8 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
     } else {
         try {
             // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
-            const PVideoFrame scriptFrame = g_avs->GetMainScriptInstance().GetFrame(_nextOutputFrameNb);
-            Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, g_avs->GetMainScriptInstance().GetEnv());
+            const PVideoFrame scriptFrame = AvsHandler::GetInstance().GetMainScriptInstance().GetFrame(_nextOutputFrameNb);
+            Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, AvsHandler::GetInstance().GetMainScriptInstance().GetEnv());
         } catch (AvisynthError) {
             return false;
         }
@@ -280,7 +280,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
 }
 
 auto FrameHandler::WorkerProc() -> void {
-    g_env.Log(L"Start output worker thread");
+    Environment::GetInstance().Log(L"Start output worker thread");
 
 #ifdef _DEBUG
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Worker");
@@ -304,7 +304,7 @@ auto FrameHandler::WorkerProc() -> void {
         }
 
         if (_filter._changeOutputMediaType || _filter._reloadAvsSource) {
-            g_env.Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
+            Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
                       _filter._inputVideoFormat.pixelFormat->name.c_str(), _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
 
             {
@@ -314,7 +314,7 @@ auto FrameHandler::WorkerProc() -> void {
 
                 BeginFlush();
                 EndFlush([this]() -> void {
-                    g_avs->GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+                    AvsHandler::GetInstance().GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
                 });
 
                 ResetOutput();
@@ -339,7 +339,7 @@ auto FrameHandler::WorkerProc() -> void {
             });
 
             if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {
-                g_env.Log(L"Downstream does not accept any of the new output media types. Terminate");
+                Environment::GetInstance().Log(L"Downstream does not accept any of the new output media types. Terminate");
                 _filter.AbortPlayback(VFW_E_TYPE_NOT_ACCEPTED);
                 break;
             }
@@ -388,18 +388,18 @@ auto FrameHandler::WorkerProc() -> void {
          */
 
         const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(processSrcFrames[2].startTime - processSrcFrames[1].startTime,
-                                                                     g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(),
-                                                                     g_avs->GetMainScriptInstance().GetSourceAvgFrameDuration(),
+                                                                     AvsHandler::GetInstance().GetMainScriptInstance().GetScriptAvgFrameDuration(),
+                                                                     AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameDuration(),
                                                                      0);
         const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(processSrcFrames[1].startTime - processSrcFrames[0].startTime,
-                                                                      g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(),
-                                                                      g_avs->GetMainScriptInstance().GetSourceAvgFrameDuration(),
+                                                                      AvsHandler::GetInstance().GetMainScriptInstance().GetScriptAvgFrameDuration(),
+                                                                      AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameDuration(),
                                                                       0);
 
         while (!_isFlushing) {
             const REFERENCE_TIME outFrameDurationBeforeEdgePortion = min(processSrcFrames[1].startTime - _nextOutputFrameStartTime, outputFrameDurationBeforeEdge);
             if (outFrameDurationBeforeEdgePortion <= 0) {
-                g_env.Log(L"Frame time drift: %10lli", -outFrameDurationBeforeEdgePortion);
+                Environment::GetInstance().Log(L"Frame time drift: %10lli", -outFrameDurationBeforeEdgePortion);
                 break;
             }
             const REFERENCE_TIME outFrameDurationAfterEdgePortion = outputFrameDurationAfterEdge - llMulDiv(outputFrameDurationAfterEdge, outFrameDurationBeforeEdgePortion, outputFrameDurationBeforeEdge, 0);
@@ -411,7 +411,7 @@ auto FrameHandler::WorkerProc() -> void {
             }
             _nextOutputFrameStartTime = outputStopTime;
 
-            g_env.Log(L"Processing output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
+            Environment::GetInstance().Log(L"Processing output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
                       _nextOutputFrameNb, processSrcFrames[0].frameNb, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
 
             RefreshOutputFrameRates(_nextOutputFrameNb, outputStartTime);
@@ -422,7 +422,7 @@ auto FrameHandler::WorkerProc() -> void {
                 }
 
                 _filter.m_pOutput->Deliver(outputSample);
-                g_env.Log(L"Delivered frame %6i", _nextOutputFrameNb);
+                Environment::GetInstance().Log(L"Delivered frame %6i", _nextOutputFrameNb);
             }
 
             _nextOutputFrameNb += 1;
@@ -434,7 +434,7 @@ auto FrameHandler::WorkerProc() -> void {
     _isWorkerLatched = true;
     _isWorkerLatched.notify_one();
 
-    g_env.Log(L"Stop output worker thread");
+    Environment::GetInstance().Log(L"Stop output worker thread");
 }
 
 auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
@@ -451,7 +451,7 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
     _addInputSampleCv.notify_one();
 
-    g_env.Log(L"GarbageCollect frames until %6i pre size %3zu post size %3zu", srcFrameNb, dbgPreSize, _sourceFrames.size());
+    Environment::GetInstance().Log(L"GarbageCollect frames until %6i pre size %3zu post size %3zu", srcFrameNb, dbgPreSize, _sourceFrames.size());
 }
 
 auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,

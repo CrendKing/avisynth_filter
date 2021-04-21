@@ -75,7 +75,7 @@
     <ClInclude Include="src\avs_handler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\rc_ptr.h">
+    <ClInclude Include="src\rc_singleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\hdr.h">

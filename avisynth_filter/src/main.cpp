@@ -12,9 +12,6 @@
 
 namespace AvsFilter {
 
-Environment g_env;
-ReferenceCountPointer<AvsHandler> g_avs;
-
 static REGFILTERPINS REG_PINS[] = {
     { .strName = nullptr                              // pin name (obsolete)
     , .bRendered = FALSE                              // is pin rendered?
@@ -49,14 +46,6 @@ static constexpr AMOVIESETUP_FILTER REG_FILTER = {
 
 template <typename T>
 static constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    if constexpr (std::is_same_v<T, CAviSynthFilter>) {
-        if (!g_avs) {
-            g_avs = new AvsHandler();
-        } else {
-            g_avs.AddRef();
-        }
-    }
-
     CUnknown *newInstance = new T(pUnk, phr);
     if (newInstance == nullptr) {
         *phr = E_OUTOFMEMORY;
@@ -78,7 +67,9 @@ static auto RegisterFilter() -> HRESULT {
 
     const HRESULT hr = AMovieDllRegisterServer2(TRUE);
     if (FAILED(hr)) {
-        g_env.Log(L"Registeration failed: %li", hr);
+        Environment::Create();
+        Environment::GetInstance().Log(L"Registeration failed: %li", hr);
+        Environment::Destroy();
     }
 
     return hr;

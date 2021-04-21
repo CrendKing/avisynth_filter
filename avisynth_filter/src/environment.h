@@ -2,12 +2,13 @@
 
 #pragma once
 
+#include "rc_singleton.h"
 #include "registry.h"
 
 
 namespace AvsFilter {
 
-class Environment {
+class Environment : public RefCountedSingleton<Environment> {
 public:
     Environment();
     ~Environment();
@@ -53,7 +54,5 @@ private:
     bool _isSupportAVXx = false;
     bool _isSupportSSSE3 = false;
 };
-
-extern Environment g_env;
 
 }

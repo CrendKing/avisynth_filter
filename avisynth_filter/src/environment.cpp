@@ -46,7 +46,6 @@ Environment::Environment()
     }
 
     DetectCPUID();
-    Format::Init();
 }
 
 Environment::~Environment() {
