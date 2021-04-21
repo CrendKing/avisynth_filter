@@ -97,9 +97,9 @@ auto CAvsFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
                 _filter->ReloadAvsFile(g_avs->GetScriptPath());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
-                std::array<WCHAR, MAX_PATH> szFile {};
+                std::array<WCHAR, MAX_PATH> szFile = {};
 
-                OPENFILENAMEW ofn {};
+                OPENFILENAMEW ofn = {};
                 ofn.lStructSize = sizeof(OPENFILENAME);
                 ofn.lpstrFile = szFile.data();
                 ofn.nMaxFile = static_cast<DWORD>(szFile.size());

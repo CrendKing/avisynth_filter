@@ -32,7 +32,7 @@ AvsHandler::ScriptInstance::ScriptInstance(AvsHandler &handler)
 }
 
 AvsHandler::ScriptInstance::~ScriptInstance() {
-    _scriptClip = nullptr;
+    StopScript();
     _env->DeleteScriptEnvironment();
 }
 
@@ -118,13 +118,17 @@ AvsHandler::MainScriptInstance::MainScriptInstance(AvsHandler &handler)
     : ScriptInstance(handler) {
 }
 
+AvsHandler::MainScriptInstance::~MainScriptInstance() {
+    _sourceDrainFrame = nullptr;
+}
+
 auto AvsHandler::MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     g_env.Log(L"ReloadAviSynthScript from main instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
-        _handler._sourceAvgFrameRate = static_cast<int>(llMulDiv(_handler._sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
-        _handler._sourceAvgFrameDuration = llMulDiv(_handler._sourceVideoInfo.fps_denominator, UNITS, _handler._sourceVideoInfo.fps_numerator, 0);
-        _handler._sourceDrainFrame = _env->NewVideoFrame(_handler._sourceVideoInfo);
+        _sourceDrainFrame = _env->NewVideoFrame(_handler._sourceVideoInfo);
+        _sourceAvgFrameRate = static_cast<int>(llMulDiv(_handler._sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
+        _sourceAvgFrameDuration = llMulDiv(_handler._sourceVideoInfo.fps_denominator, UNITS, _handler._sourceVideoInfo.fps_numerator, 0);
 
         return true;
     }
@@ -221,7 +225,6 @@ AvsHandler::~AvsHandler() {
     g_env.Log(L"~AvsHandler()");
 
     _sourceClip = nullptr;
-    _sourceDrainFrame = nullptr;
 
     _checkingScriptInstance.release();
     _mainScriptInstance.release();

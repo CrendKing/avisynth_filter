@@ -48,7 +48,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
     REFERENCE_TIME inSampleStopTime = 0;
     if (inSample->GetTime(&inSampleStartTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
-        inSampleStartTime = _nextSourceFrameNb * g_avs->GetSourceAvgFrameDuration();
+        inSampleStartTime = _nextSourceFrameNb * g_avs->GetMainScriptInstance().GetSourceAvgFrameDuration();
     }
 
     // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
@@ -133,7 +133,7 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
             g_env.Log(L"Bad frame %6i", frameNb);
         }
 
-        return g_avs->GetSourceDrainFrame();
+        return g_avs->GetMainScriptInstance().GetSourceDrainFrame();
     }
 
     return iter->second.avsFrame;
@@ -387,8 +387,14 @@ auto FrameHandler::WorkerProc() -> void {
          * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
          */
 
-        const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(processSrcFrames[2].startTime - processSrcFrames[1].startTime, g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
-        const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(processSrcFrames[1].startTime - processSrcFrames[0].startTime, g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(), g_avs->GetSourceAvgFrameDuration(), 0);
+        const REFERENCE_TIME outputFrameDurationAfterEdge = llMulDiv(processSrcFrames[2].startTime - processSrcFrames[1].startTime,
+                                                                     g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(),
+                                                                     g_avs->GetMainScriptInstance().GetSourceAvgFrameDuration(),
+                                                                     0);
+        const REFERENCE_TIME outputFrameDurationBeforeEdge = llMulDiv(processSrcFrames[1].startTime - processSrcFrames[0].startTime,
+                                                                      g_avs->GetMainScriptInstance().GetScriptAvgFrameDuration(),
+                                                                      g_avs->GetMainScriptInstance().GetSourceAvgFrameDuration(),
+                                                                      0);
 
         while (!_isFlushing) {
             const REFERENCE_TIME outFrameDurationBeforeEdgePortion = min(processSrcFrames[1].startTime - _nextOutputFrameStartTime, outputFrameDurationBeforeEdge);

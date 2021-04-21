@@ -16,7 +16,7 @@ auto SourceClip::SetFrameHandler(FrameHandler &frameHandler) -> void {
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    return _frameHandler == nullptr ? g_avs->GetSourceDrainFrame() : _frameHandler->GetSourceFrame(frameNb, env);
+    return _frameHandler == nullptr ? g_avs->GetMainScriptInstance().GetSourceDrainFrame() : _frameHandler->GetSourceFrame(frameNb, env);
 }
 
 }

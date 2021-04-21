@@ -14,18 +14,16 @@ namespace AvsFilter {
 class AvsHandler {
 private:
     class ScriptInstance {
-        friend class AvsHandler;
-
     public:
+        auto Initialize() const -> void;
         auto StopScript() -> void;
 
-    private:
+    protected:
         explicit ScriptInstance(AvsHandler &handler);
         virtual ~ScriptInstance();
 
         DISABLE_COPYING(ScriptInstance)
 
-        auto Initialize() const -> void;
         virtual auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
 
         AvsHandler &_handler;
@@ -40,14 +38,23 @@ public:
     class MainScriptInstance : public ScriptInstance {
     public:
         explicit MainScriptInstance(AvsHandler &handler);
+        ~MainScriptInstance() override;
 
         DISABLE_COPYING(MainScriptInstance)
 
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
         auto GetFrame(int frameNb) const -> PVideoFrame;
         constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
-        constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration;}
+        constexpr auto GetSourceDrainFrame() const -> const PVideoFrame & { return _sourceDrainFrame; }
+        constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
+        constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
+        constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration; }
         auto GetErrorString() const -> std::optional<std::string>;
+
+    private:
+        PVideoFrame _sourceDrainFrame = nullptr;
+        REFERENCE_TIME _sourceAvgFrameDuration = 0;
+        int _sourceAvgFrameRate = 0;
     };
 
     class CheckingScriptInstance : public ScriptInstance {
@@ -58,7 +65,7 @@ public:
 
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
         auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
-        constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type;}
+        constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type; }
     };
 
     AvsHandler();
@@ -70,9 +77,6 @@ public:
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
-    constexpr auto GetSourceDrainFrame() -> PVideoFrame & { return _sourceDrainFrame; }
-    constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
-    constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
     auto GetMainScriptInstance() const -> MainScriptInstance &;
     auto GetCheckingScriptInstance() const -> CheckingScriptInstance &;
 
@@ -86,14 +90,11 @@ private:
 
     std::unique_ptr<MainScriptInstance> _mainScriptInstance = std::make_unique<MainScriptInstance>(*this);
     std::unique_ptr<CheckingScriptInstance> _checkingScriptInstance = std::make_unique<CheckingScriptInstance>(*this);
-    const char *_versionString = _mainScriptInstance->_env->Invoke("Eval", AVSValue("VersionString()")).AsString();
+    const char *_versionString = _mainScriptInstance->GetEnv()->Invoke("Eval", AVSValue("VersionString()")).AsString();
 
     std::filesystem::path _scriptPath = g_env.GetAvsPath();
     VideoInfo _sourceVideoInfo = {};
     PClip _sourceClip = new SourceClip(_sourceVideoInfo);
-    PVideoFrame _sourceDrainFrame = nullptr;
-    REFERENCE_TIME _sourceAvgFrameDuration = 0;
-    int _sourceAvgFrameRate = 0;
 };
 
 extern ReferenceCountPointer<AvsHandler> g_avs;

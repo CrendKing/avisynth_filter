@@ -10,7 +10,7 @@ namespace AvsFilter {
 
 Environment::Environment()
     : _ini(true) {
-    std::array<WCHAR, MAX_PATH> processPathStr {};
+    std::array<WCHAR, MAX_PATH> processPathStr = {};
     std::filesystem::path processName;
 
     if (GetModuleFileNameW(nullptr, processPathStr.data(), static_cast<DWORD>(processPathStr.size())) != 0) {

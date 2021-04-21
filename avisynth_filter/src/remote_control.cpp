@@ -59,7 +59,7 @@ auto RemoteControl::Run() -> void {
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Remote Control");
 #endif
 
-	WNDCLASSA wc {};
+	WNDCLASSA wc = {};
 	wc.lpfnWndProc = &RemoteControl::WndProc;
 	wc.hInstance = g_hInst;
 	wc.lpszClassName = API_WND_CLASS_NAME;
@@ -154,7 +154,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.GetInputFormat().hdrLuminance;
 
     case API_MSG_GET_SOURCE_AVG_FPS:
-        return g_avs->GetSourceAvgFrameRate();
+        return g_avs->GetMainScriptInstance().GetSourceAvgFrameRate();
 
     case API_MSG_GET_CURRENT_OUTPUT_FPS:
         return _filter.frameHandler.GetCurrentOutputFrameRate();
