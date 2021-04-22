@@ -1,19 +1,19 @@
 name: CI
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
   build:
-    name: ${{ matrix.config.platform }}
+    name: ${{ matrix.configuration }} ${{ matrix.platform }}
     runs-on: windows-latest
     strategy:
       matrix:
-        config:
-          - { platform: 'x64' }
-          - { platform: 'x86' }
+        configuration: [Debug, Release]
+        platform: [x64, x86]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -25,7 +25,17 @@ jobs:
 
       - name: Build
         shell: cmd
-        run: build.bat ${{ matrix.config.platform }}
+        run: build.bat ${{ matrix.configuration }} ${{ matrix.platform }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v1
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist-without-markdown
+          path: |
+            ${{ matrix.platform }}/${{ matrix.configuration }}/*.ax
+            ${{ matrix.platform }}/${{ matrix.configuration }}/*.pdb
+          retention-days: 7
+          if-no-files-found: error

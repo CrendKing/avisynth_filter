@@ -1,4 +1,4 @@
-if "%VSINSTALLDIR%"=="" for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -version [16.8, -latest -find **\vcvars64.bat') do call "%%i"
+if "%VSINSTALLDIR%"=="" for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -version [16.9, -latest -find **\vcvars64.bat') do call "%%i"
 if "%VSINSTALLDIR%"=="" (
     echo "Unable to activate Visual Studio environment"
     exit /b 1
@@ -23,11 +23,7 @@ if not exist dep_simpleini (
     git clone https://github.com/brofield/simpleini.git dep_simpleini
 )
 
-set ds_platform=%1
-set filter_platform=%1
+set configuration=%1
+set platform=%2
 
-if "%ds_platform%" == "x86" (
-    set ds_platform=Win32
-)
-
-MSBuild.exe -property:Configuration=Release;Platform=%filter_platform% -maxCpuCount -nologo avisynth_filter.sln
+MSBuild.exe -property:Configuration=%configuration%;Platform=%platform% -maxCpuCount -nologo avisynth_filter.sln
