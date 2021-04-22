@@ -60,57 +60,57 @@ auto RemoteControl::Run() -> void {
     SetThreadDescription(GetCurrentThread(), L"CAviSynthFilter Remote Control");
 #endif
 
-	WNDCLASSA wc = {};
-	wc.lpfnWndProc = &RemoteControl::WndProc;
-	wc.hInstance = g_hInst;
-	wc.lpszClassName = API_WND_CLASS_NAME;
-	if (RegisterClassA(&wc) == 0) {
+    WNDCLASSA wc = {};
+    wc.lpfnWndProc = &RemoteControl::WndProc;
+    wc.hInstance = g_hInst;
+    wc.lpszClassName = API_WND_CLASS_NAME;
+    if (RegisterClassA(&wc) == 0) {
         Environment::GetInstance().Log(L"Remote control failed to register window class: %5lu", GetLastError());
-		return;
-	}
+        return;
+    }
 
-	_hWnd = CreateWindowExA(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
-	if (_hWnd == nullptr) {
+    _hWnd = CreateWindowExA(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
+    if (_hWnd == nullptr) {
         Environment::GetInstance().Log(L"Remote control Failed to create window: %5lu", GetLastError());
-		return;
-	}
+        return;
+    }
     SetWindowLongPtrW(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	Environment::GetInstance().Log(L"Remote control started processing messages");
+    Environment::GetInstance().Log(L"Remote control started processing messages");
 
-	MSG msg;
-	BOOL msgRet;
-	while ((msgRet = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
-		if (msgRet == -1) {
-			Environment::GetInstance().Log(L"Remote control message loop error: %5lu", GetLastError());
-			break;
-		}
+    MSG msg;
+    BOOL msgRet;
+    while ((msgRet = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
+        if (msgRet == -1) {
+            Environment::GetInstance().Log(L"Remote control message loop error: %5lu", GetLastError());
+            break;
+        }
 
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
-	}
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
 
-	if (!DestroyWindow(_hWnd)) {
+    if (!DestroyWindow(_hWnd)) {
         Environment::GetInstance().Log(L"Remote control failed to destroy window: %5lu", GetLastError());
-	    return;
-	}
+        return;
+    }
 
-	if (!UnregisterClassA(API_WND_CLASS_NAME, wc.hInstance)) {
+    if (!UnregisterClassA(API_WND_CLASS_NAME, wc.hInstance)) {
         Environment::GetInstance().Log(L"Remote control failed to unregister window class: %5lu", GetLastError());
-	    return;
-	}
+        return;
+    }
 
-	Environment::GetInstance().Log(L"Remote control stopped");
+    Environment::GetInstance().Log(L"Remote control stopped");
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {
-	if (!hReceiverWindow) {
-		return;
-	}
+    if (!hReceiverWindow) {
+        return;
+    }
 
-	const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.c_str()) };
-	SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd.load()), reinterpret_cast<LPARAM>(&copyData),
-					    SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
+    const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.c_str()) };
+    SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd.load()), reinterpret_cast<LPARAM>(&copyData),
+                        SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void {
