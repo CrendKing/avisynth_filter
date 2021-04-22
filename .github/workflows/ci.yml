@@ -12,30 +12,32 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        configuration: [Debug, Release]
-        platform: [x64, x86]
+        include:
+          - configuration: Release
+            platform: x64
+            output-dir: x64
+          - configuration: Release
+            platform: x86
+            output-dir: Win32
+          - configuration: Debug
+            platform: x64
+            output-dir: x64
+          - configuration: Debug
+            platform: x86
+            output-dir: Win32
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v1
-        with:
-          languages: 'cpp'
 
       - name: Build
         shell: cmd
         run: build.bat ${{ matrix.configuration }} ${{ matrix.platform }}
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
-
       - name: Archive build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: dist-without-markdown
+          name: ${{ matrix.configuration }} ${{ matrix.platform }}
           path: |
-            ${{ matrix.platform }}/${{ matrix.configuration }}/*.ax
-            ${{ matrix.platform }}/${{ matrix.configuration }}/*.pdb
-          retention-days: 7
+            ${{ matrix.output-dir }}/${{ matrix.configuration }}/*.ax
+            ${{ matrix.output-dir }}/${{ matrix.configuration }}/*.pdb
           if-no-files-found: error

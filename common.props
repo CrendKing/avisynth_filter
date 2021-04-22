@@ -45,7 +45,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)baseclasses\src;$(MSBuildThisFileDirectory)dep_directshow;$(MSBuildThisFileDirectory)dep_avisynth_plus;$(MSBuildThisFileDirectory)dep_simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)baseclasses\src;$(MSBuildThisFileDirectory)dep_avisynth_plus;$(MSBuildThisFileDirectory)dep_simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:strictStrings- %(AdditionalOptions)</AdditionalOptions>
       <BasicRuntimeChecks Condition="'$(Configuration)' == 'Debug'">EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -67,8 +67,6 @@
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories Condition="'$(Platform)' == 'Win32'">$(MSBuildThisFileDirectory)\dep_directshow\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Platform)' == 'x64'">$(MSBuildThisFileDirectory)\dep_directshow\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EnableCOMDATFolding Condition="'$(Configuration)' == 'Release'">true</EnableCOMDATFolding>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <OptimizeReferences Condition="'$(Configuration)' == 'Release'">true</OptimizeReferences>

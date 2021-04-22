@@ -38,9 +38,9 @@ auto CAvsFilterPropSettings::OnActivate() -> HRESULT {
 
     CheckDlgButton(m_Dlg, IDC_ENABLE_REMOTE_CONTROL, Environment::GetInstance().IsRemoteControlEnabled());
 
-    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const Format::PixelFormat &pixelFormat) {
         CheckDlgButton(m_Dlg, pixelFormat.resourceId, Environment::GetInstance().IsInputFormatEnabled(pixelFormat.name));
-    }
+    });
 
     const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a>\nwith " + AvsHandler::GetInstance().GetVersionString();
     SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
@@ -59,9 +59,9 @@ auto CAvsFilterPropSettings::OnApplyChanges() -> HRESULT {
 
     Environment::GetInstance().SetRemoteControlEnabled(IsDlgButtonChecked(m_Dlg, IDC_ENABLE_REMOTE_CONTROL) == BST_CHECKED);
 
-    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const Format::PixelFormat &pixelFormat) {
         Environment::GetInstance().SetInputFormatEnabled(pixelFormat.name, IsDlgButtonChecked(m_Dlg, pixelFormat.resourceId) == BST_CHECKED);
-    }
+    });
 
     Environment::GetInstance().SaveSettings();
 

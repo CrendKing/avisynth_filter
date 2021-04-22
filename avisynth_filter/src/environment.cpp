@@ -37,9 +37,9 @@ Environment::Environment()
 
             Log(L"Configured script file: %s", _avsPath.filename().c_str());
 
-            for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
-                Log(L"Configured input format %s: %i", pixelFormat.name.c_str(), _enabledInputFormats.contains(pixelFormat.name));
-            }
+            std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
+                Log(L"Configured input format %s: %i", name.c_str(), _enabledInputFormats.contains(name));
+            }, &Format::PixelFormat::name);
 
             Log(L"Loading process: %s", processName.c_str());
         }
@@ -117,12 +117,12 @@ auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool ena
 auto Environment::LoadSettingsFromIni() -> void {
     _avsPath = _ini.GetValue(L"", SETTING_NAME_AVS_FILE, L"");
 
-    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + name;
         if (_ini.GetBoolValue(L"", settingName.c_str(), true)) {
-            _enabledInputFormats.emplace(pixelFormat.name);
+            _enabledInputFormats.emplace(name);
         }
-    }
+    }, &Format::PixelFormat::name);
 
     _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
     _extraSourceBuffer = _ini.GetLongValue(L"", SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
@@ -132,12 +132,12 @@ auto Environment::LoadSettingsFromIni() -> void {
 auto Environment::LoadSettingsFromRegistry() -> void {
     _avsPath = _registry.ReadString(SETTING_NAME_AVS_FILE);
 
-    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + name;
         if (_registry.ReadNumber(settingName.c_str(), 1) != 0) {
-            _enabledInputFormats.emplace(pixelFormat.name);
+            _enabledInputFormats.emplace(name);
         }
-    }
+    }, &Format::PixelFormat::name);
 
     _isRemoteControlEnabled = _registry.ReadNumber(SETTING_NAME_REMOTE_CONTROL, 0) != 0;
     _extraSourceBuffer = _registry.ReadNumber(SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
@@ -152,10 +152,10 @@ auto Environment::SaveSettingsToRegistry() const -> void {
     static_cast<void>(_registry.WriteString(SETTING_NAME_AVS_FILE, _avsPath));
     static_cast<void>(_registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled));
 
-    for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + pixelFormat.name;
-        static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(pixelFormat.name)));
-    }
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
+        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + name;
+        static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
+    }, &Format::PixelFormat::name);
 }
 
 auto Environment::DetectCPUID() -> void {

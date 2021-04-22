@@ -262,7 +262,7 @@ __pycache__/
 
 /wiki/
 /dep_*/
-release.bat
+release*.bat
 *.zip
 
 git_hash.h
