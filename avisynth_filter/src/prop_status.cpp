@@ -56,15 +56,15 @@ auto CAvsFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
         const int frameRatePrecision = static_cast<int>(log10(FRAME_RATE_SCALE_FACTOR));
         const int parPrecision = static_cast<int>(log10(PAR_SCALE_FACTOR));
 
-        const std::wstring inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
-        const std::wstring outputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler.GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::wstring inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler->GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::wstring outputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler->GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
         const std::wstring outputParStr = DoubleToString(static_cast<double>(videoFormat.pixelAspectRatio) / PAR_SCALE_FACTOR, parPrecision);
 
-        SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler.GetInputBufferSize()).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler->GetInputBufferSize()).c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
-                        (std::to_wstring(_filter->frameHandler.GetSourceFrameNb())
+                        (std::to_wstring(_filter->frameHandler->GetSourceFrameNb())
                         + L" -> "
-                        + std::to_wstring(_filter->frameHandler.GetOutputFrameNb()))
+                        + std::to_wstring(_filter->frameHandler->GetOutputFrameNb()))
                         .c_str());
 
         SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, (inputFrameRateStr + L" -> " + outputFrameRateStr).c_str());

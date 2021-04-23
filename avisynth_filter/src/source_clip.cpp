@@ -11,12 +11,13 @@ SourceClip::SourceClip(const VideoInfo &videoInfo)
     : _videoInfo(videoInfo) {
 }
 
-auto SourceClip::SetFrameHandler(FrameHandler &frameHandler) -> void {
-    _frameHandler = &frameHandler;
+auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
+    _frameHandler = frameHandler;
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    return _frameHandler == nullptr ? AvsHandler::GetInstance().GetMainScriptInstance().GetSourceDrainFrame() : _frameHandler->GetSourceFrame(frameNb, env);
+    ASSERT(_frameHandler != nullptr);
+    return _frameHandler->GetSourceFrame(frameNb, env);
 }
 
 }

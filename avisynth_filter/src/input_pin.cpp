@@ -79,20 +79,20 @@ auto CAviSynthFilterInputPin::Active() -> HRESULT {
     _filter.TraverseFiltersInGraph();
 
     if (Environment::GetInstance().IsRemoteControlEnabled()) {
-        _filter._remoteControl.Start();
+        _filter._remoteControl->Start();
     }
 
     // need reload here instead of CompleteConnect() so that switching video works
     AvsHandler::GetInstance().GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-    AvsHandler::GetInstance().LinkFrameHandler(_filter.frameHandler);
-    _filter.frameHandler.StartWorkerThread();
+    AvsHandler::GetInstance().GetMainScriptInstance().LinkFrameHandler(_filter.frameHandler.get());
+    _filter.frameHandler->StartWorkerThread();
 
     return __super::Active();
 }
 
 auto CAviSynthFilterInputPin::Inactive() -> HRESULT {
-    _filter._remoteControl.Stop();
-    _filter.frameHandler.StopWorkerThreads();
+    _filter._remoteControl->Stop();
+    _filter.frameHandler->StopWorkerThreads();
 
     return __super::Inactive();
 }

@@ -25,7 +25,8 @@ CAviSynthFilter::CAviSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 CAviSynthFilter::~CAviSynthFilter() {
     Environment::GetInstance().Log(L"Destroy CAviSynthFilter: %p", this);
 
-    ASSERT(!_remoteControl.IsRunning());
+    _remoteControl.reset();
+    frameHandler.reset();
 
     _numFilterInstances -= 1;
     if (_numFilterInstances == 0) {
@@ -282,7 +283,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
     m_tDecodeStart = timeGetTime();
 
-    hr = frameHandler.AddInputSample(pSample);
+    hr = frameHandler->AddInputSample(pSample);
 
     m_tDecodeStart = timeGetTime() - m_tDecodeStart;
     m_itrAvgDecode = m_tDecodeStart * (10000 / 16) + 15 * (m_itrAvgDecode / 16);
@@ -313,7 +314,7 @@ auto CAviSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
 
 auto CAviSynthFilter::BeginFlush() -> HRESULT {
     if (IsActive()) {
-        frameHandler.BeginFlush();
+        frameHandler->BeginFlush();
     }
 
     return __super::BeginFlush();
@@ -321,7 +322,7 @@ auto CAviSynthFilter::BeginFlush() -> HRESULT {
 
 auto CAviSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
-        frameHandler.EndFlush([this]() -> void {
+        frameHandler->EndFlush([this]() -> void {
             AvsHandler::GetInstance().GetMainScriptInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
         });
     }

@@ -140,6 +140,10 @@ auto AvsHandler::MainScriptInstance::GetFrame(int frameNb) const -> PVideoFrame 
     return _scriptClip->GetFrame(frameNb, _env);
 }
 
+auto AvsHandler::MainScriptInstance::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
+    _handler.GetSourceClip()->SetFrameHandler(frameHandler);
+}
+
 auto AvsHandler::MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
     return _errorString.empty() ? std::nullopt : std::make_optional(_errorString);
 }
@@ -231,10 +235,6 @@ AvsHandler::~AvsHandler() {
 
     AVS_linkage = nullptr;
     FreeLibrary(_avsModule);
-}
-
-auto AvsHandler::LinkFrameHandler(FrameHandler &frameHandler) const -> void {
-    GetSourceClip()->SetFrameHandler(frameHandler);
 }
 
 auto AvsHandler::SetScriptPath(const std::filesystem::path &scriptPath) -> void {

@@ -148,7 +148,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.GetInputFormat().pixelAspectRatio;
 
     case API_MSG_GET_CURRENT_INPUT_FPS:
-        return _filter.frameHandler.GetCurrentInputFrameRate();
+        return _filter.frameHandler->GetCurrentInputFrameRate();
 
     case API_MSG_GET_INPUT_SOURCE_PATH:
         SendString(hSenderWindow, copyData->dwData, _filter.GetVideoSourcePath());
@@ -167,7 +167,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameRate();
 
     case API_MSG_GET_CURRENT_OUTPUT_FPS:
-        return _filter.frameHandler.GetCurrentOutputFrameRate();
+        return _filter.frameHandler->GetCurrentOutputFrameRate();
 
     case API_MSG_GET_AVS_STATE:
         return static_cast<LRESULT>(_filter.GetAvsState());

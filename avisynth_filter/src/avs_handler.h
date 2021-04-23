@@ -44,6 +44,7 @@ public:
 
         auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
         auto GetFrame(int frameNb) const -> PVideoFrame;
+        auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
         constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
         constexpr auto GetSourceDrainFrame() const -> const PVideoFrame & { return _sourceDrainFrame; }
         constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
@@ -73,7 +74,6 @@ public:
 
     DISABLE_COPYING(AvsHandler)
 
-    auto LinkFrameHandler(FrameHandler &frameHandler) const -> void;
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }

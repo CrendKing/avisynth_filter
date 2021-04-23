@@ -96,7 +96,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
                               std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, hdrSideData));
 
         Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i",
-                  _nextSourceFrameNb, inSampleStartTime, inSampleStopTime, inSampleStopTime - inSampleStartTime, _nextSourceFrameNb);
+                                       _nextSourceFrameNb, inSampleStartTime, inSampleStopTime, inSampleStopTime - inSampleStartTime, _nextSourceFrameNb);
 
         _nextSourceFrameNb += 1;
     }
@@ -251,7 +251,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
         sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
-                  _filter._outputVideoFormat.pixelFormat->name.c_str(), _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
+                                       _filter._outputVideoFormat.pixelFormat->name.c_str(), _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
 
         DeleteMediaType(pmtOut);
     }
@@ -264,13 +264,13 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
         return false;
     }
 
-    if (BYTE *outBuffer; FAILED(sample->GetPointer(&outBuffer))) {
+    if (BYTE *outputBuffer; FAILED(sample->GetPointer(&outputBuffer))) {
         return false;
     } else {
         try {
             // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
             const PVideoFrame scriptFrame = AvsHandler::GetInstance().GetMainScriptInstance().GetFrame(_nextOutputFrameNb);
-            Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outBuffer, AvsHandler::GetInstance().GetMainScriptInstance().GetEnv());
+            Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outputBuffer, AvsHandler::GetInstance().GetMainScriptInstance().GetEnv());
         } catch (AvisynthError) {
             return false;
         }
@@ -305,7 +305,7 @@ auto FrameHandler::WorkerProc() -> void {
 
         if (_filter._changeOutputMediaType || _filter._reloadAvsSource) {
             Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
-                      _filter._inputVideoFormat.pixelFormat->name.c_str(), _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
+                                           _filter._inputVideoFormat.pixelFormat->name.c_str(), _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
 
             {
                 const std::unique_lock receiveLock(_filter.m_csReceive);
@@ -412,7 +412,7 @@ auto FrameHandler::WorkerProc() -> void {
             _nextOutputFrameStartTime = outputStopTime;
 
             Environment::GetInstance().Log(L"Processing output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
-                      _nextOutputFrameNb, processSrcFrames[0].frameNb, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
+                                           _nextOutputFrameNb, processSrcFrames[0].frameNb, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
 
             RefreshOutputFrameRates(_nextOutputFrameNb, outputStartTime);
 
