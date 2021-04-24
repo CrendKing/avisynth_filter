@@ -15,7 +15,6 @@ class AvsHandler : public RefCountedSingleton<AvsHandler> {
 private:
     class ScriptInstance {
     public:
-        auto Initialize() const -> void;
         auto StopScript() -> void;
 
     protected:
@@ -38,7 +37,7 @@ public:
     class MainScriptInstance : public ScriptInstance {
     public:
         explicit MainScriptInstance(AvsHandler &handler);
-        ~MainScriptInstance() override;
+        ~MainScriptInstance();
 
         DISABLE_COPYING(MainScriptInstance)
 
@@ -87,14 +86,14 @@ private:
     auto GetSourceClip() const -> SourceClip *;
 
     HMODULE _avsModule = LoadAvsModule();
-
-    std::unique_ptr<MainScriptInstance> _mainScriptInstance = std::make_unique<MainScriptInstance>(*this);
-    std::unique_ptr<CheckingScriptInstance> _checkingScriptInstance = std::make_unique<CheckingScriptInstance>(*this);
-    const char *_versionString = _mainScriptInstance->GetEnv()->Invoke("Eval", AVSValue("VersionString()")).AsString();
+    const char *_versionString;
 
     std::filesystem::path _scriptPath = Environment::GetInstance().GetAvsPath();
     VideoInfo _sourceVideoInfo = {};
-    PClip _sourceClip = new SourceClip(_sourceVideoInfo);
+    PClip _sourceClip;
+
+    std::unique_ptr<MainScriptInstance> _mainScriptInstance;
+    std::unique_ptr<CheckingScriptInstance> _checkingScriptInstance;
 };
 
 }

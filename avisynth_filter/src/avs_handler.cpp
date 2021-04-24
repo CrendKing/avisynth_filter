@@ -36,11 +36,6 @@ AvsHandler::ScriptInstance::~ScriptInstance() {
     _env->DeleteScriptEnvironment();
 }
 
-auto AvsHandler::ScriptInstance::Initialize() const -> void {
-    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _handler._sourceClip);
-    _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
-}
-
 /**
  * Create new AviSynth script clip with specified media type.
  */
@@ -158,6 +153,11 @@ auto AvsHandler::CheckingScriptInstance::ReloadScript(const AM_MEDIA_TYPE &media
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         StopScript();
 
+        // Avs+ prefetchers are only destroyed when the environment is deleted
+        // just stopping the script clip is not enough
+        _env->DeleteScriptEnvironment();
+        _env = _handler.CreateEnv();
+
         return true;
     }
 
@@ -217,12 +217,18 @@ auto AvsHandler::CheckingScriptInstance::GenerateMediaType(const Format::PixelFo
 }
 
 AvsHandler::AvsHandler() {
+    IScriptEnvironment *env = CreateEnv();
+    AVS_linkage = env->GetAVSLinkage();
+    _versionString = env->Invoke("Eval", AVSValue("VersionString()")).AsString();
+    env->DeleteScriptEnvironment();
+
     Environment::GetInstance().Log(L"AvsHandler()");
     Environment::GetInstance().Log(L"Filter version: %S", FILTER_VERSION_STRING);
     Environment::GetInstance().Log(L"AviSynth version: %S", GetVersionString());
 
-    _mainScriptInstance->Initialize();
-    _checkingScriptInstance->Initialize();
+    _sourceClip = new SourceClip(_sourceVideoInfo);
+    _mainScriptInstance = std::make_unique<MainScriptInstance>(*this);
+    _checkingScriptInstance = std::make_unique<CheckingScriptInstance>(*this);
 }
 
 AvsHandler::~AvsHandler() {
@@ -254,6 +260,7 @@ auto AvsHandler::LoadAvsModule() const -> HMODULE {
     if (avsModule == nullptr) {
         ShowFatalError(L"Failed to load AviSynth.dll");
     }
+
     return avsModule;
 }
 
@@ -275,9 +282,8 @@ auto AvsHandler::CreateEnv() const -> IScriptEnvironment * {
         ShowFatalError(L"CreateScriptEnvironment() returns nullptr");
     }
 
-    if (AVS_linkage == nullptr) {
-        AVS_linkage = env->GetAVSLinkage();
-    }
+    env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
+    env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 
     return env;
 }
