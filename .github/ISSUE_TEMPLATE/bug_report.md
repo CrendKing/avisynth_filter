@@ -7,17 +7,24 @@ assignees: ''
 
 ---
 
+<!--
+Before reporting, check these first:
+
+- Try the latest commit build (https://github.com/CrendKing/avisynth_filter/actions) and check if the issue persists, if you experienced the problem in a earlier release build. Such issue might have been solved.
+
+- Try a different video player and check if the issue persists. For example, if your main video player is MPC-HC, try MPC-BE.
+
+- Try a different video renderer and check if the issue persists. For example, if issue exists with madVR, try EVR.
+
+- Try a different video file and check if the issue persists. Try another file with different format, dimension and frame rate.
+-->
+
 ### Environment
-- Filter version: [e.g. `v0.7.0 # 51f7597`, you can find this in the settings page]
+- Filter version: [e.g. `v0.7.0 # 51f7597`, you can read [this wiki](https://github.com/CrendKing/avisynth_filter/wiki/Identify-filter-version-and-verify-solution-to-an-issue) for more information]
 - AviSynth+ version: [e.g. v3.6.1]
 - OS: [e.g. Windows 10 x64]
-- Video player: [e.g. MPC-BE x64 1.5.5.5433, MPC-HC x86 1.9.7]
-- Splitter filter and video decoder: [e.g. LAV Filters]
-- Video renderer: [e.g. madVR, EVR]
-- Video format: [e.g. NV12, P010]
 - AviSynth script: [e.g. minimum content required to reproduce the issue, or software you used such as SVP]
-<!-- Wrap script content in pairs of ``` -->
-- Do you use other DirectShow filters? Specify name and version: [e.g. ffdshow]
+- Log file link or content when you experience the issue (read [this wiki](https://github.com/CrendKing/avisynth_filter/wiki/How-to-enable-logging) to enable logging)
 
 ### Describe the bug
 <!-- Summary of the unexpected behavior you are experiencing. -->
@@ -28,19 +35,7 @@ assignees: ''
 2.
 3.
 
-**Checklist**
-- Try a different **video player** and check if the issue persist. For example, if your main video player is MPC-HC, try MPC-BE.
-Findings:
-
-- Try a different **video renderer** and check if the issue persist. For example, if issue exists with madVR, try EVR.
-Findings:
-
-- Try a different **video file** and check if the issue persist. Try another file with different format, dimension and frame rate.
-Findings:
-
 <!--
-You could enable logging and upload the log file to help diagnosis. Follow wiki https://github.com/CrendKing/avisynth_filter/wiki/How-to-enable-logging
-
 You could upload screenshots if the issue is related to visual.
 
 You could upload the video file if it is small enough, or you know how to cut and crop it. If you do, be sure to test the cut file before uploading.
