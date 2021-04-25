@@ -10,6 +10,8 @@ namespace AvsFilter {
 
 class HDRSideData {
 public:
+    CTOR_WITHOUT_COPYING(HDRSideData)
+
     auto STDMETHODCALLTYPE StoreSideData(GUID guidType, const BYTE *pData, size_t size) -> HRESULT;
     auto STDMETHODCALLTYPE RetrieveSideData(GUID guidType, const BYTE **pData, size_t *pSize) const -> HRESULT;
 

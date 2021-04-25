@@ -5,11 +5,6 @@
 
 namespace AvsFilter {
 
-inline auto MediaTypeDeleter(AM_MEDIA_TYPE *mediaType) -> void {
-    DeleteMediaType(mediaType);
-}
-using SharedMediaTypePtr = std::shared_ptr<AM_MEDIA_TYPE>;
-
 auto ConvertWideToUtf8(const std::wstring &wideString) -> std::string;
 auto ConvertUtf8ToWide(const std::string &utf8String) -> std::wstring;
 auto DoubleToString(double d, int precision) -> std::wstring;

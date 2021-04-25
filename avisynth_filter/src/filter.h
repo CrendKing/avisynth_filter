@@ -55,7 +55,7 @@ public:
 
 private:
     struct MediaTypePair {
-        const SharedMediaTypePtr inputMediaType;
+        const std::shared_ptr<AM_MEDIA_TYPE> inputMediaType;
         const Format::PixelFormat *inputPixelFormat;
 
         CMediaType outputMediaType;

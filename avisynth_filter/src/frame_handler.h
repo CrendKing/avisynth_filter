@@ -15,7 +15,7 @@ public:
 
     DISABLE_COPYING(FrameHandler)
 
-    auto AddInputSample(IMediaSample *inSample) -> HRESULT;
+    auto AddInputSample(IMediaSample *inputSample) -> HRESULT;
     auto GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame;
     auto BeginFlush() -> void;
     auto EndFlush(const std::function<void ()> &interim) -> void;

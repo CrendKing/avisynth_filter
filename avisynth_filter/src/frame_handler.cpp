@@ -13,7 +13,7 @@ FrameHandler::FrameHandler(CAviSynthFilter &filter)
     ResetInput();
 }
 
-auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
+auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
     std::shared_lock sharedLock(_mutex);
@@ -44,27 +44,27 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
         return S_FALSE;
     }
 
-    REFERENCE_TIME inSampleStartTime;
-    REFERENCE_TIME inSampleStopTime = 0;
-    if (inSample->GetTime(&inSampleStartTime, &inSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
+    REFERENCE_TIME inputSampleStartTime;
+    REFERENCE_TIME inputSampleStopTime = 0;
+    if (inputSample->GetTime(&inputSampleStartTime, &inputSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
-        inSampleStartTime = _nextSourceFrameNb * AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameDuration();
+        inputSampleStartTime = _nextSourceFrameNb * AvsHandler::GetInstance().GetMainScriptInstance().GetSourceAvgFrameDuration();
     }
 
     // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-    if (inSampleStartTime < lastSampleStartTime) {
-        Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inSampleStartTime, lastSampleStartTime);
+    if (inputSampleStartTime <= lastSampleStartTime) {
+        Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inputSampleStartTime, lastSampleStartTime);
         return S_FALSE;
     }
 
     if (_nextSourceFrameNb == 0) {
-        _frameRateCheckpointInputSampleStartTime = inSampleStartTime;
+        _frameRateCheckpointInputSampleStartTime = inputSampleStartTime;
     }
 
-    RefreshInputFrameRates(_nextSourceFrameNb, inSampleStartTime);
+    RefreshInputFrameRates(_nextSourceFrameNb, inputSampleStartTime);
 
     BYTE *sampleBuffer;
-    hr = inSample->GetPointer(&sampleBuffer);
+    hr = inputSample->GetPointer(&sampleBuffer);
     if (FAILED(hr)) {
         return S_FALSE;
     }
@@ -73,8 +73,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
     std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
     {
-        if (const ATL::CComQIPtr<IMediaSideData> inSampleSideData(inSample); inSampleSideData != nullptr) {
-            hdrSideData->ReadFrom(inSampleSideData);
+        if (const ATL::CComQIPtr<IMediaSideData> inputSampleSideData(inputSample); inputSampleSideData != nullptr) {
+            hdrSideData->ReadFrom(inputSampleSideData);
 
             if (const std::optional<const BYTE *> optHdr = hdrSideData->GetHDRData()) {
                 _filter._inputVideoFormat.hdrType = 1;
@@ -93,10 +93,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inSampleStartTime, hdrSideData));
+                              std::forward_as_tuple(_nextSourceFrameNb, avsFrame, inputSampleStartTime, hdrSideData));
 
         Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli nextSourceFrameNb %6i",
-                                       _nextSourceFrameNb, inSampleStartTime, inSampleStopTime, inSampleStopTime - inSampleStartTime, _nextSourceFrameNb);
+                                       _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _nextSourceFrameNb);
 
         _nextSourceFrameNb += 1;
     }
@@ -106,7 +106,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    Environment::GetInstance().Log(L"Get source frame: frameNb %6i Input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Get source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedLock(_mutex);
 
@@ -123,8 +123,6 @@ auto FrameHandler::GetSourceFrame(int frameNb, IScriptEnvironment *env) -> PVide
         iter = _sourceFrames.lower_bound(frameNb);
         return iter != _sourceFrames.cend();
     });
-
-    ASSERT(_isFlushing || iter != _sourceFrames.cend());
 
     if (_isFlushing || iter->second.avsFrame == nullptr) {
         if (_isFlushing) {
@@ -212,6 +210,22 @@ auto FrameHandler::GetInputBufferSize() const -> int {
     const std::shared_lock sharedLock(_mutex);
 
     return static_cast<int>(_sourceFrames.size());
+}
+
+auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
+                                             int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
+                                             int &currentFrameRate) -> void {
+    bool reachCheckpoint = checkpointStartTime == 0;
+
+    if (const REFERENCE_TIME elapsedRefTime = startTime - checkpointStartTime; elapsedRefTime >= UNITS) {
+        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
+        reachCheckpoint = true;
+    }
+
+    if (reachCheckpoint) {
+        checkpointSampleNb = sampleNb;
+        checkpointStartTime = startTime;
+    }
 }
 
 auto FrameHandler::ResetInput() -> void {
@@ -397,15 +411,15 @@ auto FrameHandler::WorkerProc() -> void {
                                                                       0);
 
         while (!_isFlushing) {
-            const REFERENCE_TIME outFrameDurationBeforeEdgePortion = min(processSrcFrames[1].startTime - _nextOutputFrameStartTime, outputFrameDurationBeforeEdge);
-            if (outFrameDurationBeforeEdgePortion <= 0) {
-                Environment::GetInstance().Log(L"Frame time drift: %10lli", -outFrameDurationBeforeEdgePortion);
+            const REFERENCE_TIME outputFrameDurationBeforeEdgePortion = min(processSrcFrames[1].startTime - _nextOutputFrameStartTime, outputFrameDurationBeforeEdge);
+            if (outputFrameDurationBeforeEdgePortion <= 0) {
+                Environment::GetInstance().Log(L"Frame time drift: %10lli", -outputFrameDurationBeforeEdgePortion);
                 break;
             }
-            const REFERENCE_TIME outFrameDurationAfterEdgePortion = outputFrameDurationAfterEdge - llMulDiv(outputFrameDurationAfterEdge, outFrameDurationBeforeEdgePortion, outputFrameDurationBeforeEdge, 0);
+            const REFERENCE_TIME outputFrameDurationAfterEdgePortion = outputFrameDurationAfterEdge - llMulDiv(outputFrameDurationAfterEdge, outputFrameDurationBeforeEdgePortion, outputFrameDurationBeforeEdge, 0);
 
             const REFERENCE_TIME outputStartTime = _nextOutputFrameStartTime;
-            REFERENCE_TIME outputStopTime = outputStartTime + outFrameDurationBeforeEdgePortion + outFrameDurationAfterEdgePortion;
+            REFERENCE_TIME outputStopTime = outputStartTime + outputFrameDurationBeforeEdgePortion + outputFrameDurationAfterEdgePortion;
             if (outputStopTime < processSrcFrames[1].startTime && outputStopTime >= processSrcFrames[1].startTime - MAX_OUTPUT_FRAME_DURATION_PADDING) {
                 outputStopTime = processSrcFrames[1].startTime;
             }
@@ -417,8 +431,8 @@ auto FrameHandler::WorkerProc() -> void {
             RefreshOutputFrameRates(_nextOutputFrameNb, outputStartTime);
 
             if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, outputStartTime, outputStopTime)) {
-                if (const ATL::CComQIPtr<IMediaSideData> outSampleSideData(outputSample); outSampleSideData != nullptr) {
-                    processSrcFrames[0].hdrSideData->WriteTo(outSampleSideData);
+                if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(outputSample); outputSampleSideData != nullptr) {
+                    processSrcFrames[0].hdrSideData->WriteTo(outputSampleSideData);
                 }
 
                 _filter.m_pOutput->Deliver(outputSample);
@@ -452,22 +466,6 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     _addInputSampleCv.notify_one();
 
     Environment::GetInstance().Log(L"GarbageCollect frames until %6i pre size %3zu post size %3zu", srcFrameNb, dbgPreSize, _sourceFrames.size());
-}
-
-auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
-                                             int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
-                                             int &currentFrameRate) -> void {
-    bool reachCheckpoint = checkpointStartTime == 0;
-
-    if (const REFERENCE_TIME elapsedRefTime = startTime - checkpointStartTime; elapsedRefTime >= UNITS) {
-        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
-        reachCheckpoint = true;
-    }
-
-    if (reachCheckpoint) {
-        checkpointSampleNb = sampleNb;
-        checkpointStartTime = startTime;
-    }
 }
 
 auto FrameHandler::RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void {

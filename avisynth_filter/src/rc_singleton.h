@@ -3,6 +3,8 @@
 #pragma once
 
 
+namespace AvsFilter {
+
 template <typename T>
 class RefCountedSingleton {
 public:
@@ -21,3 +23,5 @@ public:
 private:
     static inline std::unique_ptr<T> _instance;
 };
+
+}

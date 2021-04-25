@@ -82,7 +82,7 @@ auto CAviSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESU
         while (true) {
             hr = enumTypes->Next(1, &nextType, nullptr);
             if (hr == S_OK) {
-                const SharedMediaTypePtr nextTypePtr(nextType, MediaTypeDeleter);
+                const std::shared_ptr<AM_MEDIA_TYPE> nextTypePtr(nextType, &DeleteMediaType);
 
                 if (const Format::PixelFormat *optInputPixelFormat = GetInputPixelFormat(nextType);
                     optInputPixelFormat && std::ranges::find(_compatibleMediaTypes, optInputPixelFormat, &MediaTypePair::inputPixelFormat) == _compatibleMediaTypes.cend()) {

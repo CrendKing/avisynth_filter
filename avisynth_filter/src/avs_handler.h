@@ -37,7 +37,7 @@ public:
     class MainScriptInstance : public ScriptInstance {
     public:
         explicit MainScriptInstance(AvsHandler &handler);
-        ~MainScriptInstance();
+        ~MainScriptInstance() override;
 
         DISABLE_COPYING(MainScriptInstance)
 
