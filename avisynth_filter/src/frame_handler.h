@@ -28,34 +28,7 @@ public:
     constexpr auto GetCurrentOutputFrameRate() const -> int { return _currentOutputFrameRate; }
 
 private:
-    template <typename... Mutexes>
-    class MultiLock {
-    public:
-        explicit MultiLock(Mutexes&... mutexes)
-            : _mutexes(mutexes...) {
-        }
-
-        MultiLock(const MultiLock &) = delete;
-        auto operator=(const MultiLock &) -> MultiLock & = delete;
-
-        constexpr auto lock() const noexcept -> void {
-            std::apply([](Mutexes&... mutexes) {
-                std::lock(mutexes...);
-            }, _mutexes);
-        }
-
-        auto unlock() const noexcept -> void {
-            std::apply([](Mutexes&... mutexes) {
-                (..., mutexes.unlock());
-            }, _mutexes);
-        }
-
-    private:
-        std::tuple<Mutexes&...> _mutexes;
-    };
-
     struct SourceFrameInfo {
-        int frameNb;
         PVideoFrame avsFrame;
         REFERENCE_TIME startTime;
         std::shared_ptr<HDRSideData> hdrSideData;
@@ -85,9 +58,8 @@ private:
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
 
-    std::atomic<int> _maxRequestedFrameNb;
     int _nextSourceFrameNb;
-    int _nextProcessSrcFrameNb;
+    std::atomic<int> _maxRequestedFrameNb;
     int _nextOutputFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
 
