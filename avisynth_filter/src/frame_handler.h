@@ -43,6 +43,7 @@ private:
     auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) const -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
+    auto ChangeOutputFormat() -> bool;
     auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
     auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
 

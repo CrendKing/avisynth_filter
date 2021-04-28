@@ -34,6 +34,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
+    if ((_filter._changeOutputMediaType || _filter._reloadAvsSource) && !ChangeOutputFormat()) {
+        return S_FALSE;
+    }
+
     REFERENCE_TIME inputSampleStartTime;
     REFERENCE_TIME inputSampleStopTime = 0;
     if (inputSample->GetTime(&inputSampleStartTime, &inputSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
@@ -307,54 +311,6 @@ auto FrameHandler::WorkerProc() -> void {
             _isWorkerLatched = false;
         }
 
-        if (_filter._changeOutputMediaType || _filter._reloadAvsSource) {
-            Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
-                                           _filter._inputVideoFormat.pixelFormat->name.c_str(), _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
-
-            {
-                const std::unique_lock receiveLock(_filter.m_csReceive);
-
-                _filter.StopStreaming();
-
-                BeginFlush();
-                EndFlush([this]() -> void {
-                    AvsHandler::GetInstance().GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-                });
-
-                ResetOutput();
-
-                _filter._changeOutputMediaType = false;
-                _filter._reloadAvsSource = false;
-            }
-
-            auto potentialOutputMediaTypes = _filter.InputToOutputMediaType(&_filter.m_pInput->CurrentMediaType());
-            const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes, [this](const CMediaType &outputMediaType) -> bool {
-                /*
-                 * "QueryAccept (Downstream)" forces the downstream to use the new output media type as-is, which may lead to wrong rendering result
-                 * "ReceiveConnection" allows downstream to counter-propose suitable media type for the connection
-                 * after ReceiveConnection(), the next output sample should carry the new output media type, which is handled in PrepareOutputSample()
-                 */
-
-                if (_isFlushing) {
-                    return false;
-                }
-
-                return SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
-            });
-
-            if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {
-                Environment::GetInstance().Log(L"Downstream does not accept any of the new output media types. Terminate");
-                _filter.AbortPlayback(VFW_E_TYPE_NOT_ACCEPTED);
-                break;
-            }
-
-            {
-                const std::unique_lock receiveLock(_filter.m_csReceive);
-
-                _filter.StartStreaming();
-            }
-        }
-
         /*
          * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
          * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
@@ -452,6 +408,46 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     _addInputSampleCv.notify_all();
 
     Environment::GetInstance().Log(L"GarbageCollect frames until %6i pre size %3zu post size %3zu", srcFrameNb, dbgPreSize, _sourceFrames.size());
+}
+
+auto FrameHandler::ChangeOutputFormat() -> bool {
+    Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
+                                   _filter._inputVideoFormat.pixelFormat->name.c_str(), _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
+
+    _filter.StopStreaming();
+
+    BeginFlush();
+    EndFlush([this]() -> void {
+        AvsHandler::GetInstance().GetMainScriptInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    });
+
+    _filter._changeOutputMediaType = false;
+    _filter._reloadAvsSource = false;
+
+    auto potentialOutputMediaTypes = _filter.InputToOutputMediaType(&_filter.m_pInput->CurrentMediaType());
+    const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes, [this](const CMediaType &outputMediaType) -> bool {
+        /*
+         * "QueryAccept (Downstream)" forces the downstream to use the new output media type as-is, which may lead to wrong rendering result
+         * "ReceiveConnection" allows downstream to counter-propose suitable media type for the connection
+         * after ReceiveConnection(), the next output sample should carry the new output media type, which is handled in PrepareOutputSample()
+         */
+
+        if (_isFlushing) {
+            return false;
+        }
+
+        return SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
+    });
+
+    if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {
+        Environment::GetInstance().Log(L"Downstream does not accept any of the new output media types");
+        _filter.AbortPlayback(VFW_E_TYPE_NOT_ACCEPTED);
+        return false;
+    }
+
+    _filter.StartStreaming();
+
+    return true;
 }
 
 auto FrameHandler::RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void {
