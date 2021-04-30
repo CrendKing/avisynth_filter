@@ -2,10 +2,9 @@
 
 #include "pch.h"
 #include "source_clip.h"
-#include "avs_handler.h"
 
 
-namespace AvsFilter {
+namespace SynthFilter {
 
 SourceClip::SourceClip(const VideoInfo &videoInfo)
     : _videoInfo(videoInfo) {
@@ -17,7 +16,7 @@ auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     ASSERT(_frameHandler != nullptr);
-    return _frameHandler->GetSourceFrame(frameNb, env);
+    return _frameHandler->GetSourceFrame(frameNb);
 }
 
 }

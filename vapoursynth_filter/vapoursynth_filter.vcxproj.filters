@@ -21,9 +21,6 @@
     <ClInclude Include="src\frameserver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\source_clip.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\format.cpp">
@@ -33,9 +30,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\frameserver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\source_clip.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

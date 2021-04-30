@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{C84DE615-CF6F-441C-99B8-E30F5046CF9F}</ProjectGuid>
+    <ProjectGuid>{A736C512-27B1-4D1C-B8E4-50EF31FE13AF}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
@@ -14,26 +14,24 @@
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)dep_avisynth_plus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>AVSF_AVISYNTH;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)dep_vapoursynth_plus\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>AVSF_VAPOURSYNTH;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)dep_avisynth_plus\libs\$(PlatformArchitecture);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>AviSynth.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(SolutionDir)dep_vapoursynth_plus\libs\$(PlatformArchitecture);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>VSScript.dll</DelayLoadDLLs>
     </Link>
     <ResourceCompile>
-      <PreprocessorDefinitions>AVSF_AVISYNTH;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>AVSF_VAPOURSYNTH;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\frame_handler.h" />
     <ClInclude Include="src\frameserver.h" />
-    <ClInclude Include="src\source_clip.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\format.cpp" />
     <ClCompile Include="src\frame_handler.cpp" />
     <ClCompile Include="src\frameserver.cpp" />
-    <ClCompile Include="src\source_clip.cpp" />
   </ItemGroup>
 </Project>

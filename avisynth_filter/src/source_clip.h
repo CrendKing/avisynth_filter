@@ -5,9 +5,7 @@
 #include "frame_handler.h"
 
 
-namespace AvsFilter {
-
-class CAviSynthFilter;
+namespace SynthFilter {
 
 class SourceClip : public IClip {
 public:

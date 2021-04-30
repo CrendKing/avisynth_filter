@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{30836ddb-efab-421e-98ef-ea3bed0d83c1}</ItemsProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetExt>.ax</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <PreBuildEvent>
+      <Command>for /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH "%%H"&gt; "$(MSBuildThisFileDirectory)src\git_hash.h"</Command>
+    </PreBuildEvent>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)src;$(SolutionDir)baseclasses\src;$(SolutionDir)dep_simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>$(MSBuildThisFileDirectory)src\filter_common.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\allocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\api.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\constants.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\environment.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\filter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\format.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\hdr.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\input_pin.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\media_sample.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_settings.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_status.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\rc_singleton.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\registry.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\remote_control.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\resource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\side_data.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\util.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\allocator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\environment.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\filter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\hdr.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\input_pin.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\main.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\media_sample.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\prop_settings.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\prop_status.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\registry.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\remote_control.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\util.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)src\filter_common.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)src\filter_common.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)baseclasses\baseclasses.vcxproj">
+      <Project>{6d6faba3-51a7-4162-b5a8-ada838387d60}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

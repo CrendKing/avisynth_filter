@@ -1,10 +1,10 @@
-# [AviSynth Filter](https://github.com/CrendKing/avisynth_filter)
+# [AviSynth Filter and VapourSynth Filter](https://github.com/CrendKing/avisynth_filter)
 
-A DirectShow filter that puts AviSynth into video playing, by loading AviSynth script and feed the generated frames to video player.
+DirectShow filters that put AviSynth or VapourSynth into video playing, by loading a script and feed the generated frames to video player.
 
-This filter exports an "AvsFilterSource()" function to the AviSynth script, which serves as a source plugin. This filter feeds the video samples from DirectShow upstream to the script. Then it sends the processed frame data to the downstream.
+Each filter takes video samples from upstream, feeds them to the frame server in compatible format, and delivers the transformed output frames to downstream.
 
-If you used ffdshow's AviSynth plugin, you may find this filter similar in many ways. On top of that, this filter is actively adding new features.
+If you used ffdshow's AviSynth plugin before, you may find these filters similar in many ways. On top of that, our filters are actively adding new features.
 
 ## Features
 
@@ -13,7 +13,7 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
     * 4:2:2: YUY2, P210, P216
     * 4:4:4: YV24
     * RGB24, RGB32
-* High performance multithreaded frame delivery
+* High performance frame generation and delivery
 * HDR metadata passthrough
 * [API and Remote Control](#api-and-remote-control)
 * [Portable mode](https://github.com/CrendKing/avisynth_filter/wiki/Portable-mode)
@@ -21,22 +21,25 @@ If you used ffdshow's AviSynth plugin, you may find this filter similar in many 
 ## Requirement
 
 * CPU with SSE2 instruction set.
-* [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above.
+* [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above, or
+* [VapourSynth](https://github.com/vapoursynth/vapoursynth).
 
 ## Install
 
-* Before anything, install AviSynth+. Make sure `AviSynth.dll` is reachable either in the directory of the video player, system directories or directories from the `PATH` environment variable.
+* Before anything, install AviSynth+ or VapourSynth. Make sure the frame server's dll files are reachable either in the directory of the video player, system directories or directories from the `PATH` environment variable.
 * Unpack the archive.
-* Run install.bat to register the filter `avisynth_filter.ax`.
-* Enable the filter `AviSynth Filter` in video player.
+* Run install.bat to register the filter .ax files.
+* Enable `AviSynth Filter` or `VapourSynth Filter` in video player.
 
 ## Uninstall
 
-Run uninstall.bat to unregister the filter and clean up user data.
+Run uninstall.bat to unregister the filters and clean up user data.
 
 ## Usage
 
-The filter exports the following functions to the AviSynth script.
+### AviSynth Filter
+
+The filter exposes the following functions to the AviSynth script:
 
 #### `AvsFilterSource()`
 
@@ -46,7 +49,7 @@ This function takes no argument.
 
 #### `AvsFilterDisconnect()`
 
-This function serves as a heuristic to disconnect the AviSynth Filter from DirectShow filter graph. Put at the end of the script file.
+This function serves as a heuristic to disconnect the filter itself from DirectShow filter graph. Put at the end of the script file.
 
 It can be used to avoid unnecessary processing and improve performance if the script does not modify the source. Avoid to use it during live reloading.
 
@@ -54,15 +57,29 @@ A good example is if your script applies modifications based on video metadata (
 
 This function takes no argument.
 
+### VapourSynth
+
+The filter exposes the following variables to the VapourSynth Python script:
+
+#### `VpsFilterSource`
+
+This variable has the type of [`VideoNode`](http://www.vapoursynth.com/doc/pythonreference.html#VideoNode). It serves as the source clip.
+
+#### `VpsFilterDisconnect`
+
+This variable does not exist at the entry of the script. Upon return, if this variable exists and has an non-zero value, it disconnects the filter itself from DirectShow filter graph.
+
 ## API and Remote Control
 
-Since version 0.6.0, this filter allows other programs to remotely control it via API. By default the functionality is disabled and can be activated from settings (requires restarting the video player after changing).
+Since version 0.6.0, these filters allow other programs to remotely control it via API. By default the functionality is disabled and can be activated from settings (requires restarting the video player after changing).
 
 For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
 
-## Example AviSynth script
+## Example scripts
 
 Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.
+
+### AviSynth
 
 ```
 AvsFilterSource()
@@ -76,9 +93,22 @@ if (fps < 20) {
 }
 ```
 
+### VapourSynth
+
+```
+from vapoursynth import core
+import math
+
+fps = round(VpsFilterSource.fps)
+if fps < 20:
+    core.text.Text(VpsFilterSource, 'This video has low FPS').set_output()
+else:
+    VpsFilterDisconnect = True
+```
+
 ## Build
 
-A build script `build.bat` is included to automate the process. It obtains dependencies and starts compilation. Before running `build.bat`, make sure you have the latest Visual Studio installed. The script will automatically assume the Visual Studio developer environment and check out dependencies. To run the script, pass the target platform as the first argument, e.g. `build.bat x64` or `build.bat x86`.
+A build script `build.ps1` is included to automate the process. It obtains dependencies and starts compilation. Before running `build.ps1`, make sure you have the latest Visual Studio installed. The script will automatically assume the Visual Studio developer environment and check out dependencies. To run the script, pass the target platform as the first argument, e.g. `build.ps1 x64` or `build.ps1 x86`.
 
 ## Credit
 
