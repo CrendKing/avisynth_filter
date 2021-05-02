@@ -12,16 +12,14 @@
 namespace SynthFilter {
 
 class ScriptInstance {
-public:
-    auto StopScript() -> void;
-
 protected:
     ScriptInstance();
-    virtual ~ScriptInstance();
+    ~ScriptInstance();
 
     DISABLE_COPYING(ScriptInstance)
 
-    virtual auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    auto StopScript() -> void;
 
     IScriptEnvironment *_env;
     PClip _scriptClip = nullptr;
@@ -34,13 +32,13 @@ class MainScriptInstance
     : public ScriptInstance
     , public RefCountedSingleton<MainScriptInstance> {
 public:
-    ~MainScriptInstance() override;
+    ~MainScriptInstance();
 
     CTOR_WITHOUT_COPYING(MainScriptInstance)
 
-    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    using ScriptInstance::StopScript;
     auto GetFrame(int frameNb) const -> PVideoFrame;
-    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
     constexpr auto GetSourceDrainFrame() const -> const PVideoFrame & { return _sourceDrainFrame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
@@ -60,7 +58,7 @@ class CheckingScriptInstance
 public:
     CTOR_WITHOUT_COPYING(CheckingScriptInstance)
 
-    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
     constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type; }
 };
@@ -77,12 +75,12 @@ public:
     DISABLE_COPYING(FrameServer)
 
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
+    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
 
 private:
     auto CreateEnv() const -> IScriptEnvironment *;
-    auto GetSourceClip() const -> SourceClip *;
 
     const char *_versionString;
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();

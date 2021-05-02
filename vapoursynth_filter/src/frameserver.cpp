@@ -16,7 +16,7 @@ static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode 
 }
 
 static auto VS_CC SourceGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrameRef * {
-    FrameHandler &frameHandler = MainScriptInstance::GetInstance().GetFrameHandler();
+    FrameHandler &frameHandler = FrameServer::GetInstance().GetFrameHandler();
     return AVSF_VS_API->cloneFrameRef(frameHandler.GetSourceFrame(n));
 }
 
@@ -135,10 +135,6 @@ auto MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignor
     return false;
 }
 
-auto MainScriptInstance::LinkFrameHandler(FrameHandler *frameHandler) -> void {
-    this->_frameHandler = frameHandler;
-}
-
 auto MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
     return _errorString.empty() ? std::nullopt : std::make_optional(_errorString);
 }
@@ -240,6 +236,10 @@ auto FrameServer::SetScriptPath(const std::filesystem::path &scriptPath) -> void
 
 auto FrameServer::GetVersionString() const -> const char * {
     return _versionString.c_str();
+}
+
+auto FrameServer::LinkFrameHandler(FrameHandler *frameHandler) -> void {
+    _frameHandler = frameHandler;
 }
 
 }

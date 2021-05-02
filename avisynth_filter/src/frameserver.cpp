@@ -19,13 +19,6 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
     return AVSValue();
 }
 
-auto ScriptInstance::StopScript() -> void {
-    if (_scriptClip != nullptr) {
-        Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
-        _scriptClip = nullptr;
-    }
-}
-
 ScriptInstance::ScriptInstance()
     : _env(FrameServer::GetInstance().CreateEnv()) {
 }
@@ -90,6 +83,13 @@ auto ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDis
     return true;
 }
 
+auto ScriptInstance::StopScript() -> void {
+    if (_scriptClip != nullptr) {
+        Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
+        _scriptClip = nullptr;
+    }
+}
+
 MainScriptInstance::~MainScriptInstance() {
     _sourceDrainFrame = nullptr;
 }
@@ -110,10 +110,6 @@ auto MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignor
 
 auto MainScriptInstance::GetFrame(int frameNb) const -> PVideoFrame {
     return _scriptClip->GetFrame(frameNb, _env);
-}
-
-auto MainScriptInstance::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
-    FrameServer::GetInstance().GetSourceClip()->SetFrameHandler(frameHandler);
 }
 
 auto MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
@@ -214,6 +210,10 @@ auto FrameServer::SetScriptPath(const std::filesystem::path &scriptPath) -> void
     _scriptPath = scriptPath;
 }
 
+auto FrameServer::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
+    reinterpret_cast<SourceClip *>(_sourceClip.operator->())->SetFrameHandler(frameHandler);
+}
+
 auto FrameServer::CreateEnv() const -> IScriptEnvironment * {
     /*
     use CreateScriptEnvironment() instead of CreateScriptEnvironment2().
@@ -233,10 +233,6 @@ auto FrameServer::CreateEnv() const -> IScriptEnvironment * {
     env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 
     return env;
-}
-
-auto FrameServer::GetSourceClip() const -> SourceClip * {
-    return reinterpret_cast<SourceClip *>(_sourceClip.operator->());
 }
 
 }

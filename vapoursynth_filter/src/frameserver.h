@@ -12,16 +12,16 @@ namespace SynthFilter {
 
 class ScriptInstance {
 public:
-    auto StopScript() -> void;
     constexpr auto GetVsScript() const -> VSScript * { return _vsScript; }
 
 protected:
     ScriptInstance();
-    virtual ~ScriptInstance();
+    ~ScriptInstance();
 
     DISABLE_COPYING(ScriptInstance)
 
-    virtual auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    auto StopScript() -> void;
 
     VSScript *_vsScript = nullptr;
     VSNodeRef *_scriptClip = nullptr;
@@ -34,13 +34,12 @@ class MainScriptInstance
     : public ScriptInstance
     , public RefCountedSingleton<MainScriptInstance> {
 public:
-    ~MainScriptInstance() override;
+    ~MainScriptInstance();
 
     CTOR_WITHOUT_COPYING(MainScriptInstance)
 
-    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
-    auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
-    constexpr auto GetFrameHandler() const -> FrameHandler & { return *_frameHandler; }
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    using ScriptInstance::StopScript;
     constexpr auto GetScriptClip() const -> VSNodeRef * { return _scriptClip; }
     constexpr auto GetSourceDrainFrame() -> const VSFrameRef * { return _sourceDrainFrame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
@@ -49,7 +48,6 @@ public:
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-    FrameHandler *_frameHandler = nullptr;
     const VSFrameRef *_sourceDrainFrame = nullptr;
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
@@ -61,7 +59,7 @@ class CheckingScriptInstance
 public:
     CTOR_WITHOUT_COPYING(CheckingScriptInstance)
 
-    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool override;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
     constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.format->id; }
 };
@@ -79,13 +77,16 @@ public:
 
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     auto GetVersionString() const -> const char *;
+    auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
+    constexpr auto GetFrameHandler() const -> FrameHandler & { return *_frameHandler; }
     constexpr auto GetSourceVideoInfo() const -> const VSVideoInfo & { return _sourceVideoInfo; }
     constexpr auto GetVsApi() const -> const VSAPI * { return _vsApi; }
 
 private:
-    std::string _versionString = "VapourSynth";
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
+    std::string _versionString = "VapourSynth";
+    FrameHandler *_frameHandler = nullptr;
     VSVideoInfo _sourceVideoInfo = {};
     const VSAPI *_vsApi;
 };

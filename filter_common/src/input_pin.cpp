@@ -82,9 +82,9 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
+    FrameServer::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
     // need reload here instead of CompleteConnect() so that switching video works
     MainScriptInstance::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-    MainScriptInstance::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
     _filter.frameHandler->Start();
 
     return __super::Active();
