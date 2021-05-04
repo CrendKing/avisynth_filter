@@ -35,6 +35,7 @@ Environment::Environment()
 
             _wsetlocale(LC_CTYPE, L".utf8");
 
+            Log(L"Filter version: %S", FILTER_VERSION_STRING);
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
 
             std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {

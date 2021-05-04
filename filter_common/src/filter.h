@@ -69,9 +69,9 @@ private:
     };
 
     static auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
-        CheckingScriptInstance::GetInstance().ReloadScript(*mtIn, true);
-        return Format::LookupFsFormatId(CheckingScriptInstance::GetInstance().GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
-            return CheckingScriptInstance::GetInstance().GenerateMediaType(pixelFormat, mtIn);
+        AuxFrameServer::GetInstance().ReloadScript(*mtIn, true);
+        return Format::LookupFsFormatId(AuxFrameServer::GetInstance().GetScriptPixelType()) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
+            return AuxFrameServer::GetInstance().GenerateMediaType(pixelFormat, mtIn);
         });
     }
 

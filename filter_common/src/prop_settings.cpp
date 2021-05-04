@@ -30,7 +30,7 @@ auto CSynthFilterPropSettings::OnDisconnect() -> HRESULT {
 
 auto CSynthFilterPropSettings::OnActivate() -> HRESULT {
     _configScriptPath = Environment::GetInstance().GetScriptPath();
-    _scriptFileManagedByRC = _configScriptPath != FrameServer::GetInstance().GetScriptPath();
+    _scriptFileManagedByRC = _configScriptPath != FrameServerCommon::GetInstance().GetScriptPath();
     if (_scriptFileManagedByRC) {
         ShowWindow(GetDlgItem(m_Dlg, IDC_REMOTE_CONTROL_STATUS), SW_SHOW);
     }
@@ -49,7 +49,7 @@ auto CSynthFilterPropSettings::OnActivate() -> HRESULT {
     EnableWindow(GetDlgItem(m_Dlg, IDC_INPUT_FORMAT_RGB24), FALSE);
 #endif
 
-    const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a>\nwith " + FrameServer::GetInstance().GetVersionString();
+    const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a>\nwith " + FrameServerCommon::GetInstance().GetVersionString();
     SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page
@@ -102,7 +102,7 @@ auto CSynthFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPa
             if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_BUTTON_EDIT && !_configScriptPath.empty()) {
                 ShellExecuteW(hwnd, L"edit", _configScriptPath.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
-                _filter->ReloadScript(FrameServer::GetInstance().GetScriptPath());
+                _filter->ReloadScript(FrameServerCommon::GetInstance().GetScriptPath());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {
                 std::array<WCHAR, MAX_PATH> szFile = {};
 

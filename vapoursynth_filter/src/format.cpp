@@ -74,7 +74,7 @@ auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat 
     return nullptr;
 }
 
-auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const ScriptInstance *scriptInstance) -> VideoFormat {
+auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat {
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     REFERENCE_TIME fpsNum = UNITS;
     REFERENCE_TIME frameDuration = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;

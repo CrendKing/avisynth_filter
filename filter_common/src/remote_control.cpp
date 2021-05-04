@@ -164,7 +164,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.GetInputFormat().hdrLuminance;
 
     case API_MSG_GET_SOURCE_AVG_FPS:
-        return MainScriptInstance::GetInstance().GetSourceAvgFrameRate();
+        return MainFrameServer::GetInstance().GetSourceAvgFrameRate();
 
     case API_MSG_GET_CURRENT_OUTPUT_FPS:
         return _filter.frameHandler->GetCurrentOutputFrameRate();
@@ -173,7 +173,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return static_cast<LRESULT>(_filter.GetFrameServerState());
 
     case API_MSG_GET_AVS_ERROR:
-        if (const std::optional<std::string> optFrameServerError = MainScriptInstance::GetInstance().GetErrorString()) {
+        if (const std::optional<std::string> optFrameServerError = MainFrameServer::GetInstance().GetErrorString()) {
             SendString(hSenderWindow, copyData->dwData, *optFrameServerError);
             return TRUE;
         }
@@ -181,7 +181,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return FALSE;
 
     case API_MSG_GET_AVS_SOURCE_FILE: {
-        const std::filesystem::path &effectiveScriptPath = FrameServer::GetInstance().GetScriptPath();
+        const std::filesystem::path &effectiveScriptPath = FrameServerCommon::GetInstance().GetScriptPath();
         if (effectiveScriptPath.empty()) {
             return FALSE;
         }

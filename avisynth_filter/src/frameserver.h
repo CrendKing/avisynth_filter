@@ -6,38 +6,61 @@
 #include "format.h"
 #include "frame_handler.h"
 #include "rc_singleton.h"
-#include "source_clip.h"
 
 
 namespace SynthFilter {
 
-class ScriptInstance {
-protected:
-    ScriptInstance();
-    ~ScriptInstance();
+class FrameServerCommon : public RefCountedSingleton<FrameServerCommon> {
+    friend class FrameServerBase;
+    friend class MainFrameServer;
+    friend class AuxFrameServer;
 
-    DISABLE_COPYING(ScriptInstance)
+public:
+    FrameServerCommon();
+    ~FrameServerCommon();
+
+    DISABLE_COPYING(FrameServerCommon)
+
+    auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
+    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
+    constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
+    constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
+
+private:
+    auto CreateEnv() const -> IScriptEnvironment *;
+
+    const char *_versionString;
+    std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
+    VideoInfo _sourceVideoInfo = {};
+    PClip _sourceClip;
+};
+
+class FrameServerBase {
+protected:
+    ~FrameServerBase();
+
+    CTOR_WITHOUT_COPYING(FrameServerBase)
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto StopScript() -> void;
 
-    IScriptEnvironment *_env;
+    IScriptEnvironment *_env = FrameServerCommon::GetInstance().CreateEnv();
     PClip _scriptClip = nullptr;
     VideoInfo _scriptVideoInfo = {};
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
 };
 
-class MainScriptInstance
-    : public ScriptInstance
-    , public RefCountedSingleton<MainScriptInstance> {
+class MainFrameServer
+    : public FrameServerBase
+    , public RefCountedSingleton<MainFrameServer> {
 public:
-    ~MainScriptInstance();
+    ~MainFrameServer();
 
-    CTOR_WITHOUT_COPYING(MainScriptInstance)
+    CTOR_WITHOUT_COPYING(MainFrameServer)
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
-    using ScriptInstance::StopScript;
+    using FrameServerBase::StopScript;
     auto GetFrame(int frameNb) const -> PVideoFrame;
     constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
     constexpr auto GetSourceDrainFrame() const -> const PVideoFrame & { return _sourceDrainFrame; }
@@ -52,40 +75,15 @@ private:
     int _sourceAvgFrameRate = 0;
 };
 
-class CheckingScriptInstance
-    : public ScriptInstance
-    , public RefCountedSingleton<CheckingScriptInstance> {
+class AuxFrameServer
+    : public FrameServerBase
+    , public RefCountedSingleton<AuxFrameServer> {
 public:
-    CTOR_WITHOUT_COPYING(CheckingScriptInstance)
+    CTOR_WITHOUT_COPYING(AuxFrameServer)
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
     constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type; }
-};
-
-class FrameServer : public RefCountedSingleton<FrameServer> {
-    friend class ScriptInstance;
-    friend class MainScriptInstance;
-    friend class CheckingScriptInstance;
-
-public:
-    FrameServer();
-    ~FrameServer();
-
-    DISABLE_COPYING(FrameServer)
-
-    auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
-    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
-    constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
-    constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
-
-private:
-    auto CreateEnv() const -> IScriptEnvironment *;
-
-    const char *_versionString;
-    std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
-    VideoInfo _sourceVideoInfo = {};
-    PClip _sourceClip;
 };
 
 }

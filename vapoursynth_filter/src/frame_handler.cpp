@@ -42,7 +42,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     REFERENCE_TIME inputSampleStopTime = 0;
     if (inputSample->GetTime(&inputSampleStartTime, &inputSampleStopTime) == VFW_E_SAMPLE_TIME_NOT_SET) {
         // for samples without start time, always treat as fixed frame rate
-        inputSampleStartTime = _nextSourceFrameNb * MainScriptInstance::GetInstance().GetSourceAvgFrameDuration();
+        inputSampleStartTime = _nextSourceFrameNb * MainFrameServer::GetInstance().GetSourceAvgFrameDuration();
     }
 
     {
@@ -125,8 +125,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
             if (i > 0) {
                 outputFrameDurations[i - 1] = llMulDiv(processSourceFrameIters[i]->second.startTime - processSourceFrameIters[i - 1]->second.startTime,
-                                                       MainScriptInstance::GetInstance().GetScriptAvgFrameDuration(),
-                                                       MainScriptInstance::GetInstance().GetSourceAvgFrameDuration(),
+                                                       MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
+                                                       MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
                                                        0);
             }
         }
@@ -164,7 +164,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                    std::forward_as_tuple(_nextOutputFrameNb),
                                    std::forward_as_tuple(outputStartTime, outputStopTime, processSourceFrameIters[0]->first, processSourceFrameIters[0]->second.hdrSideData));
         }
-        AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainScriptInstance::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
+        AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
 
         _nextOutputFrameNb += 1;
     }
@@ -192,7 +192,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
 
     if (_isFlushing) {
         Environment::GetInstance().Log(L"Drain for frame %6i", frameNb);
-        return MainScriptInstance::GetInstance().GetSourceDrainFrame();
+        return MainFrameServer::GetInstance().GetSourceDrainFrame();
     }
 
     return iter->second.frame;
@@ -268,7 +268,7 @@ auto FrameHandler::Stop() -> void {
          *
          * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
          */
-        MainScriptInstance::GetInstance().StopScript();
+        MainFrameServer::GetInstance().StopScript();
     });
 
     if (_workerThread.joinable()) {
@@ -371,7 +371,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
 
     if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         _filter.m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
-        _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut, &MainScriptInstance::GetInstance());
+        _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut, &MainFrameServer::GetInstance());
         sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
@@ -496,7 +496,7 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
 
     BeginFlush();
     EndFlush([this]() -> void {
-        MainScriptInstance::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+        MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     });
 
     _filter._changeOutputMediaType = false;

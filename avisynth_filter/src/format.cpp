@@ -77,7 +77,7 @@ auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat 
     return nullptr;
 }
 
-auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const ScriptInstance *scriptInstance) -> VideoFormat {
+auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat {
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     const REFERENCE_TIME frameDuration = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
 
@@ -122,7 +122,7 @@ auto Format::WriteSample(const VideoFormat &videoFormat, PVideoFrame srcFrame, B
 }
 
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> PVideoFrame {
-    PVideoFrame frame = MainScriptInstance::GetInstance().GetEnv()->NewVideoFrame(videoFormat.videoInfo, static_cast<int>(_vectorSize));
+    PVideoFrame frame = MainFrameServer::GetInstance().GetEnv()->NewVideoFrame(videoFormat.videoInfo, static_cast<int>(_vectorSize));
 
     const std::array dstSlices = { frame->GetWritePtr(), frame->GetWritePtr(PLANAR_U), frame->GetWritePtr(PLANAR_V) };
     const std::array dstStrides = { frame->GetPitch(), frame->GetPitch(PLANAR_U), frame->GetPitch(PLANAR_V) };
@@ -147,7 +147,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         srcMainPlaneStride = -srcMainPlaneStride;
     }
 
-    MainScriptInstance::GetInstance().GetEnv()->BitBlt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
+    MainFrameServer::GetInstance().GetEnv()->BitBlt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
 
     if (videoFormat.pixelFormat->fsFormatId & VideoInfo::CS_INTERLEAVED) {
         return;
@@ -195,8 +195,8 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
             srcV = srcUVPlane2;
         }
 
-        MainScriptInstance::GetInstance().GetEnv()->BitBlt(dstSlices[1], dstStrides[1], srcU, srcUVStride, srcUVRowSize, srcUVHeight);
-        MainScriptInstance::GetInstance().GetEnv()->BitBlt(dstSlices[2], dstStrides[2], srcV, srcUVStride, srcUVRowSize, srcUVHeight);
+        MainFrameServer::GetInstance().GetEnv()->BitBlt(dstSlices[1], dstStrides[1], srcU, srcUVStride, srcUVRowSize, srcUVHeight);
+        MainFrameServer::GetInstance().GetEnv()->BitBlt(dstSlices[2], dstStrides[2], srcV, srcUVStride, srcUVRowSize, srcUVHeight);
     }
 }
 
@@ -213,7 +213,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         dstMainPlaneStride = -dstMainPlaneStride;
     }
 
-    MainScriptInstance::GetInstance().GetEnv()->BitBlt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
+    MainFrameServer::GetInstance().GetEnv()->BitBlt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
 
     if (videoFormat.pixelFormat->fsFormatId & VideoInfo::CS_INTERLEAVED) {
         return;
@@ -255,8 +255,8 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
             dstV = dstUVPlane2;
         }
 
-        MainScriptInstance::GetInstance().GetEnv()->BitBlt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
-        MainScriptInstance::GetInstance().GetEnv()->BitBlt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
+        MainFrameServer::GetInstance().GetEnv()->BitBlt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
+        MainFrameServer::GetInstance().GetEnv()->BitBlt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
     }
 }
 

@@ -73,8 +73,8 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::GetAllocator(__deref_out IMemAlloca
 }
 
 auto CSynthFilterInputPin::Active() -> HRESULT {
-    _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType(), &MainScriptInstance::GetInstance());
-    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &MainScriptInstance::GetInstance());
+    _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType(), &MainFrameServer::GetInstance());
+    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &MainFrameServer::GetInstance());
 
     _filter.TraverseFiltersInGraph();
 
@@ -82,9 +82,9 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
-    FrameServer::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
+    FrameServerCommon::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
     // need reload here instead of CompleteConnect() so that switching video works
-    MainScriptInstance::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     _filter.frameHandler->Start();
 
     return __super::Active();

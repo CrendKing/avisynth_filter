@@ -16,9 +16,9 @@ CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME_FULL, pUnk, __uuidof(CSynthFilter)) {
     if (_numFilterInstances == 0) {
         Environment::Create();
-        FrameServer::Create();
-        MainScriptInstance::Create();
-        CheckingScriptInstance::Create();
+        FrameServerCommon::Create();
+        MainFrameServer::Create();
+        AuxFrameServer::Create();
         Format::Initialize();
     }
     _numFilterInstances += 1;
@@ -34,9 +34,9 @@ CSynthFilter::~CSynthFilter() {
 
     _numFilterInstances -= 1;
     if (_numFilterInstances == 0) {
-        CheckingScriptInstance::Destroy();
-        MainScriptInstance::Destroy();
-        FrameServer::Destroy();
+        AuxFrameServer::Destroy();
+        MainFrameServer::Destroy();
+        FrameServerCommon::Destroy();
         Environment::Destroy();
     }
 }
@@ -90,15 +90,15 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
                 if (const Format::PixelFormat *optInputPixelFormat = GetInputPixelFormat(nextType);
                     optInputPixelFormat && std::ranges::find(_compatibleMediaTypes, optInputPixelFormat, &MediaTypePair::inputPixelFormat) == _compatibleMediaTypes.cend()) {
                     // invoke the script with each supported input pixel format, and observe the output frameserver format
-                    if (!CheckingScriptInstance::GetInstance().ReloadScript(*nextType, Environment::GetInstance().IsRemoteControlEnabled())) {
+                    if (!AuxFrameServer::GetInstance().ReloadScript(*nextType, Environment::GetInstance().IsRemoteControlEnabled())) {
                         Environment::GetInstance().Log(L"Disconnect filter by user request");
                         _disconnectFilter = true;
                         return VFW_E_TYPE_NOT_ACCEPTED;
                     }
 
                     // all media types that share the same frameserver format are acceptable for output pin connection
-                    for (const Format::PixelFormat &fsPixelFormat : Format::LookupFsFormatId(CheckingScriptInstance::GetInstance().GetScriptPixelType())) {
-                        const CMediaType outputMediaType = CheckingScriptInstance::GetInstance().GenerateMediaType(fsPixelFormat, nextType);
+                    for (const Format::PixelFormat &fsPixelFormat : Format::LookupFsFormatId(AuxFrameServer::GetInstance().GetScriptPixelType())) {
+                        const CMediaType outputMediaType = AuxFrameServer::GetInstance().GenerateMediaType(fsPixelFormat, nextType);
                         _compatibleMediaTypes.emplace_back(nextTypePtr, optInputPixelFormat, outputMediaType, MediaTypeToPixelFormat(&outputMediaType));
                         Environment::GetInstance().Log(L"Add compatible formats: input %s output %s", optInputPixelFormat->name.c_str(), fsPixelFormat.name.c_str());
                     }
@@ -204,7 +204,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
      * The problem is that the graph manager may not query all N1 media types during CheckInputType(). It may stop querying once found a valid transform
      * input/output pair, where the output media type is not acceptable with the downstream.
      *
-     * The solution is to enumerate all N1 media types from upstream, generate the whole N2 by calling CheckingScriptInstance::GenerateMediaType().
+     * The solution is to enumerate all N1 media types from upstream, generate the whole N2 by calling AuxFrameServer::GenerateMediaType().
      * During GetMediaType() and CheckTransform(), we offer and accept any output media type that is in N2. This allows downstream to choose the best media type it wants to use.
      *
      * Once both input and output pins are connected, we check if the pins' media types are valid transform. If yes, we are lucky and the pin connection completes.
@@ -267,7 +267,7 @@ auto CSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     pSample->GetMediaType(&pmt);
     if (pmt != nullptr && pmt->pbFormat != nullptr) {
         m_pInput->CurrentMediaType() = *pmt;
-        _inputVideoFormat = Format::GetVideoFormat(*pmt, &MainScriptInstance::GetInstance());
+        _inputVideoFormat = Format::GetVideoFormat(*pmt, &MainFrameServer::GetInstance());
         DeleteMediaType(pmt);
 
         _changeOutputMediaType = true;
@@ -326,7 +326,7 @@ auto CSynthFilter::BeginFlush() -> HRESULT {
 auto CSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
         frameHandler->EndFlush([this]() -> void {
-            MainScriptInstance::GetInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
+            MainFrameServer::GetInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
         });
     }
 
@@ -353,12 +353,12 @@ auto STDMETHODCALLTYPE CSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> HRES
 }
 
 auto CSynthFilter::ReloadScript(const std::filesystem::path &scriptPath) -> void {
-    FrameServer::GetInstance().SetScriptPath(scriptPath);
+    FrameServerCommon::GetInstance().SetScriptPath(scriptPath);
     _reloadScript = true;
 }
 
 auto CSynthFilter::GetFrameServerState() const -> AvsState {
-    if (MainScriptInstance::GetInstance().GetErrorString()) {
+    if (MainFrameServer::GetInstance().GetErrorString()) {
         return AvsState::Error;
     }
 

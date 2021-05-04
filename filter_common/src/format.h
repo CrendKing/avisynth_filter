@@ -7,7 +7,7 @@
 
 namespace SynthFilter {
 
-class ScriptInstance;
+class FrameServerBase;
 
 class Format {
 #ifdef AVSF_AVISYNTH
@@ -75,7 +75,7 @@ public:
         return nullptr;
     }
 
-    static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const ScriptInstance *scriptInstance) -> VideoFormat;
+    static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat;
     static auto WriteSample(const VideoFormat &videoFormat, FrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> FrameType;
     static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;

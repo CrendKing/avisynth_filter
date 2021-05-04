@@ -3,7 +3,6 @@
 #include "pch.h"
 #include "frameserver.h"
 #include "api.h"
-#include "constants.h"
 
 
 namespace SynthFilter {
@@ -12,15 +11,53 @@ static constexpr const char *VPS_SOURCE_NODE_NAME         = "VpsFilterSource";
 static constexpr const char *VPS_DISCONNECT_VARIABLE_NAME = "VpsFilterDisconnect";
 
 static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) -> void {
-    AVSF_VS_API->setVideoInfo(&FrameServer::GetInstance().GetSourceVideoInfo(), 1, node);
+    AVSF_VS_API->setVideoInfo(&FrameServerCommon::GetInstance().GetSourceVideoInfo(), 1, node);
 }
 
 static auto VS_CC SourceGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrameRef * {
-    FrameHandler &frameHandler = FrameServer::GetInstance().GetFrameHandler();
+    FrameHandler &frameHandler = FrameServerCommon::GetInstance().GetFrameHandler();
     return AVSF_VS_API->cloneFrameRef(frameHandler.GetSourceFrame(n));
 }
 
-auto ScriptInstance::StopScript() -> void {
+FrameServerCommon::FrameServerCommon() {
+    Environment::GetInstance().Log(L"FrameServerCommon()");
+
+    const int vsInitCounter = vsscript_init();
+    ASSERT(vsInitCounter == 1);
+
+    _vsApi = vsscript_getVSApi2(VAPOURSYNTH_API_VERSION);
+    VSCore *vsCore = _vsApi->createCore(0);
+
+    VSCoreInfo coreInfo;
+    _vsApi->getCoreInfo2(vsCore, &coreInfo);
+
+    _versionString
+        .append(" R").append(std::to_string(coreInfo.core))
+        .append(" API R").append(std::to_string(VAPOURSYNTH_API_MAJOR)).append(".").append(std::to_string(VAPOURSYNTH_API_MINOR));
+    Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString());
+
+    _vsApi->freeCore(vsCore);
+}
+
+FrameServerCommon::~FrameServerCommon() {
+    Environment::GetInstance().Log(L"~FrameServerCommon()");
+
+    vsscript_finalize();
+}
+
+auto FrameServerCommon::SetScriptPath(const std::filesystem::path &scriptPath) -> void {
+    _scriptPath = scriptPath;
+}
+
+auto FrameServerCommon::GetVersionString() const -> const char * {
+    return _versionString.c_str();
+}
+
+auto FrameServerCommon::LinkFrameHandler(FrameHandler *frameHandler) -> void {
+    _frameHandler = frameHandler;
+}
+
+auto FrameServerBase::StopScript() -> void {
     if (_scriptClip != nullptr) {
         Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
         AVSF_VS_API->freeNode(_scriptClip);
@@ -28,11 +65,11 @@ auto ScriptInstance::StopScript() -> void {
     }
 }
 
-ScriptInstance::ScriptInstance() {
+FrameServerBase::FrameServerBase() {
     vsscript_createScript(&_vsScript);
 }
 
-ScriptInstance::~ScriptInstance() {
+FrameServerBase::~FrameServerBase() {
     StopScript();
     vsscript_freeScript(_vsScript);
 }
@@ -40,10 +77,10 @@ ScriptInstance::~ScriptInstance() {
 /**
  * Create new script clip with specified media type.
  */
-auto ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     StopScript();
 
-    FrameServer::GetInstance()._sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
+    FrameServerCommon::GetInstance()._sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
 
     VSMap *filterInputs = AVSF_VS_API->createMap();
     VSMap *filterOutputs = AVSF_VS_API->createMap();
@@ -60,8 +97,8 @@ auto ScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDis
 
     bool toDisconnect = false;
 
-    if (!FrameServer::GetInstance()._scriptPath.empty()) {
-        const std::string utf8Filename = ConvertWideToUtf8(FrameServer::GetInstance()._scriptPath);
+    if (!FrameServerCommon::GetInstance()._scriptPath.empty()) {
+        const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath);
 
         if (vsscript_evaluateFile(&_vsScript, utf8Filename.c_str(), efSetWorkingDir) == 0) {
             _scriptClip = vsscript_getOutput(_vsScript, 0);
@@ -112,21 +149,21 @@ core.text.Text(%s, r'''%s''').set_output()\n";
     return true;
 }
 
-MainScriptInstance::~MainScriptInstance() {
+MainFrameServer::~MainFrameServer() {
     AVSF_VS_API->freeFrame(_sourceDrainFrame);
 }
 
-auto MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     Environment::GetInstance().Log(L"ReloadScript from main instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
-        _sourceAvgFrameRate = static_cast<int>(llMulDiv(FrameServer::GetInstance()._sourceVideoInfo.fpsNum, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fpsDen, 0));
-        _sourceAvgFrameDuration = llMulDiv(FrameServer::GetInstance()._sourceVideoInfo.fpsDen, UNITS, FrameServer::GetInstance()._sourceVideoInfo.fpsNum, 0);
+        _sourceAvgFrameRate = static_cast<int>(llMulDiv(FrameServerCommon::GetInstance()._sourceVideoInfo.fpsNum, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fpsDen, 0));
+        _sourceAvgFrameDuration = llMulDiv(FrameServerCommon::GetInstance()._sourceVideoInfo.fpsDen, UNITS, FrameServerCommon::GetInstance()._sourceVideoInfo.fpsNum, 0);
 
         AVSF_VS_API->freeFrame(_sourceDrainFrame);
-        _sourceDrainFrame = AVSF_VS_API->newVideoFrame(FrameServer::GetInstance()._sourceVideoInfo.format,
-                                                       FrameServer::GetInstance()._sourceVideoInfo.width,
-                                                       FrameServer::GetInstance()._sourceVideoInfo.height,
+        _sourceDrainFrame = AVSF_VS_API->newVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo.format,
+                                                       FrameServerCommon::GetInstance()._sourceVideoInfo.width,
+                                                       FrameServerCommon::GetInstance()._sourceVideoInfo.height,
                                                        nullptr, vsscript_getCore(_vsScript));
 
         return true;
@@ -135,11 +172,11 @@ auto MainScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignor
     return false;
 }
 
-auto MainScriptInstance::GetErrorString() const -> std::optional<std::string> {
+auto MainFrameServer::GetErrorString() const -> std::optional<std::string> {
     return _errorString.empty() ? std::nullopt : std::make_optional(_errorString);
 }
 
-auto CheckingScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     Environment::GetInstance().Log(L"ReloadScript from checking instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
@@ -157,7 +194,7 @@ auto CheckingScriptInstance::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool i
  * For example, when the original subtype has 8-bit samples and new subtype has 16-bit,
  * all "size" and FourCC values will be adjusted.
  */
-auto CheckingScriptInstance::GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
+auto AuxFrameServer::GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType {
     FOURCCMap fourCC(&pixelFormat.mediaSubtype);
 
     CMediaType newMediaType(*templateMediaType);
@@ -201,45 +238,6 @@ auto CheckingScriptInstance::GenerateMediaType(const Format::PixelFormat &pixelF
     }
 
     return newMediaType;
-}
-
-FrameServer::FrameServer() {
-    Environment::GetInstance().Log(L"FrameServer()");
-    Environment::GetInstance().Log(L"Filter version: %S", FILTER_VERSION_STRING);
-
-    const int vsInitCounter = vsscript_init();
-    ASSERT(vsInitCounter == 1);
-
-    _vsApi = vsscript_getVSApi2(VAPOURSYNTH_API_VERSION);
-    VSCore *vsCore = _vsApi->createCore(0);
-
-    VSCoreInfo coreInfo;
-    _vsApi->getCoreInfo2(vsCore, &coreInfo);
-
-    _versionString
-        .append(" R").append(std::to_string(coreInfo.core))
-        .append(" API R").append(std::to_string(VAPOURSYNTH_API_MAJOR)).append(".").append(std::to_string(VAPOURSYNTH_API_MINOR));
-    Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString());
-
-    _vsApi->freeCore(vsCore);
-}
-
-FrameServer::~FrameServer() {
-    Environment::GetInstance().Log(L"~FrameServer()");
-
-    vsscript_finalize();
-}
-
-auto FrameServer::SetScriptPath(const std::filesystem::path &scriptPath) -> void {
-    _scriptPath = scriptPath;
-}
-
-auto FrameServer::GetVersionString() const -> const char * {
-    return _versionString.c_str();
-}
-
-auto FrameServer::LinkFrameHandler(FrameHandler *frameHandler) -> void {
-    _frameHandler = frameHandler;
 }
 
 }
