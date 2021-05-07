@@ -76,11 +76,11 @@ auto CSynthFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         SetDlgItemTextW(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
 
         if (!_isSourcePathSet) {
-            std::wstring videoSourcePath = _filter->GetVideoSourcePath();
+            std::wstring_view videoSourcePath = _filter->GetVideoSourcePath().c_str();
             if (videoSourcePath.empty()) {
                 videoSourcePath = UNAVAILABLE_SOURCE_PATH;
             }
-            SetDlgItemTextW(hwnd, IDC_EDIT_PATH_VALUE, videoSourcePath.c_str());
+            SetDlgItemTextW(hwnd, IDC_EDIT_PATH_VALUE, videoSourcePath.data());
             _isSourcePathSet = true;
         }
 

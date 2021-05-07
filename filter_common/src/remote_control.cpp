@@ -103,17 +103,17 @@ auto RemoteControl::Run() -> void {
     Environment::GetInstance().Log(L"Remote control stopped");
 }
 
-auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void {
+auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, std::string_view data) const -> void {
     if (!hReceiverWindow) {
         return;
     }
 
-    const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.c_str()) };
+    const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.data()) };
     SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd.load()), reinterpret_cast<LPARAM>(&copyData),
                         SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
 }
 
-auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void {
+auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, std::wstring_view data) const -> void {
     // the API should always send UTF-8 strings
     // convert WCHAR to UTF-8
 
@@ -135,7 +135,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return API_VERSION;
 
     case API_MSG_GET_VIDEO_FILTERS:
-        SendString(hSenderWindow, copyData->dwData, JoinStrings(_filter.GetVideoFilterNames(), API_CSV_DELIMITER));
+        SendString(hSenderWindow, copyData->dwData, JoinStrings(_filter.GetVideoFilterNames(), API_CSV_DELIMITER_STR));
         return TRUE;
 
     case API_MSG_GET_INPUT_WIDTH:
@@ -151,7 +151,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.frameHandler->GetCurrentInputFrameRate();
 
     case API_MSG_GET_INPUT_SOURCE_PATH:
-        SendString(hSenderWindow, copyData->dwData, _filter.GetVideoSourcePath());
+        SendString(hSenderWindow, copyData->dwData, _filter.GetVideoSourcePath().native());
         return TRUE;
 
     case API_MSG_GET_INPUT_CODEC:
@@ -186,7 +186,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
             return FALSE;
         }
 
-        SendString(hSenderWindow, copyData->dwData, effectiveScriptPath);
+        SendString(hSenderWindow, copyData->dwData, effectiveScriptPath.native());
         return TRUE;
     }
 

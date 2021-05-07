@@ -38,8 +38,8 @@ Environment::Environment()
             Log(L"Filter version: %S", FILTER_VERSION_STRING);
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
 
-            std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
-                Log(L"Configured input format %s: %i", name.c_str(), _enabledInputFormats.contains(name));
+            std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
+                Log(L"Configured input format %s: %i", name, _enabledInputFormats.contains(name));
             }, &Format::PixelFormat::name);
 
             Log(L"Loading process: %s", processName.c_str());
@@ -98,11 +98,11 @@ auto Environment::SetRemoteControlEnabled(bool enabled) -> void {
     }
 }
 
-auto Environment::IsInputFormatEnabled(const std::wstring &formatName) const -> bool {
+auto Environment::IsInputFormatEnabled(const WCHAR *formatName) const -> bool {
     return _enabledInputFormats.contains(formatName);
 }
 
-auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void {
+auto Environment::SetInputFormatEnabled(const WCHAR *formatName, bool enabled) -> void {
     if (enabled) {
         _enabledInputFormats.emplace(formatName);
     } else {
@@ -110,7 +110,8 @@ auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool ena
     }
 
     if (_useIni) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + formatName;
+        // TODO replace with std::format()
+        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + formatName;
         _ini.SetBoolValue(L"", settingName.c_str(), enabled);
     }
 }
@@ -118,8 +119,8 @@ auto Environment::SetInputFormatEnabled(const std::wstring &formatName, bool ena
 auto Environment::LoadSettingsFromIni() -> void {
     _scriptPath = _ini.GetValue(L"", SETTING_NAME_SCRIPT_FILE, L"");
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + name;
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
+        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + name;
         if (_ini.GetBoolValue(L"", settingName.c_str(), true)) {
             _enabledInputFormats.emplace(name);
         }
@@ -133,8 +134,8 @@ auto Environment::LoadSettingsFromIni() -> void {
 auto Environment::LoadSettingsFromRegistry() -> void {
     _scriptPath = _registry.ReadString(SETTING_NAME_SCRIPT_FILE);
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + name;
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
+        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + name;
         if (_registry.ReadNumber(settingName.c_str(), 1) != 0) {
             _enabledInputFormats.emplace(name);
         }
@@ -150,11 +151,11 @@ auto Environment::SaveSettingsToIni() const -> void {
 }
 
 auto Environment::SaveSettingsToRegistry() const -> void {
-    static_cast<void>(_registry.WriteString(SETTING_NAME_SCRIPT_FILE, _scriptPath));
+    static_cast<void>(_registry.WriteString(SETTING_NAME_SCRIPT_FILE, _scriptPath.c_str()));
     static_cast<void>(_registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled));
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const std::wstring &name) {
-        const std::wstring settingName = SETTING_NAME_INPUT_FORMAT_PREFIX + name;
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
+        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + name;
         static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
     }, &Format::PixelFormat::name);
 }

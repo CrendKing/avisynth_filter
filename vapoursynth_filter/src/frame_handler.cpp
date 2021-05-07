@@ -375,7 +375,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
         sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
-                                       _filter._outputVideoFormat.pixelFormat->name.c_str(), _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
+                                       _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
 
         DeleteMediaType(pmtOut);
     }
@@ -490,7 +490,7 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
 auto FrameHandler::ChangeOutputFormat() -> bool {
     Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
-                                   _filter._inputVideoFormat.pixelFormat->name.c_str(), _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
+                                   _filter._inputVideoFormat.pixelFormat->name, _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
 
     _filter.StopStreaming();
 

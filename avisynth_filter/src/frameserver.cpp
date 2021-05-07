@@ -85,7 +85,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     AVSValue invokeResult;
 
     if (!FrameServerCommon::GetInstance()._scriptPath.empty()) {
-        const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath);
+        const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath.native());
         const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
         const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
 

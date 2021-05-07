@@ -16,7 +16,7 @@ public:
 
     auto ReadString(const WCHAR *valueName) const -> std::wstring;
     auto ReadNumber(const WCHAR *valueName, int defaultValue) const -> DWORD;
-    auto WriteString(const WCHAR *valueName, const std::wstring &valueString) const -> bool;
+    auto WriteString(const WCHAR *valueName, std::wstring_view valueString) const -> bool;
     auto WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> bool;
 
 private:

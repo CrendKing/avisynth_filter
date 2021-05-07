@@ -5,10 +5,10 @@
 
 namespace SynthFilter {
 
-auto ConvertWideToUtf8(const std::wstring &wideString) -> std::string;
-auto ConvertUtf8ToWide(const std::string &utf8String) -> std::wstring;
+auto ConvertWideToUtf8(std::wstring_view wideString) -> std::string;
+auto ConvertUtf8ToWide(std::string_view utf8String) -> std::wstring;
 auto DoubleToString(double d, int precision) -> std::wstring;
-auto JoinStrings(const std::vector<std::wstring> &input, WCHAR delimiter) -> std::wstring;
+auto JoinStrings(const std::vector<std::wstring> &input, std::wstring_view delimiter) -> std::wstring;
 
 /**
  * ceil(dividend / divisor), assuming both oprands are positive

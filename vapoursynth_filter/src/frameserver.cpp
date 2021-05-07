@@ -98,7 +98,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     bool toDisconnect = false;
 
     if (!FrameServerCommon::GetInstance()._scriptPath.empty()) {
-        const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath);
+        const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath.native());
 
         if (vsscript_evaluateFile(&_vsScript, utf8Filename.c_str(), efSetWorkingDir) == 0) {
             _scriptClip = vsscript_getOutput(_vsScript, 0);

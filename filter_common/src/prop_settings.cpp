@@ -88,11 +88,11 @@ auto CSynthFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPa
     case WM_COMMAND:
         if (HIWORD(wParam) == EN_CHANGE) {
             if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_EDIT_SCRIPT_FILE) {
-                std::array<WCHAR, STR_MAX_LENGTH> buffer;
-                GetDlgItemTextW(hwnd, IDC_EDIT_SCRIPT_FILE, buffer.data(), static_cast<int>(buffer.size()));
+                std::wstring newScriptPath(STR_MAX_LENGTH, L'\0');
+                newScriptPath.resize(GetDlgItemTextW(hwnd, IDC_EDIT_SCRIPT_FILE, newScriptPath.data(), static_cast<int>(newScriptPath.size())));
 
-                if (const std::wstring newValue = std::wstring(buffer.data(), buffer.size()).c_str(); newValue != _configScriptPath) {
-                    _configScriptPath = newValue;
+                if (newScriptPath != _configScriptPath) {
+                    _configScriptPath = newScriptPath;
                     SetDirty();
                 }
 

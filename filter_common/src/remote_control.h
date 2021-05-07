@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include "api.h"
+#include "util.h"
+
 
 namespace SynthFilter {
 
@@ -22,9 +25,11 @@ private:
     static auto CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
     auto Run() -> void;
-    auto SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::string &data) const -> void;
-    auto SendString(HWND hReceiverWindow, ULONG_PTR msgId, const std::wstring &data) const -> void;
+    auto SendString(HWND hReceiverWindow, ULONG_PTR msgId, std::string_view data) const -> void;
+    auto SendString(HWND hReceiverWindow, ULONG_PTR msgId, std::wstring_view data) const -> void;
     auto HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *copyData) const -> LRESULT;
+
+    static inline const std::wstring API_CSV_DELIMITER_STR = ConvertUtf8ToWide(API_CSV_DELIMITER);
 
     std::thread _msgThread;
     std::atomic<HWND> _hWnd = nullptr;

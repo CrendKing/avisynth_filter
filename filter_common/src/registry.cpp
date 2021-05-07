@@ -14,9 +14,7 @@ Registry::~Registry() {
 }
 
 auto Registry::Initialize() -> bool {
-    std::wstring registryKeyName = REGISTRY_KEY_NAME_PREFIX;
-    registryKeyName += FILTER_NAME_WIDE;
-
+    const std::wstring registryKeyName = std::wstring(REGISTRY_KEY_NAME_PREFIX) + FILTER_NAME_WIDE;
     return RegCreateKeyExW(HKEY_CURRENT_USER, registryKeyName.c_str(), 0, nullptr, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, nullptr, &_registryKey, nullptr) == ERROR_SUCCESS;
 }
 
@@ -47,8 +45,8 @@ auto Registry::ReadNumber(const WCHAR *valueName, int defaultValue) const -> DWO
     return ret;
 }
 
-auto Registry::WriteString(const WCHAR *valueName, const std::wstring &valueString) const -> bool {
-    return _registryKey && RegSetValueExW(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.c_str()), static_cast<DWORD>(valueString.size() * 2 + 2)) == ERROR_SUCCESS;
+auto Registry::WriteString(const WCHAR *valueName, std::wstring_view valueString) const -> bool {
+    return _registryKey && RegSetValueExW(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.data()), static_cast<DWORD>((valueString.size() + 1) * sizeof(decltype(valueString)::value_type))) == ERROR_SUCCESS;
 }
 
 auto Registry::WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> bool {

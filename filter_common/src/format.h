@@ -22,7 +22,7 @@ class Format {
 
 public:
     struct PixelFormat {
-        std::wstring name;
+        const WCHAR *name;
         const CLSID &mediaSubtype;
         int fsFormatId;
 

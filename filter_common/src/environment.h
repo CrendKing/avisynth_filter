@@ -20,8 +20,8 @@ public:
 
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
-    auto IsInputFormatEnabled(const std::wstring &formatName) const -> bool;
-    auto SetInputFormatEnabled(const std::wstring &formatName, bool enabled) -> void;
+    auto IsInputFormatEnabled(const WCHAR *formatName) const -> bool;
+    auto SetInputFormatEnabled(const WCHAR *formatName, bool enabled) -> void;
     auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
     auto SetRemoteControlEnabled(bool enabled) -> void;
     auto GetExtraSourceBuffer() const -> int { return _extraSourceBuffer; }
@@ -42,7 +42,7 @@ private:
     Registry _registry;
 
     std::filesystem::path _scriptPath;
-    std::unordered_set<std::wstring> _enabledInputFormats;
+    std::unordered_set<const WCHAR *> _enabledInputFormats;
     bool _isRemoteControlEnabled = false;
     int _extraSourceBuffer;
 
