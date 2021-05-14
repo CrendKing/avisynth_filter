@@ -43,7 +43,8 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS = {
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
     return pixelFormat!= other.pixelFormat
         || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
-        || pixelAspectRatio != other.pixelAspectRatio
+        || pixelAspectRatioNum != other.pixelAspectRatioNum
+        || pixelAspectRatioDen != other.pixelAspectRatioDen
         || hdrType != other.hdrType
         || hdrLuminance != other.hdrLuminance
         || bmi.biSize != other.bmi.biSize
@@ -83,7 +84,8 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
 
     VideoFormat ret {
         .pixelFormat = LookupMediaSubtype(mediaType.subtype),
-        .pixelAspectRatio = PAR_SCALE_FACTOR,
+        .pixelAspectRatioNum = 1,
+        .pixelAspectRatioDen = 1,
         .hdrType = 0,
         .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType)
@@ -104,17 +106,15 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
              * DAR comes from VIDEOINFOHEADER2.dwPictAspectRatioX / VIDEOINFOHEADER2.dwPictAspectRatioY
              * SAR comes from info.videoInfo.width / info.videoInfo.height
              */
-            ret.pixelAspectRatio = static_cast<int>(llMulDiv(static_cast<LONGLONG>(vih2->dwPictAspectRatioX) * ret.videoInfo.height,
-                                                    PAR_SCALE_FACTOR,
-                                                    static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * ret.videoInfo.width,
-                                                    0));
+            ret.pixelAspectRatioNum = vih2->dwPictAspectRatioX * ret.videoInfo.height;
+            ret.pixelAspectRatioDen = vih2->dwPictAspectRatioY * ret.videoInfo.width;
         }
     }
 
     return ret;
 }
 
-auto Format::WriteSample(const VideoFormat &videoFormat, PVideoFrame srcFrame, BYTE *dstBuffer) -> void {
+auto Format::WriteSample(const VideoFormat &videoFormat, const PVideoFrame &srcFrame, BYTE *dstBuffer) -> void {
     const std::array srcSlices = { srcFrame->GetReadPtr(), srcFrame->GetReadPtr(PLANAR_U), srcFrame->GetReadPtr(PLANAR_V) };
     const std::array srcStrides = { srcFrame->GetPitch(), srcFrame->GetPitch(PLANAR_U), srcFrame->GetPitch(PLANAR_V) };
 

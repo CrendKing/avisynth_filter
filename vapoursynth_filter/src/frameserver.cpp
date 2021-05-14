@@ -7,8 +7,8 @@
 
 namespace SynthFilter {
 
-static constexpr const char *VPS_SOURCE_NODE_NAME         = "VpsFilterSource";
-static constexpr const char *VPS_DISCONNECT_VARIABLE_NAME = "VpsFilterDisconnect";
+static constexpr const char *VPS_VAR_NAME_SOURCE_NODE       = "VpsFilterSource";
+static constexpr const char *VPS_VAR_NAME_DISCONNECT        = "VpsFilterDisconnect";
 
 static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) -> void {
     AVSF_VS_API->setVideoInfo(&FrameServerCommon::GetInstance().GetSourceVideoInfo(), 1, node);
@@ -87,7 +87,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     AVSF_VS_API->createFilter(filterInputs, filterOutputs, "VpsFilter_Source", SourceInit, SourceGetFrame, nullptr, fmParallel, nfNoCache, nullptr, vsscript_getCore(_vsScript));
     VSNodeRef *sourceClip = AVSF_VS_API->propGetNode(filterOutputs, "clip", 0, nullptr);
-    AVSF_VS_API->propSetNode(filterInputs, VPS_SOURCE_NODE_NAME, sourceClip, 0);
+    AVSF_VS_API->propSetNode(filterInputs, VPS_VAR_NAME_SOURCE_NODE, sourceClip, 0);
     vsscript_setVariable(_vsScript, filterInputs);
 
     AVSF_VS_API->freeMap(filterOutputs);
@@ -104,9 +104,9 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
             _scriptClip = vsscript_getOutput(_vsScript, 0);
 
             VSMap *scriptOutputs = AVSF_VS_API->createMap();
-            vsscript_getVariable(_vsScript, VPS_DISCONNECT_VARIABLE_NAME, scriptOutputs);
-            if (AVSF_VS_API->propNumElements(scriptOutputs, VPS_DISCONNECT_VARIABLE_NAME) == 1) {
-                toDisconnect = AVSF_VS_API->propGetInt(scriptOutputs, VPS_DISCONNECT_VARIABLE_NAME, 0, nullptr) != 0;
+            vsscript_getVariable(_vsScript, VPS_VAR_NAME_DISCONNECT, scriptOutputs);
+            if (AVSF_VS_API->propNumElements(scriptOutputs, VPS_VAR_NAME_DISCONNECT) == 1) {
+                toDisconnect = AVSF_VS_API->propGetInt(scriptOutputs, VPS_VAR_NAME_DISCONNECT, 0, nullptr) != 0;
             }
             AVSF_VS_API->freeMap(scriptOutputs);
         } else {
@@ -124,9 +124,9 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 "from vapoursynth import core\n\
 core.text.Text(%s, r'''%s''').set_output()\n";
 
-        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, VPS_SOURCE_NODE_NAME, _errorString.c_str());
+        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, VPS_VAR_NAME_SOURCE_NODE, _errorString.c_str());
         const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
-        snprintf(errorScript.get(), errorScriptSize, errorFormat, VPS_SOURCE_NODE_NAME, _errorString.c_str());
+        snprintf(errorScript.get(), errorScriptSize, errorFormat, VPS_VAR_NAME_SOURCE_NODE, _errorString.c_str());
         if (vsscript_evaluateScript(&_vsScript, errorScript.get(), "VpsFilter_Error", efSetWorkingDir) == 0) {
             _scriptClip = vsscript_getOutput(_vsScript, 0);
         } else {

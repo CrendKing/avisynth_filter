@@ -40,7 +40,8 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS = {
 auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
     return pixelFormat!= other.pixelFormat
         || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
-        || pixelAspectRatio != other.pixelAspectRatio
+        || pixelAspectRatioNum != other.pixelAspectRatioNum
+        || pixelAspectRatioDen != other.pixelAspectRatioDen
         || hdrType != other.hdrType
         || hdrLuminance != other.hdrLuminance
         || bmi.biSize != other.bmi.biSize
@@ -77,13 +78,14 @@ auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat 
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat {
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     REFERENCE_TIME fpsNum = UNITS;
-    REFERENCE_TIME frameDuration = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
-    vs_normalizeRational(&fpsNum, &frameDuration);
+    REFERENCE_TIME fpsDen = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
+    vs_normalizeRational(&fpsNum, &fpsDen);
     VSCore *vsCore= vsscript_getCore(scriptInstance->GetVsScript());
 
     VideoFormat ret {
         .pixelFormat = LookupMediaSubtype(mediaType.subtype),
-        .pixelAspectRatio = PAR_SCALE_FACTOR,
+        .pixelAspectRatioNum = 1,
+        .pixelAspectRatioDen = 1,
         .hdrType = 0,
         .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType),
@@ -92,7 +94,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     ret.videoInfo = {
         .format = AVSF_VS_API->getFormatPreset(ret.pixelFormat->fsFormatId, ret.fsEnvironment),
         .fpsNum = fpsNum,
-        .fpsDen = frameDuration,
+        .fpsDen = fpsDen,
         .width = ret.bmi.biWidth,
         .height = abs(ret.bmi.biHeight),
         .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM,
@@ -106,10 +108,9 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
              * DAR comes from VIDEOINFOHEADER2.dwPictAspectRatioX / VIDEOINFOHEADER2.dwPictAspectRatioY
              * SAR comes from info.videoInfo.width / info.videoInfo.height
              */
-            ret.pixelAspectRatio = static_cast<int>(llMulDiv(static_cast<LONGLONG>(vih2->dwPictAspectRatioX) * ret.videoInfo.height,
-                                                    PAR_SCALE_FACTOR,
-                                                    static_cast<LONGLONG>(vih2->dwPictAspectRatioY) * ret.videoInfo.width,
-                                                    0));
+            ret.pixelAspectRatioNum = vih2->dwPictAspectRatioX * ret.videoInfo.height;
+            ret.pixelAspectRatioDen = vih2->dwPictAspectRatioY * ret.videoInfo.width;
+            vs_normalizeRational(&ret.pixelAspectRatioNum, &ret.pixelAspectRatioDen);
         }
     }
 
@@ -128,7 +129,7 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrameRef *srcFr
     CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, rowSize, AVSF_VS_API->getFrameHeight(srcFrame, 0));
 }
 
-auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> const VSFrameRef * {
+auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrameRef * {
     VSFrameRef *frame = AVSF_VS_API->newVideoFrame(videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.fsEnvironment);
 
     const std::array dstSlices = { AVSF_VS_API->getWritePtr(frame, 0)

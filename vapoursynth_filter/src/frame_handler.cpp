@@ -68,7 +68,20 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
-    const VSFrameRef *frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
+    VSFrameRef *frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
+    VSMap *frameProps = AVSF_VS_API->getFramePropsRW(frame);
+    AVSF_VS_API->propSetInt(frameProps, "_FieldBased", 0, paReplace);
+    AVSF_VS_API->propSetFloat(frameProps, "_AbsoluteTime", static_cast<double>(inputSampleStartTime) / UNITS, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
+
+    if (inputSampleStopTime > 0) {
+        REFERENCE_TIME frameDurationNum = inputSampleStopTime - inputSampleStartTime;
+        REFERENCE_TIME frameDurationDen = UNITS;
+        vs_normalizeRational(&frameDurationNum, &frameDurationDen);
+        AVSF_VS_API->propSetInt(frameProps, "_DurationNum", frameDurationNum, paReplace);
+        AVSF_VS_API->propSetInt(frameProps, "_DurationDen", frameDurationDen, paReplace);
+    }
 
     std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
     {

@@ -43,7 +43,7 @@ The filter exposes the following functions to the AviSynth script:
 
 #### `AvsFilterSource()`
 
-The source function which returns a `clip` object. Similar to other source functions like `AviSource()`.
+The source function which returns an [`IClip`](http://avisynth.nl/index.php/Filter_SDK/Cplusplus_API#IClip) object. Similar to other source functions like `AviSource()`.
 
 This function takes no argument.
 
@@ -64,6 +64,17 @@ The filter exposes the following variables to the VapourSynth Python script:
 #### `VpsFilterSource`
 
 This variable has the type of [`VideoNode`](http://www.vapoursynth.com/doc/pythonreference.html#VideoNode). It serves as the source clip.
+
+Note that the [`fps`](http://www.vapoursynth.com/doc/pythonreference.html#VideoNode.fps) property of the video node is set to the average framerate instead of 0 / 1, regardless if frames have variable frame durations. It is equivalent to mpv's [`container_fps`](https://mpv.io/manual/master/#video-filters-container-fps) variable.
+
+The following [Reserved Frame Properties](http://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties) are supported:
+
+* `_FieldBased` (always 0)
+* `_AbsoluteTime`
+* `_DurationNum`
+* `_DurationDen`
+* `_SARNum`
+* `_SARDen`
 
 #### `VpsFilterDisconnect`
 

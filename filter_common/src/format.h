@@ -13,10 +13,12 @@ class Format {
 #ifdef AVSF_AVISYNTH
     using FrameServerInstance = void *;
     using FrameType = PVideoFrame;
+    using ConstFrameType = const PVideoFrame &;
     using VideoInfoType = VideoInfo;
 #else
     using FrameServerInstance = VSCore *;
-    using FrameType = const VSFrameRef *;
+    using FrameType = VSFrameRef *;
+    using ConstFrameType = const VSFrameRef *;
     using VideoInfoType = VSVideoInfo;
 #endif
 
@@ -44,7 +46,8 @@ public:
     struct VideoFormat {
         const PixelFormat *pixelFormat;
         VideoInfoType videoInfo;
-        int pixelAspectRatio;
+        int64_t pixelAspectRatioNum;
+        int64_t pixelAspectRatioDen;
         int hdrType;
         int hdrLuminance;
         BITMAPINFOHEADER bmi;
@@ -76,7 +79,7 @@ public:
     }
 
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat;
-    static auto WriteSample(const VideoFormat &videoFormat, FrameType srcFrame, BYTE *dstBuffer) -> void;
+    static auto WriteSample(const VideoFormat &videoFormat, ConstFrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> FrameType;
     static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
     static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
