@@ -109,15 +109,8 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     }
 
     if (!_errorString.empty()) {
-        // must use Prefetch to match the number of threads accessing GetFrame() simultaneously
-        // add trailing '\n' to pad size because snprintf() does not count the terminating null
-        const char *errorFormat =
-            "Subtitle(AvsFilterSource(), ReplaceStr(\"\"\"%s\"\"\", \"\n\", \"\\n\"), lsp=0)\n";
-
-        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, _errorString.c_str());
-        const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
-        snprintf(errorScript.get(), errorScriptSize, errorFormat, _errorString.c_str());
-        invokeResult = _env->Invoke("Eval", AVSValue(errorScript.get()));
+        const std::string errorScript = std::format("Subtitle(AvsFilterSource(), \"{}\", lsp=0)", ReplaceSubstr(_errorString, "\n", "\\n"));
+        invokeResult = _env->Invoke("Eval", AVSValue(errorScript.c_str()));
     }
 
     _scriptClip = invokeResult.AsClip();

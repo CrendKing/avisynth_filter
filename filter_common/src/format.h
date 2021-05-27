@@ -53,7 +53,6 @@ public:
         BITMAPINFOHEADER bmi;
         FrameServerInstance fsEnvironment;
 
-        auto operator!=(const VideoFormat &other) const -> bool;
         auto GetCodecFourCC() const -> DWORD;
     };
 

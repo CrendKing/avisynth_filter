@@ -49,7 +49,7 @@ auto CSynthFilterPropSettings::OnActivate() -> HRESULT {
     EnableWindow(GetDlgItem(m_Dlg, IDC_INPUT_FORMAT_RGB24), FALSE);
 #endif
 
-    const std::string title = std::string("<a>") + FILTER_NAME_BASE + " v" + FILTER_VERSION_STRING "</a>\nwith " + FrameServerCommon::GetInstance().GetVersionString();
+    const std::string title = std::format("<a>{} v{}</a>\nwith {}", FILTER_NAME_BASE, FILTER_VERSION_STRING, FrameServerCommon::GetInstance().GetVersionString());
     SetDlgItemTextA(m_hwnd, IDC_SYSLINK_TITLE, title.c_str());
 
     // move the focus to the tab of the settings page, effectively unfocus all controls in the page

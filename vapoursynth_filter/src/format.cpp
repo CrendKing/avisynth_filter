@@ -37,17 +37,6 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS = {
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
 
-auto Format::VideoFormat::operator!=(const VideoFormat &other) const -> bool {
-    return pixelFormat!= other.pixelFormat
-        || memcmp(&videoInfo, &other.videoInfo, sizeof(videoInfo)) != 0
-        || pixelAspectRatioNum != other.pixelAspectRatioNum
-        || pixelAspectRatioDen != other.pixelAspectRatioDen
-        || hdrType != other.hdrType
-        || hdrLuminance != other.hdrLuminance
-        || bmi.biSize != other.bmi.biSize
-        || memcmp(&bmi, &other.bmi, bmi.biSize) != 0;
-}
-
 auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
     return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
 }

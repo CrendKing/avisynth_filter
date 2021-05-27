@@ -31,7 +31,7 @@ public:
 
 private:
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
-    std::string _versionString = "VapourSynth";
+    std::string _versionString;
     FrameHandler *_frameHandler = nullptr;
     VSVideoInfo _sourceVideoInfo = {};
     const VSAPI *_vsApi;

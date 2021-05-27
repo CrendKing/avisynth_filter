@@ -110,8 +110,7 @@ auto Environment::SetInputFormatEnabled(const WCHAR *formatName, bool enabled) -
     }
 
     if (_useIni) {
-        // TODO replace with std::format()
-        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + formatName;
+        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, formatName);
         _ini.SetBoolValue(L"", settingName.c_str(), enabled);
     }
 }
@@ -120,7 +119,7 @@ auto Environment::LoadSettingsFromIni() -> void {
     _scriptPath = _ini.GetValue(L"", SETTING_NAME_SCRIPT_FILE, L"");
 
     std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + name;
+        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
         if (_ini.GetBoolValue(L"", settingName.c_str(), true)) {
             _enabledInputFormats.emplace(name);
         }
@@ -135,7 +134,7 @@ auto Environment::LoadSettingsFromRegistry() -> void {
     _scriptPath = _registry.ReadString(SETTING_NAME_SCRIPT_FILE);
 
     std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + name;
+        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
         if (_registry.ReadNumber(settingName.c_str(), 1) != 0) {
             _enabledInputFormats.emplace(name);
         }
@@ -155,7 +154,7 @@ auto Environment::SaveSettingsToRegistry() const -> void {
     static_cast<void>(_registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled));
 
     std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-        const std::wstring settingName = std::wstring(SETTING_NAME_INPUT_FORMAT_PREFIX) + name;
+        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
         static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
     }, &Format::PixelFormat::name);
 }

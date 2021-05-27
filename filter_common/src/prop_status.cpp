@@ -64,15 +64,13 @@ auto CSynthFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         const std::wstring outputParStr = DoubleToString(static_cast<double>(videoFormat.pixelAspectRatioNum) / videoFormat.pixelAspectRatioDen, parPrecision);
 
         SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler->GetInputBufferSize()).c_str());
-        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE,
-                        (std::to_wstring(_filter->frameHandler->GetSourceFrameNb())
-                        + L" -> "
-                        + std::to_wstring(_filter->frameHandler->GetOutputFrameNb())
-                        + L" -> "
-                        + std::to_wstring(_filter->frameHandler->GetDeliveryFrameNb()))
+        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, std::format(L"{} -> {} -> {}",
+                        _filter->frameHandler->GetSourceFrameNb(),
+                        _filter->frameHandler->GetOutputFrameNb(),
+                        _filter->frameHandler->GetDeliveryFrameNb())
                         .c_str());
 
-        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, (inputFrameRateStr + L" -> " + outputFrameRateStr).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::format(L"{} -> {}", inputFrameRateStr, outputFrameRateStr).c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
 
         if (!_isSourcePathSet) {
@@ -84,7 +82,7 @@ auto CSynthFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
             _isSourcePathSet = true;
         }
 
-        const std::wstring infoStr = std::to_wstring(videoFormat.bmi.biWidth) + L" x "+ std::to_wstring(abs(videoFormat.bmi.biHeight)) + L" " + videoFormat.pixelFormat->name;
+        const std::wstring infoStr = std::format(L"{} x {} {}", videoFormat.bmi.biWidth, abs(videoFormat.bmi.biHeight), videoFormat.pixelFormat->name);
         SetDlgItemTextW(hwnd, IDC_TEXT_FORMAT_VALUE, infoStr.c_str());
 
         return 0;

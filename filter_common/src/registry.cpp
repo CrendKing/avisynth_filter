@@ -14,7 +14,7 @@ Registry::~Registry() {
 }
 
 auto Registry::Initialize() -> bool {
-    const std::wstring registryKeyName = std::wstring(REGISTRY_KEY_NAME_PREFIX) + FILTER_NAME_WIDE;
+    const std::wstring registryKeyName = std::format(L"{}{}", REGISTRY_KEY_NAME_PREFIX, FILTER_NAME_WIDE);
     return RegCreateKeyExW(HKEY_CURRENT_USER, registryKeyName.c_str(), 0, nullptr, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, nullptr, &_registryKey, nullptr) == ERROR_SUCCESS;
 }
 

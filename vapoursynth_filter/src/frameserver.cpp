@@ -7,8 +7,8 @@
 
 namespace SynthFilter {
 
-static constexpr const char *VPS_VAR_NAME_SOURCE_NODE       = "VpsFilterSource";
-static constexpr const char *VPS_VAR_NAME_DISCONNECT        = "VpsFilterDisconnect";
+static constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
+static constexpr const char *VPS_VAR_NAME_DISCONNECT  = "VpsFilterDisconnect";
 
 static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) -> void {
     AVSF_VS_API->setVideoInfo(&FrameServerCommon::GetInstance().GetSourceVideoInfo(), 1, node);
@@ -31,9 +31,7 @@ FrameServerCommon::FrameServerCommon() {
     VSCoreInfo coreInfo;
     _vsApi->getCoreInfo2(vsCore, &coreInfo);
 
-    _versionString
-        .append(" R").append(std::to_string(coreInfo.core))
-        .append(" API R").append(std::to_string(VAPOURSYNTH_API_MAJOR)).append(".").append(std::to_string(VAPOURSYNTH_API_MINOR));
+    _versionString = std::format("VapourSynth R{} API R{}.{}", coreInfo.core, VAPOURSYNTH_API_MAJOR, VAPOURSYNTH_API_MINOR);
     Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString());
 
     _vsApi->freeCore(vsCore);
@@ -119,15 +117,10 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
             _scriptClip = sourceClip;
         }
     } else {
-        // add trailing '\n' to pad size because snprintf() does not count the terminating null
-        const char *errorFormat =
+        const std::string errorScript = std::format(
 "from vapoursynth import core\n\
-core.text.Text(%s, r'''%s''').set_output()\n";
-
-        const size_t errorScriptSize = snprintf(nullptr, 0, errorFormat, VPS_VAR_NAME_SOURCE_NODE, _errorString.c_str());
-        const std::unique_ptr<char []> errorScript(new char[errorScriptSize]);
-        snprintf(errorScript.get(), errorScriptSize, errorFormat, VPS_VAR_NAME_SOURCE_NODE, _errorString.c_str());
-        if (vsscript_evaluateScript(&_vsScript, errorScript.get(), "VpsFilter_Error", efSetWorkingDir) == 0) {
+core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorString);
+        if (vsscript_evaluateScript(&_vsScript, errorScript.c_str(), "VpsFilter_Error", efSetWorkingDir) == 0) {
             _scriptClip = vsscript_getOutput(_vsScript, 0);
         } else {
             _scriptClip = sourceClip;
