@@ -372,7 +372,7 @@ auto FrameHandler::ResetOutput() -> void {
     _nextDeliveryFrameNb = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int outputFrameNb, OutputSampleData &data) const -> bool {
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) const -> bool {
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &data.startTime, &data.stopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
         sample.Detach();
@@ -397,7 +397,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
         return false;
     }
 
-    if (outputFrameNb == 0 && FAILED(sample->SetDiscontinuity(TRUE))) {
+    if (frameNb == 0 && FAILED(sample->SetDiscontinuity(TRUE))) {
         return false;
     }
 

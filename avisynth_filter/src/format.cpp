@@ -2,7 +2,6 @@
 
 #include "pch.h"
 #include "format.h"
-#include "api.h"
 #include "constants.h"
 #include "environment.h"
 #include "frameserver.h"

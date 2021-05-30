@@ -68,7 +68,7 @@ public:
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
     constexpr auto GetScriptClip() const -> VSNodeRef * { return _scriptClip; }
-    constexpr auto GetSourceDrainFrame() -> const VSFrameRef * { return _sourceDrainFrame; }
+    constexpr auto GetSourceDrainFrame() const -> const VSFrameRef * { return _sourceDrainFrame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
     constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration; }
