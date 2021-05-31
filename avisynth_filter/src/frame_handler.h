@@ -41,7 +41,7 @@ private:
 
     auto ResetInput() -> void;
     auto ResetOutput() -> void;
-    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) const -> bool;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
@@ -64,6 +64,7 @@ private:
     std::atomic<int> _maxRequestedFrameNb;
     int _nextOutputFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
+    bool _notifyChangedOutputMediaType = false;
 
     std::thread _workerThread;
 

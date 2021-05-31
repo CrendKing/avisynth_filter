@@ -306,6 +306,7 @@ auto FrameHandler::ResetInput() -> void {
     _nextSourceFrameNb = 0;
     _nextOutputFrameNb = 0;
     _nextOutputSourceFrameNb = 0;
+    _notifyChangedOutputMediaType = false;
 
     _frameRateCheckpointInputSampleNb = 0;
     _currentInputFrameRate = 0;
@@ -341,16 +342,20 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
 
     AM_MEDIA_TYPE *pmtOut;
     sample->GetMediaType(&pmtOut);
+    const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
 
     if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         _filter.m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
         _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut, &MainFrameServer::GetInstance());
+        _notifyChangedOutputMediaType = true;
+    }
+
+    if (_notifyChangedOutputMediaType) {
         sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
+        _notifyChangedOutputMediaType = false;
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
                                        _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
-
-        DeleteMediaType(pmtOut);
     }
 
     if (FAILED(sample->SetTime(&_nextOutputFrameStartTime, &stopTime))) {
@@ -490,7 +495,14 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
             return false;
         }
 
-        return SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
+        if (SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType))) {
+            _filter.m_pOutput->SetMediaType(&outputMediaType);
+            _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &MainFrameServer::GetInstance());
+            _notifyChangedOutputMediaType = true;
+            return true;
+        }
+
+        return false;
     });
 
     if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {

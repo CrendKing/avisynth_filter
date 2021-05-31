@@ -228,6 +228,7 @@ auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startT
 auto FrameHandler::ResetInput() -> void {
     _nextSourceFrameNb = 0;
     _maxRequestedFrameNb = 0;
+    _notifyChangedOutputMediaType = false;
 
     _frameRateCheckpointInputSampleNb = 0;
     _currentInputFrameRate = 0;
@@ -243,7 +244,7 @@ auto FrameHandler::ResetOutput() -> void {
     _currentOutputFrameRate = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) const -> bool {
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> bool {
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &startTime, &stopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
         sample.Detach();
@@ -252,16 +253,20 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
 
     AM_MEDIA_TYPE *pmtOut;
     sample->GetMediaType(&pmtOut);
+    const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
 
     if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         _filter.m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
         _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut, &MainFrameServer::GetInstance());
+        _notifyChangedOutputMediaType = true;
+    }
+
+    if (_notifyChangedOutputMediaType) {
         sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
+        _notifyChangedOutputMediaType = false;
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
                                        _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
-
-        DeleteMediaType(pmtOut);
     }
 
     if (FAILED(sample->SetTime(&startTime, &stopTime))) {
@@ -436,7 +441,14 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
             return false;
         }
 
-        return SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
+        if (SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType))) {
+            _filter.m_pOutput->SetMediaType(&outputMediaType);
+            _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &MainFrameServer::GetInstance());
+            _notifyChangedOutputMediaType = true;
+            return true;
+        }
+
+        return false;
     });
 
     if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {

@@ -80,7 +80,7 @@ private:
     int _nextOutputFrameNb;
     std::atomic<int> _nextOutputSourceFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
-
+    bool _notifyChangedOutputMediaType = false;
     int _nextDeliveryFrameNb;
 
     std::thread _workerThread;
