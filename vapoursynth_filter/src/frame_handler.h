@@ -40,8 +40,6 @@ private:
     struct OutputSampleData {
         ~OutputSampleData();
 
-        REFERENCE_TIME startTime;
-        REFERENCE_TIME stopTime;
         int sourceFrameNb;
         std::shared_ptr<HDRSideData> hdrSideData;
         const VSFrameRef *frame = nullptr;
@@ -54,7 +52,7 @@ private:
 
     auto ResetInput() -> void;
     auto ResetOutput() -> void;
-    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) const -> bool;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
@@ -79,7 +77,6 @@ private:
     std::condition_variable_any _flushOutputSampleCv;
 
     int _nextSourceFrameNb;
-    int _nextProcessSourceFrameNb;
     int _nextOutputFrameNb;
     std::atomic<int> _nextOutputSourceFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;

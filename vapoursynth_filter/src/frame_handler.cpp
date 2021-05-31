@@ -58,6 +58,9 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
     if (_nextSourceFrameNb == 0) {
         _frameRateCheckpointInputSampleStartTime = inputSampleStartTime;
+
+        _nextOutputFrameStartTime = inputSampleStartTime;
+        _frameRateCheckpointOutputFrameStartTime = inputSampleStartTime;
     }
 
     RefreshInputFrameRates(_nextSourceFrameNb, inputSampleStartTime);
@@ -112,77 +115,24 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli",
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime);
 
-    _nextSourceFrameNb += 1;
-
-    /*
-     * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
-     * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
-     */
-
-    // use map.lower_bound() in case the exact frame is removed by the script
-    std::array<decltype(_sourceFrames)::const_iterator, NUM_SRC_FRAMES_PER_PROCESSING> processSourceFrameIters = { _sourceFrames.lower_bound(_nextProcessSourceFrameNb) };
-    std::array<REFERENCE_TIME, NUM_SRC_FRAMES_PER_PROCESSING - 1> outputFrameDurations;
-
-    {
-        const std::shared_lock sharedSourceLock(_sourceMutex);
-
-        for (int i = 0; i < NUM_SRC_FRAMES_PER_PROCESSING; ++i) {
-            if (processSourceFrameIters[i] == _sourceFrames.cend()) {
-                return S_OK;
-            }
-
-            if (i < NUM_SRC_FRAMES_PER_PROCESSING - 1) {
-                processSourceFrameIters[i + 1] = processSourceFrameIters[i];
-                ++processSourceFrameIters[i + 1];
-            }
-
-            if (i > 0) {
-                outputFrameDurations[i - 1] = llMulDiv(processSourceFrameIters[i]->second.startTime - processSourceFrameIters[i - 1]->second.startTime,
-                                                       MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
-                                                       MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
-                                                       0);
-            }
-        }
-    }
-
-    if (processSourceFrameIters[0]->first == 0) {
-        _nextOutputFrameStartTime = processSourceFrameIters[0]->second.startTime;
-        _frameRateCheckpointOutputFrameStartTime = processSourceFrameIters[0]->second.startTime;
-    }
-
-    while (true) {
-        const REFERENCE_TIME outputFrameDurationBeforeEdgePortion = min(processSourceFrameIters[1]->second.startTime - _nextOutputFrameStartTime, outputFrameDurations[0]);
-        if (outputFrameDurationBeforeEdgePortion <= 0) {
-            Environment::GetInstance().Log(L"Frame time drift: %10lli", -outputFrameDurationBeforeEdgePortion);
-            break;
-        }
-        const REFERENCE_TIME outputFrameDurationAfterEdgePortion = outputFrameDurations[1] - llMulDiv(outputFrameDurations[1], outputFrameDurationBeforeEdgePortion, outputFrameDurations[0], 0);
-
-        const REFERENCE_TIME outputStartTime = _nextOutputFrameStartTime;
-        REFERENCE_TIME outputStopTime = outputStartTime + outputFrameDurationBeforeEdgePortion + outputFrameDurationAfterEdgePortion;
-        if (outputStopTime < processSourceFrameIters[1]->second.startTime && outputStopTime >= processSourceFrameIters[1]->second.startTime - MAX_OUTPUT_FRAME_DURATION_PADDING) {
-            outputStopTime = processSourceFrameIters[1]->second.startTime;
-        }
-        _nextOutputFrameStartTime = outputStopTime;
-
-        Environment::GetInstance().Log(L"Requesting output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
-                                       _nextOutputFrameNb, processSourceFrameIters[0]->first, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
-
-        RefreshOutputFrameRates(_nextOutputFrameNb, outputStartTime);
-
+    const int64_t maxRequestOutputFrameNb = llMulDiv(_nextSourceFrameNb,
+                                                 MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
+                                                 MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
+                                                 0);
+    while (_nextOutputFrameNb <= maxRequestOutputFrameNb) {
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
             _outputSamples.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(_nextOutputFrameNb),
-                                   std::forward_as_tuple(outputStartTime, outputStopTime, processSourceFrameIters[0]->first, processSourceFrameIters[0]->second.hdrSideData));
+                                   std::forward_as_tuple(_nextSourceFrameNb, hdrSideData));
         }
         AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
 
         _nextOutputFrameNb += 1;
     }
 
-    _nextProcessSourceFrameNb += 1;
+    _nextSourceFrameNb += 1;
 
     return S_OK;
 }
@@ -354,7 +304,6 @@ auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startT
 
 auto FrameHandler::ResetInput() -> void {
     _nextSourceFrameNb = 0;
-    _nextProcessSourceFrameNb = 0;
     _nextOutputFrameNb = 0;
     _nextOutputSourceFrameNb = 0;
 
@@ -372,8 +321,19 @@ auto FrameHandler::ResetOutput() -> void {
     _nextDeliveryFrameNb = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) const -> bool {
-    if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &data.startTime, &data.stopTime, 0))) {
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) -> bool {
+    const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(data.frame);
+    int errNum, errDen;
+    const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, "_DurationNum", 0, &errNum);
+    const int64_t frameDurationDen = AVSF_VS_API->propGetInt(frameProps, "_DurationDen", 0, &errDen);
+    if (errNum != 0 || errDen != 0) {
+        return false;
+    }
+
+    const int64_t frameDuration = llMulDiv(frameDurationNum, UNITS, frameDurationDen, 0);
+    REFERENCE_TIME stopTime = _nextOutputFrameStartTime + frameDuration;
+
+    if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &_nextOutputFrameStartTime, &stopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
         sample.Detach();
         return false;
@@ -393,7 +353,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
         DeleteMediaType(pmtOut);
     }
 
-    if (FAILED(sample->SetTime(&data.startTime, &data.stopTime))) {
+    if (FAILED(sample->SetTime(&_nextOutputFrameStartTime, &stopTime))) {
         return false;
     }
 
@@ -411,6 +371,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
     if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(sample); outputSampleSideData != nullptr) {
         data.hdrSideData->WriteTo(outputSampleSideData);
     }
+
+    RefreshOutputFrameRates(frameNb, _nextOutputFrameStartTime);
+    _nextOutputFrameStartTime = stopTime;
 
     return true;
 }
