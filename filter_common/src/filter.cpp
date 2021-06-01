@@ -230,8 +230,8 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
         const CMediaType *reconnectInputMediaType = nullptr;
 
         for (const auto &[inputMediaType, inputPixelFormat, outputMediaType, outputPixelFormat] : _compatibleMediaTypes) {
-            if (optConnectionOutputPixelFormat == inputPixelFormat) {
-                if (optConnectionInputPixelFormat == outputPixelFormat) {
+            if (optConnectionOutputPixelFormat == outputPixelFormat) {
+                if (optConnectionInputPixelFormat == inputPixelFormat) {
                     Environment::GetInstance().Log(L"Connected with types: in %s out %s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
                     isMediaTypesCompatible = true;
                     break;
