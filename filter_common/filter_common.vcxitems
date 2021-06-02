@@ -48,6 +48,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)src\allocator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\environment.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\filter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\format_common.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\frameserver_common.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\frame_handler_common.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\hdr.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\input_pin.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\main.cpp" />

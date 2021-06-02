@@ -53,7 +53,9 @@ public:
         BITMAPINFOHEADER bmi;
         FrameServerInstance fsEnvironment;
 
-        auto GetCodecFourCC() const -> DWORD;
+        auto GetCodecFourCC() const -> DWORD {
+            return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
+        }
     };
 
     static auto Initialize() -> void;

@@ -3,7 +3,6 @@
 #include "pch.h"
 #include "format.h"
 #include "constants.h"
-#include "environment.h"
 #include "frameserver.h"
 
 
@@ -38,33 +37,6 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS = {
     { .name = L"RGB32", .mediaSubtype = MEDIASUBTYPE_RGB32, .fsFormatId = VideoInfo::CS_BGR32,     .bitCount = 32, .componentsPerPixel = 4, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_RGB32 },
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
-
-auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
-    return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
-}
-
-auto Format::Initialize() -> void {
-    if (Environment::GetInstance().IsSupportAVXx()) {
-        _vectorSize = sizeof(__m256i);
-    } else if (Environment::GetInstance().IsSupportSSSE3()) {
-        _vectorSize = sizeof(__m128i);
-    } else {
-        _vectorSize = 0;
-    }
-
-    INPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 0 ? 0 : _vectorSize - 2;
-    OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING = (_vectorSize == 0 ? sizeof(__m128i) : _vectorSize) * 2 - 2;
-}
-
-auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat * {
-    for (const PixelFormat &imageFormat : PIXEL_FORMATS) {
-        if (mediaSubtype == imageFormat.mediaSubtype) {
-            return &imageFormat;
-        }
-    }
-
-    return nullptr;
-}
 
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat {
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
