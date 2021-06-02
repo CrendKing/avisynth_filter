@@ -25,13 +25,25 @@ FrameServerCommon::FrameServerCommon() {
     const int vsInitCounter = vsscript_init();
     ASSERT(vsInitCounter == 1);
 
-    _vsApi = vsscript_getVSApi2(VAPOURSYNTH_API_VERSION);
+    int vsApiVersion = VAPOURSYNTH_API_VERSION;
+    _vsApi = vsscript_getVSApi2(vsApiVersion);
+    if (_vsApi == nullptr) {
+        // Minimum supported API version R3.5
+        vsApiVersion = 0x30005;
+        _vsApi = vsscript_getVSApi2(vsApiVersion);
+    }
+
     VSCore *vsCore = _vsApi->createCore(0);
 
     VSCoreInfo coreInfo;
-    _vsApi->getCoreInfo2(vsCore, &coreInfo);
+    if (vsApiVersion == VAPOURSYNTH_API_VERSION) {
+        _vsApi->getCoreInfo2(vsCore, &coreInfo);
+    } else {
+        #pragma warning(suppress: 4996)
+        coreInfo = *_vsApi->getCoreInfo(vsCore);
+    }
 
-    _versionString = std::format("VapourSynth R{} API R{}.{}", coreInfo.core, VAPOURSYNTH_API_MAJOR, VAPOURSYNTH_API_MINOR);
+    _versionString = std::format("VapourSynth R{} API R{}.{}", coreInfo.core, coreInfo.api >> 16, coreInfo.api & 0xffff);
     Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString());
 
     _vsApi->freeCore(vsCore);

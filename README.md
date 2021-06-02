@@ -22,7 +22,7 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 
 * CPU with SSE2 instruction set.
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above, or
-* [VapourSynth](https://github.com/vapoursynth/vapoursynth) R47 (API version 3.6) and above.
+* [VapourSynth](https://github.com/vapoursynth/vapoursynth) R43 (API version 3.5) and above.
 
 ## Install
 
