@@ -72,14 +72,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     AVSF_VS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
 
-    if (inputSampleStopTime > 0) {
-        REFERENCE_TIME frameDurationNum = inputSampleStopTime - inputSampleStartTime;
-        REFERENCE_TIME frameDurationDen = UNITS;
-        vs_normalizeRational(&frameDurationNum, &frameDurationDen);
-        AVSF_VS_API->propSetInt(frameProps, "_DurationNum", frameDurationNum, paReplace);
-        AVSF_VS_API->propSetInt(frameProps, "_DurationDen", frameDurationDen, paReplace);
-    }
-
     std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
     {
         if (const ATL::CComQIPtr<IMediaSideData> inputSampleSideData(inputSample); inputSampleSideData != nullptr) {
@@ -109,24 +101,56 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli",
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime);
 
-    const int64_t maxRequestOutputFrameNb = llMulDiv(_nextSourceFrameNb,
-                                                 MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
-                                                 MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
-                                                 0);
+    _nextSourceFrameNb += 1;
+
+    /*
+     * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
+     * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
+     */
+
+    // use map.lower_bound() in case the exact frame is removed by the script
+    std::array<decltype(_sourceFrames)::const_iterator, NUM_SRC_FRAMES_PER_PROCESSING> processSourceFrameIters = { _sourceFrames.lower_bound(_nextProcessSourceFrameNb) };
+
+    {
+        const std::shared_lock sharedSourceLock(_sourceMutex);
+
+        for (int i = 0; i < NUM_SRC_FRAMES_PER_PROCESSING; ++i) {
+            if (processSourceFrameIters[i] == _sourceFrames.cend()) {
+                return S_OK;
+            }
+
+            if (i < NUM_SRC_FRAMES_PER_PROCESSING - 1) {
+                processSourceFrameIters[i + 1] = processSourceFrameIters[i];
+                ++processSourceFrameIters[i + 1];
+            }
+        }
+    }
+
+    frameProps = AVSF_VS_API->getFramePropsRW(processSourceFrameIters[0]->second.frame);
+    REFERENCE_TIME frameDurationNum = processSourceFrameIters[1]->second.startTime - processSourceFrameIters[0]->second.startTime;
+    REFERENCE_TIME frameDurationDen = UNITS;
+    vs_normalizeRational(&frameDurationNum, &frameDurationDen);
+    AVSF_VS_API->propSetInt(frameProps, "_DurationNum", frameDurationNum, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, "_DurationDen", frameDurationDen, paReplace);
+
+    const int64_t maxRequestOutputFrameNb = llMulDiv(processSourceFrameIters[0]->first,
+                                                     MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
+                                                     MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
+                                                     0);
     while (_nextOutputFrameNb <= maxRequestOutputFrameNb) {
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
             _outputSamples.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(_nextOutputFrameNb),
-                                   std::forward_as_tuple(_nextSourceFrameNb, hdrSideData));
+                                   std::forward_as_tuple(processSourceFrameIters[0]->first, processSourceFrameIters[0]->second.hdrSideData));
         }
         AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
 
         _nextOutputFrameNb += 1;
     }
 
-    _nextSourceFrameNb += 1;
+    _nextProcessSourceFrameNb = processSourceFrameIters[1]->first;
 
     return S_OK;
 }
@@ -276,6 +300,7 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f
 
 auto FrameHandler::ResetInput() -> void {
     _nextSourceFrameNb = 0;
+    _nextProcessSourceFrameNb = 0;
     _nextOutputFrameNb = 0;
     _nextOutputSourceFrameNb = 0;
     _notifyChangedOutputMediaType = false;
@@ -299,11 +324,14 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
     int errNum, errDen;
     const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, "_DurationNum", 0, &errNum);
     const int64_t frameDurationDen = AVSF_VS_API->propGetInt(frameProps, "_DurationDen", 0, &errDen);
-    if (errNum != 0 || errDen != 0) {
-        return false;
+    int64_t frameDuration;
+
+    if (errNum == 0 && errDen == 0) {
+        frameDuration = llMulDiv(frameDurationNum, UNITS, frameDurationDen, 0);
+    } else {
+        frameDuration = MainFrameServer::GetInstance().GetScriptAvgFrameDuration();
     }
 
-    const int64_t frameDuration = llMulDiv(frameDurationNum, UNITS, frameDurationDen, 0);
     REFERENCE_TIME stopTime = _nextOutputFrameStartTime + frameDuration;
 
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &_nextOutputFrameStartTime, &stopTime, 0))) {
@@ -314,9 +342,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
 
     AM_MEDIA_TYPE *pmtOut;
     sample->GetMediaType(&pmtOut);
-    const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
 
-    if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
+    if (const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
+        pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         _filter.m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
         _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut, &MainFrameServer::GetInstance());
         _notifyChangedOutputMediaType = true;

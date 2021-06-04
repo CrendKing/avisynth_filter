@@ -32,7 +32,7 @@ private:
     struct SourceFrameInfo {
         ~SourceFrameInfo();
 
-        const VSFrameRef *frame;
+        VSFrameRef *frame;
         REFERENCE_TIME startTime;
         std::shared_ptr<HDRSideData> hdrSideData;
     };
@@ -59,8 +59,7 @@ private:
     auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
     auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
 
-    static constexpr const REFERENCE_TIME INVALID_REF_TIME = -1;
-    static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 3;
+    static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 2;
 
     CSynthFilter &_filter;
 
@@ -77,6 +76,7 @@ private:
     std::condition_variable_any _flushOutputSampleCv;
 
     int _nextSourceFrameNb;
+    int _nextProcessSourceFrameNb;
     int _nextOutputFrameNb;
     std::atomic<int> _nextOutputSourceFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;

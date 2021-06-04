@@ -226,9 +226,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
 
     AM_MEDIA_TYPE *pmtOut;
     sample->GetMediaType(&pmtOut);
-    const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
 
-    if (pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
+    if (const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
+        pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
         _filter.m_pOutput->SetMediaType(static_cast<CMediaType *>(pmtOut));
         _filter._outputVideoFormat = Format::GetVideoFormat(*pmtOut, &MainFrameServer::GetInstance());
         _notifyChangedOutputMediaType = true;

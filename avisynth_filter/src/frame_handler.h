@@ -48,7 +48,6 @@ private:
     auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
     auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
 
-    static constexpr const REFERENCE_TIME INVALID_REF_TIME = -1;
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 3;
 
     CSynthFilter &_filter;
