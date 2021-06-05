@@ -56,3 +56,4 @@ $configuration = $args[0]
 $platform = $args[1]
 
 MSBuild.exe -property:"Configuration=${configuration};Platform=${platform}" -maxCpuCount -nologo avisynth_filter.sln
+exit $LASTEXITCODE
