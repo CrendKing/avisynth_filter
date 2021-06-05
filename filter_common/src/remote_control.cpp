@@ -145,7 +145,7 @@ auto RemoteControl::HandleCopyData(HWND hSenderWindow, const COPYDATASTRUCT *cop
         return _filter.GetInputFormat().videoInfo.height;
 
     case API_MSG_GET_INPUT_PAR:
-        return llMulDiv(_filter.GetInputFormat().pixelAspectRatioNum, PAR_SCALE_FACTOR, _filter.GetInputFormat().pixelAspectRatioDen, 0);
+        return static_cast<LRESULT>(llMulDiv(_filter.GetInputFormat().pixelAspectRatioNum, PAR_SCALE_FACTOR, _filter.GetInputFormat().pixelAspectRatioDen, 0));
 
     case API_MSG_GET_CURRENT_INPUT_FPS:
         return _filter.frameHandler->GetCurrentInputFrameRate();
