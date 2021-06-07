@@ -88,6 +88,7 @@ private:
 
     bool _disconnectFilter = false;
     std::vector<MediaTypePair> _compatibleMediaTypes;
+    std::vector<CMediaType> _availableOutputMediaTypes;
     int _mediaTypeReconnectionWatermark = 0;
 
     Format::VideoFormat _inputVideoFormat;

@@ -100,6 +100,9 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
                     for (const Format::PixelFormat &fsPixelFormat : Format::LookupFsFormatId(AuxFrameServer::GetInstance().GetScriptPixelType())) {
                         const CMediaType outputMediaType = AuxFrameServer::GetInstance().GenerateMediaType(fsPixelFormat, nextType);
                         _compatibleMediaTypes.emplace_back(nextTypePtr, optInputPixelFormat, outputMediaType, MediaTypeToPixelFormat(&outputMediaType));
+                        if (std::ranges::find(_availableOutputMediaTypes, outputMediaType) == _availableOutputMediaTypes.end()) {
+                            _availableOutputMediaTypes.emplace_back(outputMediaType);
+                        }
                         Environment::GetInstance().Log(L"Add compatible formats: input %s output %s", optInputPixelFormat->name, fsPixelFormat.name);
                     }
                 }
@@ -115,13 +118,11 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
 }
 
 auto CSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    if (const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn);
-        optInputPixelFormat && std::ranges::any_of(_compatibleMediaTypes,
-                                                   [optInputPixelFormat](const MediaTypePair &pair) -> bool { return optInputPixelFormat == pair.inputPixelFormat; })) {
-        return S_OK;
-    }
-
-    return VFW_E_TYPE_NOT_ACCEPTED;
+    const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn);
+    const bool result = optInputPixelFormat && std::ranges::any_of(_compatibleMediaTypes,
+                                                                   [optInputPixelFormat](const MediaTypePair &pair) -> bool { return optInputPixelFormat == pair.inputPixelFormat; });
+    Environment::GetInstance().Log(L"CheckInputType(): input %s result %i", optInputPixelFormat ? optInputPixelFormat->name : L"Unknown", result);
+    return result ? S_OK : VFW_E_TYPE_NOT_ACCEPTED;
 }
 
 auto CSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT {
@@ -133,11 +134,11 @@ auto CSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESUL
         return E_UNEXPECTED;
     }
 
-    if (iPosition >= static_cast<int>(_compatibleMediaTypes.size())) {
+    if (iPosition >= static_cast<int>(_availableOutputMediaTypes.size())) {
         return VFW_S_NO_MORE_ITEMS;
     }
 
-    *pMediaType = _compatibleMediaTypes[iPosition].outputMediaType;
+    *pMediaType = _availableOutputMediaTypes[iPosition];
     Environment::GetInstance().Log(L"GetMediaType() offer media type %d with %s", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
 
     return S_OK;
