@@ -14,9 +14,9 @@ Environment::Environment()
     std::filesystem::path processName;
 
     if (GetModuleFileNameW(nullptr, processPathStr.data(), static_cast<DWORD>(processPathStr.size())) != 0) {
-        _iniPath = std::filesystem::path(processPathStr.data());
-        processName = _iniPath.filename();
-        _iniPath.replace_filename(FILTER_FILENAME_BASE).replace_extension(L"ini");
+        std::filesystem::path processPath = processPathStr.data();
+        processName = processPath.filename();
+        _iniPath = processPath.replace_filename(FILTER_FILENAME_BASE).replace_extension(L"ini");
         _useIni = _ini.LoadFile(_iniPath.c_str()) == SI_OK;
     }
 

@@ -145,31 +145,18 @@ auto CSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESUL
 }
 
 auto CSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    bool isInputMediaTypeOk = mtIn == &m_pInput->CurrentMediaType();
-    bool isOutputMediaTypeOk = mtOut == &m_pOutput->CurrentMediaType();
-
-    if (!isInputMediaTypeOk) {
-        isInputMediaTypeOk = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
+    if (mtIn != &m_pInput->CurrentMediaType()) {
+        const bool queryAcceptRet = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
             return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
         });
+        Environment::GetInstance().Log(L"Downstream QueryAccept in CheckTransform(): result %i input %s", queryAcceptRet, MediaTypeToPixelFormat(mtIn)->name);
 
-        Environment::GetInstance().Log(L"Downstream QueryAccept in CheckTransform(): result %i input %s", isInputMediaTypeOk, MediaTypeToPixelFormat(mtIn)->name);
-    }
-
-    if (!isOutputMediaTypeOk) {
-        const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn);
-        const Format::PixelFormat *optOutputPixelFormat = MediaTypeToPixelFormat(mtOut);
-        if (optInputPixelFormat && optOutputPixelFormat) {
-            const auto &iter = std::ranges::find_if(_compatibleMediaTypes,
-                                                    [optInputPixelFormat, optOutputPixelFormat](const MediaTypePair &pair) -> bool {
-                                                        return optInputPixelFormat == pair.inputPixelFormat && optOutputPixelFormat == pair.outputPixelFormat;
-                                                    });
-            isOutputMediaTypeOk = iter != _compatibleMediaTypes.cend();
-            Environment::GetInstance().Log(L"CheckTransform() for %s -> %s, result: %i", optInputPixelFormat->name, optOutputPixelFormat->name, isOutputMediaTypeOk);
+        if (!queryAcceptRet) {
+            return VFW_E_TYPE_NOT_ACCEPTED;
         }
     }
 
-    return isInputMediaTypeOk && isOutputMediaTypeOk ? S_OK : VFW_E_TYPE_NOT_ACCEPTED;
+    return S_OK;
 }
 
 auto CSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
@@ -194,13 +181,13 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
     /*
      * The media type negotiation logic
      *
-     * Suppose the upstream's output pin supports N1 media types (a set). The script could convert those N1 input types to N2 output types.
-     * The downstream's input pin supports N3 media types.
+     * Suppose the upstream filter outputs N1 media types (a set). The script could convert those N1 input media types to N2 output media types.
+     * The downstream filter accepts N3 media types.
      *
-     * The goal is to find a pair of input/output types where
-     *   1) the output type is in the intersection of N2 and N3.
-     *   2) the input type has a N1 -> N2 mapping to the output type.
-     * There could be multiple such pairs exist. It is up to the downstream to choose which to use.
+     * If the intersection of N2 and N3 is empty, this won't work. The graph manager will keep trying different downstream filters to find one
+     * where the intersection is not empty, or remove AVSF out of the graph.
+     *
+     * Once the intersection is not empty, it is up to the downstream to choose which to use.
      *
      * The problem is that the graph manager may not query all N1 media types during CheckInputType(). It may stop querying once found a valid transform
      * input/output pair, where the output media type is not acceptable with the downstream.
@@ -209,7 +196,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
      * During GetMediaType() and CheckTransform(), we offer and accept any output media type that is in N2. This allows downstream to choose the best media type it wants to use.
      *
      * Once both input and output pins are connected, we check if the pins' media types are valid transform. If yes, we are lucky and the pin connection completes.
-     * If not, we keep the connection to the downstream, reverse lookup the compatible input media type and reconnect input pin with that.
+     * If not, we keep the connection to the downstream, reverse lookup the compatible input media type and reconnect input pin with that type.
      * Because the reconnect media type is selected from upstream's enumerated media type, the connection should always succeed at the second time.
      *
      * Since there could be multiple compatible input/output pair, if first input media type fails to reconnect, we raise water mark and try the next candidate
@@ -254,6 +241,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                 return E_UNEXPECTED;
             }
 
+            Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %s", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
             CheckHr(ReconnectPin(m_pInput, reconnectInputMediaType));
         }
     }
