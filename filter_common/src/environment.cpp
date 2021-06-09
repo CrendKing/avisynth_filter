@@ -118,12 +118,12 @@ auto Environment::SetInputFormatEnabled(const WCHAR *formatName, bool enabled) -
 auto Environment::LoadSettingsFromIni() -> void {
     _scriptPath = _ini.GetValue(L"", SETTING_NAME_SCRIPT_FILE, L"");
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
-        if (_ini.GetBoolValue(L"", settingName.c_str(), true)) {
-            _enabledInputFormats.emplace(name);
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const Format::PixelFormat &format) {
+        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, format.name);
+        if (_ini.GetBoolValue(L"", settingName.c_str(), format.enabledByDefault)) {
+            _enabledInputFormats.emplace(format.name);
         }
-    }, &Format::PixelFormat::name);
+    });
 
     _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
     _extraSourceBuffer = _ini.GetLongValue(L"", SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
@@ -133,12 +133,12 @@ auto Environment::LoadSettingsFromIni() -> void {
 auto Environment::LoadSettingsFromRegistry() -> void {
     _scriptPath = _registry.ReadString(SETTING_NAME_SCRIPT_FILE);
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
-        if (_registry.ReadNumber(settingName.c_str(), 1) != 0) {
-            _enabledInputFormats.emplace(name);
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const Format::PixelFormat &format) {
+        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, format.name);
+        if (_registry.ReadNumber(settingName.c_str(), format.enabledByDefault) != 0) {
+            _enabledInputFormats.emplace(format.name);
         }
-    }, &Format::PixelFormat::name);
+    });
 
     _isRemoteControlEnabled = _registry.ReadNumber(SETTING_NAME_REMOTE_CONTROL, 0) != 0;
     _extraSourceBuffer = _registry.ReadNumber(SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);

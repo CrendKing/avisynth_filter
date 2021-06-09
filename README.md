@@ -37,6 +37,14 @@ Run uninstall.bat to unregister the filters and clean up user data.
 
 ## Usage
 
+### Common
+
+By default, 10-bit and 16-bit input formats are not enabled for compatibility reasons. If you have a 10/16-bit capable video renderer installed, you can enable them by ticking the relevant checkboxes in the filter's settings page. On the other hand, if you don't have a said video renderer installed while enabling these input formats, you might experience compatibility issue and reduced video qualities.
+
+Examples of 10/16-bit capable video renderers: [madVR](http://madvr.com/), [MPC Video Renderer](https://github.com/Aleksoid1978/VideoRenderer).
+
+Examples of video renderers having issues: [Enhanced Video Renderer](https://docs.microsoft.com/en-us/windows/win32/medfound/enhanced-video-renderer) ([related issue](https://github.com/clsid2/mpc-hc/issues/767#issuecomment-735239261)), [PotPlayer "Built-in" video renderers](http://potplayer.daum.net/) ([related issue](https://github.com/CrendKing/avisynth_filter/issues/37#issuecomment-858152467)).
+
 ### AviSynth Filter
 
 The filter exposes the following functions to the AviSynth script:

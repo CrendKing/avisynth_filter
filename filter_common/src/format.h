@@ -41,6 +41,7 @@ public:
         bool areUVPlanesInterleaved;
 
         int resourceId;
+        bool enabledByDefault;
     };
 
     struct VideoFormat {
