@@ -77,14 +77,16 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
             return false;
         }
 
-        if (SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType))) {
+        const bool result = SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
+        Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %i", Format::LookupMediaSubtype(outputMediaType.subtype)->name, result);
+
+        if (result) {
             _filter.m_pOutput->SetMediaType(&outputMediaType);
             _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &MainFrameServer::GetInstance());
             _notifyChangedOutputMediaType = true;
-            return true;
         }
 
-        return false;
+        return result;
     });
 
     if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {

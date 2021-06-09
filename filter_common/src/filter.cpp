@@ -118,10 +118,23 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
 }
 
 auto CSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn);
-    const bool result = optInputPixelFormat && std::ranges::any_of(_compatibleMediaTypes,
-                                                                   [optInputPixelFormat](const MediaTypePair &pair) -> bool { return optInputPixelFormat == pair.inputPixelFormat; });
-    Environment::GetInstance().Log(L"CheckInputType(): input %s result %i", optInputPixelFormat ? optInputPixelFormat->name : L"Unknown", result);
+    bool result;
+
+    if (const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn);
+        !IsActive()) {
+        result = optInputPixelFormat && std::ranges::any_of(_compatibleMediaTypes, [optInputPixelFormat](const MediaTypePair &pair) -> bool {
+            return optInputPixelFormat == pair.inputPixelFormat;
+        });
+        Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %s result %i", optInputPixelFormat ? optInputPixelFormat->name : L"Unknown", result);
+    } else {
+        ASSERT(*mtIn != m_pInput->CurrentMediaType());
+
+        result = optInputPixelFormat && std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
+            return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
+        });
+        Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %s result %i", optInputPixelFormat ? optInputPixelFormat->name : L"Unknown", result);
+    }
+
     return result ? S_OK : VFW_E_TYPE_NOT_ACCEPTED;
 }
 
@@ -139,23 +152,12 @@ auto CSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESUL
     }
 
     *pMediaType = _availableOutputMediaTypes[iPosition];
-    Environment::GetInstance().Log(L"GetMediaType() offer media type %d with %s", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
+    Environment::GetInstance().Log(L"GetMediaType() offers media type %d with %s", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
 
     return S_OK;
 }
 
 auto CSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT {
-    if (mtIn != &m_pInput->CurrentMediaType()) {
-        const bool queryAcceptRet = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
-            return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
-        });
-        Environment::GetInstance().Log(L"Downstream QueryAccept in CheckTransform(): result %i input %s", queryAcceptRet, MediaTypeToPixelFormat(mtIn)->name);
-
-        if (!queryAcceptRet) {
-            return VFW_E_TYPE_NOT_ACCEPTED;
-        }
-    }
-
     return S_OK;
 }
 
@@ -220,13 +222,13 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
         for (const auto &[inputMediaType, inputPixelFormat, outputMediaType, outputPixelFormat] : _compatibleMediaTypes) {
             if (optConnectionOutputPixelFormat == outputPixelFormat) {
                 if (optConnectionInputPixelFormat == inputPixelFormat) {
-                    Environment::GetInstance().Log(L"Connected with types: in %s out %s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
+                    Environment::GetInstance().Log(L"Connected pins with media types: %s -> %s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
                     isMediaTypesCompatible = true;
                     break;
                 }
 
                 if (mediaTypeReconnectionIndex >= _mediaTypeReconnectionWatermark) {
-                    reconnectInputMediaType = reinterpret_cast<const CMediaType *>(inputMediaType.get());
+                    reconnectInputMediaType = static_cast<const CMediaType *>(inputMediaType.get());
                     _mediaTypeReconnectionWatermark += 1;
                     break;
                 }
