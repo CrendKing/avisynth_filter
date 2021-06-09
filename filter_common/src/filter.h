@@ -38,6 +38,7 @@ public:
     // CVideoTransformFilter
     auto GetPin(int n) -> CBasePin * override;
     auto CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT override;
+    auto BreakConnect(PIN_DIRECTION direction) -> HRESULT override;
     auto CheckInputType(const CMediaType *mtIn) -> HRESULT override;
     auto GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESULT override;
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;

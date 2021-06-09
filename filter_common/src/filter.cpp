@@ -117,22 +117,35 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
     return S_OK;
 }
 
+auto CSynthFilter::BreakConnect(PIN_DIRECTION direction) -> HRESULT {
+    if (direction == PINDIR_INPUT) {
+        _compatibleMediaTypes.clear();
+        _availableOutputMediaTypes.clear();
+        _mediaTypeReconnectionWatermark = 0;
+    }
+
+    return S_OK;
+}
+
 auto CSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
-    bool result;
+    bool result = false;
 
-    if (const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn);
-        !IsActive()) {
-        result = optInputPixelFormat && std::ranges::any_of(_compatibleMediaTypes, [optInputPixelFormat](const MediaTypePair &pair) -> bool {
-            return optInputPixelFormat == pair.inputPixelFormat;
-        });
-        Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %s result %i", optInputPixelFormat ? optInputPixelFormat->name : L"Unknown", result);
+    if (const Format::PixelFormat *optInputPixelFormat = MediaTypeToPixelFormat(mtIn); optInputPixelFormat) {
+        if (!IsActive()) {
+            result = std::ranges::any_of(_compatibleMediaTypes, [optInputPixelFormat](const MediaTypePair &pair) -> bool {
+                return optInputPixelFormat == pair.inputPixelFormat;
+            });
+            Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %s result %i", optInputPixelFormat->name, result);
+        } else {
+            ASSERT(*mtIn != m_pInput->CurrentMediaType());
+
+            result = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
+                return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
+            });
+            Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %s result %i", optInputPixelFormat->name, result);
+        }
     } else {
-        ASSERT(*mtIn != m_pInput->CurrentMediaType());
-
-        result = optInputPixelFormat && std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
-            return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
-        });
-        Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %s result %i", optInputPixelFormat ? optInputPixelFormat->name : L"Unknown", result);
+        Environment::GetInstance().Log(L"Unknown input media type in CheckInputType()");
     }
 
     return result ? S_OK : VFW_E_TYPE_NOT_ACCEPTED;
@@ -214,6 +227,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
             Environment::GetInstance().Log(L"Unexpected input or output format");
             return E_UNEXPECTED;
         }
+        Environment::GetInstance().Log(L"Pins are connected with media types: %s -> %s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
 
         bool isMediaTypesCompatible = false;
         int mediaTypeReconnectionIndex = 0;
@@ -222,7 +236,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
         for (const auto &[inputMediaType, inputPixelFormat, outputMediaType, outputPixelFormat] : _compatibleMediaTypes) {
             if (optConnectionOutputPixelFormat == outputPixelFormat) {
                 if (optConnectionInputPixelFormat == inputPixelFormat) {
-                    Environment::GetInstance().Log(L"Connected pins with media types: %s -> %s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
+                    Environment::GetInstance().Log(L"Pin connections are settled");
                     isMediaTypesCompatible = true;
                     break;
                 }
