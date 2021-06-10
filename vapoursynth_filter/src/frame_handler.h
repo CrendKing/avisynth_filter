@@ -60,6 +60,9 @@ private:
     auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
 
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 2;
+    static constexpr const char *VS_PROP_NAME_ABS_TIME = "_AbsoluteTime";
+    static constexpr const char *VS_PROP_NAME_DURATION_NUM = "_DurationNum";
+    static constexpr const char *VS_PROP_NAME_DURATION_DEN = "_DurationDen";
 
     CSynthFilter &_filter;
 
@@ -79,7 +82,6 @@ private:
     int _nextProcessSourceFrameNb;
     int _nextOutputFrameNb;
     std::atomic<int> _nextOutputSourceFrameNb;
-    REFERENCE_TIME _nextOutputFrameStartTime;
     bool _notifyChangedOutputMediaType = false;
     int _nextDeliveryFrameNb;
 

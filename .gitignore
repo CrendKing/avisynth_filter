@@ -264,5 +264,6 @@ __pycache__/
 /dep_*/
 release*.bat
 *.zip
+*.sln.startup.json
 
 /filter_common/src/git_hash.h

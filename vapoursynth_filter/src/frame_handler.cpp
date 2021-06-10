@@ -52,11 +52,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
     if (_nextSourceFrameNb == 0) {
         _frameRateCheckpointInputSampleStartTime = inputSampleStartTime;
-
-        _nextOutputFrameStartTime = inputSampleStartTime;
-        _frameRateCheckpointOutputFrameStartTime = inputSampleStartTime;
     }
-
     RefreshInputFrameRates(_nextSourceFrameNb, inputSampleStartTime);
 
     BYTE *sampleBuffer;
@@ -68,7 +64,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     VSFrameRef *frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
     VSMap *frameProps = AVSF_VS_API->getFramePropsRW(frame);
     AVSF_VS_API->propSetInt(frameProps, "_FieldBased", 0, paReplace);
-    AVSF_VS_API->propSetFloat(frameProps, "_AbsoluteTime", static_cast<double>(inputSampleStartTime) / UNITS, paReplace);
+    AVSF_VS_API->propSetFloat(frameProps, VS_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
 
@@ -130,8 +126,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     REFERENCE_TIME frameDurationNum = processSourceFrameIters[1]->second.startTime - processSourceFrameIters[0]->second.startTime;
     REFERENCE_TIME frameDurationDen = UNITS;
     vs_normalizeRational(&frameDurationNum, &frameDurationDen);
-    AVSF_VS_API->propSetInt(frameProps, "_DurationNum", frameDurationNum, paReplace);
-    AVSF_VS_API->propSetInt(frameProps, "_DurationDen", frameDurationDen, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_NUM, frameDurationNum, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_DEN, frameDurationDen, paReplace);
 
     const int64_t maxRequestOutputFrameNb = llMulDiv(processSourceFrameIters[0]->first,
                                                      MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
@@ -321,20 +317,21 @@ auto FrameHandler::ResetOutput() -> void {
 
 auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) -> bool {
     const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(data.frame);
-    int errNum, errDen;
-    const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, "_DurationNum", 0, &errNum);
-    const int64_t frameDurationDen = AVSF_VS_API->propGetInt(frameProps, "_DurationDen", 0, &errDen);
+    int propGetError;
+    const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_NUM, 0, &propGetError);
+    const int64_t frameDurationDen = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_DEN, 0, &propGetError);
     int64_t frameDuration;
 
-    if (errNum == 0 && errDen == 0) {
+    if (frameDurationNum > 0 && frameDurationDen > 0) {
         frameDuration = llMulDiv(frameDurationNum, UNITS, frameDurationDen, 0);
     } else {
         frameDuration = MainFrameServer::GetInstance().GetScriptAvgFrameDuration();
     }
 
-    REFERENCE_TIME stopTime = _nextOutputFrameStartTime + frameDuration;
+    REFERENCE_TIME frameStartTime = static_cast<REFERENCE_TIME>(AVSF_VS_API->propGetFloat(frameProps, VS_PROP_NAME_ABS_TIME, 0, &propGetError) * UNITS);
+    REFERENCE_TIME frameStopTime = frameStartTime + frameDuration;
 
-    if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &_nextOutputFrameStartTime, &stopTime, 0))) {
+    if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &frameStartTime, &frameStopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
         sample.Detach();
         return false;
@@ -358,7 +355,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
                                        _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
     }
 
-    if (FAILED(sample->SetTime(&_nextOutputFrameStartTime, &stopTime))) {
+    if (FAILED(sample->SetTime(&frameStartTime, &frameStopTime))) {
         return false;
     }
 
@@ -377,8 +374,10 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
         data.hdrSideData->WriteTo(outputSampleSideData);
     }
 
-    RefreshOutputFrameRates(frameNb, _nextOutputFrameStartTime);
-    _nextOutputFrameStartTime = stopTime;
+    if (frameNb == 0) {
+        _frameRateCheckpointOutputFrameStartTime = frameStartTime;
+    }
+    RefreshOutputFrameRates(frameNb, frameStartTime);
 
     return true;
 }
