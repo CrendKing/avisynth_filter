@@ -88,7 +88,7 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
                 const std::shared_ptr<AM_MEDIA_TYPE> nextTypePtr(nextType, &DeleteMediaType);
 
                 if (const Format::PixelFormat *optInputPixelFormat = GetInputPixelFormat(nextType);
-                    optInputPixelFormat && std::ranges::find(_compatibleMediaTypes, optInputPixelFormat, &MediaTypePair::inputPixelFormat) == _compatibleMediaTypes.cend()) {
+                    optInputPixelFormat && std::ranges::find(_compatibleMediaTypes, optInputPixelFormat, &MediaTypePair::inputPixelFormat) == _compatibleMediaTypes.end()) {
                     // invoke the script with each supported input pixel format, and observe the output frameserver format
                     if (!AuxFrameServer::GetInstance().ReloadScript(*nextType, Environment::GetInstance().IsRemoteControlEnabled())) {
                         Environment::GetInstance().Log(L"Disconnect filter by user request");

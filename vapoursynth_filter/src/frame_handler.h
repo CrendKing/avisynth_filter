@@ -37,8 +37,8 @@ private:
         std::shared_ptr<HDRSideData> hdrSideData;
     };
 
-    struct OutputSampleData {
-        ~OutputSampleData();
+    struct OutputFrameData {
+        ~OutputFrameData();
 
         int sourceFrameNb;
         std::shared_ptr<HDRSideData> hdrSideData;
@@ -52,7 +52,7 @@ private:
 
     auto ResetInput() -> void;
     auto ResetOutput() -> void;
-    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) -> bool;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputFrameData &data) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
@@ -67,7 +67,7 @@ private:
     CSynthFilter &_filter;
 
     std::map<int, SourceFrameInfo> _sourceFrames;
-    std::map<int, OutputSampleData> _outputSamples;
+    std::map<int, OutputFrameData> _outputFrames;
 
     mutable std::shared_mutex _sourceMutex;
     std::shared_mutex _outputMutex;
@@ -81,7 +81,7 @@ private:
     int _nextSourceFrameNb;
     int _nextProcessSourceFrameNb;
     int _nextOutputFrameNb;
-    std::atomic<int> _nextOutputSourceFrameNb;
+    std::atomic<int> _lastUsedSourceFrameNb;
     bool _notifyChangedOutputMediaType = false;
     int _nextDeliveryFrameNb;
 

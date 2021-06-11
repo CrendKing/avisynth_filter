@@ -44,7 +44,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         const std::shared_lock sharedSourceLock(_sourceMutex);
 
         // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? 0 : _sourceFrames.crbegin()->second.startTime;
+        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
             inputSampleStartTime <= lastSampleStartTime) {
             Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inputSampleStartTime, lastSampleStartTime);
             return S_FALSE;
@@ -115,7 +115,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
 
         // use map.lower_bound() in case the exact frame is removed by the script
         iter = _sourceFrames.lower_bound(frameNb);
-        return iter != _sourceFrames.cend();
+        return iter != _sourceFrames.end();
     });
 
     if (_isFlushing || iter->second.frame == nullptr) {
@@ -312,7 +312,7 @@ auto FrameHandler::WorkerProc() -> void {
                 continue;
             }
 
-            processSourceFrameIters[0] = _sourceFrames.cbegin();
+            processSourceFrameIters[0] = _sourceFrames.begin();
 
             for (int i = 1; i < NUM_SRC_FRAMES_PER_PROCESSING; ++i) {
                 processSourceFrameIters[i] = processSourceFrameIters[i - 1];

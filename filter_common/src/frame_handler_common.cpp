@@ -41,7 +41,7 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
     // search for all previous frames in case of some source frames are never used
     // this could happen by plugins that decrease frame rate
-    const auto sourceEnd = _sourceFrames.cend();
+    const auto sourceEnd = _sourceFrames.end();
     for (decltype(_sourceFrames)::const_iterator iter = _sourceFrames.begin(); iter != sourceEnd && iter->first <= srcFrameNb; iter = _sourceFrames.begin()) {
         _sourceFrames.erase(iter);
     }

@@ -22,11 +22,11 @@ public:
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     auto IsInputFormatEnabled(const WCHAR *formatName) const -> bool;
     auto SetInputFormatEnabled(const WCHAR *formatName, bool enabled) -> void;
-    auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
+    constexpr auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
     auto SetRemoteControlEnabled(bool enabled) -> void;
-    auto GetExtraSourceBuffer() const -> int { return _extraSourceBuffer; }
-    auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
-    auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
+    constexpr auto GetExtraSourceBuffer() const -> int { return _extraSourceBuffer; }
+    constexpr auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
+    constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
 
 private:
     auto LoadSettingsFromIni() -> void;

@@ -21,7 +21,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         }
 
         // add headroom to avoid blocking and context switch
-        return _nextSourceFrameNb <= _nextOutputSourceFrameNb + NUM_SRC_FRAMES_PER_PROCESSING + Environment::GetInstance().GetExtraSourceBuffer();
+        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + NUM_SRC_FRAMES_PER_PROCESSING + Environment::GetInstance().GetExtraSourceBuffer();
     });
 
     if (_isFlushing || _isStopping) {
@@ -43,7 +43,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         const std::shared_lock sharedSourceLock(_sourceMutex);
 
         // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? 0 : _sourceFrames.crbegin()->second.startTime;
+        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
             inputSampleStartTime <= lastSampleStartTime) {
             Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inputSampleStartTime, lastSampleStartTime);
             return S_FALSE;
@@ -93,8 +93,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                               std::forward_as_tuple(frame, inputSampleStartTime, hdrSideData));
     }
 
-    Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli",
-                                   _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime);
+    Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli, last used: %6i",
+                                   _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _lastUsedSourceFrameNb.load());
 
     _nextSourceFrameNb += 1;
 
@@ -110,7 +110,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         const std::shared_lock sharedSourceLock(_sourceMutex);
 
         for (int i = 0; i < NUM_SRC_FRAMES_PER_PROCESSING; ++i) {
-            if (processSourceFrameIters[i] == _sourceFrames.cend()) {
+            if (processSourceFrameIters[i] == _sourceFrames.end()) {
                 return S_OK;
             }
 
@@ -134,10 +134,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                                      MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
                                                      0);
     while (_nextOutputFrameNb <= maxRequestOutputFrameNb) {
+        // preemptively put frame data into the queue instead of passing a new pointer to the callback userdata
+        // so that if the callback is not called due to frameserver shutdown, there won't be memory leak
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
-            _outputSamples.emplace(std::piecewise_construct,
+            _outputFrames.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(_nextOutputFrameNb),
                                    std::forward_as_tuple(processSourceFrameIters[0]->first, processSourceFrameIters[0]->second.hdrSideData));
         }
@@ -164,7 +166,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
 
         // use map.lower_bound() in case the exact frame is removed by the script
         iter = _sourceFrames.lower_bound(frameNb);
-        if (iter == _sourceFrames.cend()) {
+        if (iter == _sourceFrames.end()) {
             return false;
         }
 
@@ -215,7 +217,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
         std::shared_lock sharedOutputLock(_outputMutex);
 
         _flushOutputSampleCv.wait(sharedOutputLock, [this]() {
-            return std::ranges::all_of(_outputSamples | std::views::values, [](const OutputSampleData &data) {
+            return std::ranges::all_of(_outputFrames | std::views::values, [](const OutputFrameData &data) {
                 return data.frame!= nullptr;
             });
         });
@@ -226,7 +228,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     }
 
     _sourceFrames.clear();
-    _outputSamples.clear();
+    _outputFrames.clear();
 
     ResetInput();
 
@@ -264,7 +266,7 @@ FrameHandler::SourceFrameInfo::~SourceFrameInfo() {
     AVSF_VS_API->freeFrame(frame);
 }
 
-FrameHandler::OutputSampleData::~OutputSampleData() {
+FrameHandler::OutputFrameData::~OutputFrameData() {
     if (frame != nullptr) {
         AVSF_VS_API->freeFrame(frame);
     }
@@ -277,26 +279,25 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f
     }
 
     FrameHandler *frameHandler = static_cast<FrameHandler *>(userData);
-    Environment::GetInstance().Log(L"Output frame %6i is ready, output queue size %2zu", n, frameHandler->_outputSamples.size());
+    Environment::GetInstance().Log(L"Output frame %6i is ready, output queue size %2zu", n, frameHandler->_outputFrames.size());
 
     if (frameHandler->_isFlushing) {
         {
             std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
 
-            frameHandler->_outputSamples.erase(n);
+            frameHandler->_outputFrames.erase(n);
         }
+        frameHandler->_flushOutputSampleCv.notify_all();
 
         AVSF_VS_API->freeFrame(f);
-        frameHandler->_flushOutputSampleCv.notify_all();
     } else {
         {
             std::shared_lock sharedOutputLock(frameHandler->_outputMutex);
 
-            const decltype(frameHandler->_outputSamples)::iterator iter = frameHandler->_outputSamples.find(n);
-            ASSERT(iter != frameHandler->_outputSamples.end());
+            const decltype(frameHandler->_outputFrames)::iterator iter = frameHandler->_outputFrames.find(n);
+            ASSERT(iter != frameHandler->_outputFrames.end());
             iter->second.frame = f;
         }
-
         frameHandler->_deliverSampleCv.notify_all();
     }
 }
@@ -305,7 +306,7 @@ auto FrameHandler::ResetInput() -> void {
     _nextSourceFrameNb = 0;
     _nextProcessSourceFrameNb = 0;
     _nextOutputFrameNb = 0;
-    _nextOutputSourceFrameNb = 0;
+    _lastUsedSourceFrameNb = 0;
     _notifyChangedOutputMediaType = false;
 
     _frameRateCheckpointInputSampleNb = 0;
@@ -322,7 +323,7 @@ auto FrameHandler::ResetOutput() -> void {
     _nextDeliveryFrameNb = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputSampleData &data) -> bool {
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputFrameData &data) -> bool {
     const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(data.frame);
     int propGetError;
     const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_NUM, 0, &propGetError);
@@ -413,7 +414,7 @@ auto FrameHandler::WorkerProc() -> void {
             _isWorkerLatched = false;
         }
 
-        decltype(_outputSamples)::iterator iter;
+        decltype(_outputFrames)::iterator iter;
         {
             std::shared_lock sharedOutputLock(_outputMutex);
 
@@ -422,8 +423,8 @@ auto FrameHandler::WorkerProc() -> void {
                     return true;
                 }
 
-                iter = _outputSamples.find(_nextDeliveryFrameNb);
-                if (iter == _outputSamples.end()) {
+                iter = _outputFrames.find(_nextDeliveryFrameNb);
+                if (iter == _outputFrames.end()) {
                     return false;
                 }
 
@@ -435,7 +436,8 @@ auto FrameHandler::WorkerProc() -> void {
             continue;
         }
 
-        _nextOutputSourceFrameNb = iter->second.sourceFrameNb;
+        _lastUsedSourceFrameNb = iter->second.sourceFrameNb;
+        _addInputSampleCv.notify_all();
 
         if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, iter->first, iter->second)) {
             _filter.m_pOutput->Deliver(outputSample);
@@ -445,10 +447,10 @@ auto FrameHandler::WorkerProc() -> void {
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
-            _outputSamples.erase(iter);
+            _outputFrames.erase(iter);
         }
 
-        GarbageCollect(_nextOutputSourceFrameNb - 1);
+        GarbageCollect(_lastUsedSourceFrameNb - 1);
         _nextDeliveryFrameNb += 1;
     }
 
