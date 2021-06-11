@@ -92,7 +92,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                               std::forward_as_tuple(_nextSourceFrameNb),
                               std::forward_as_tuple(frame, inputSampleStartTime, hdrSideData));
     }
-    _newSourceFrameCv.notify_all();
 
     Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli",
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime);
@@ -128,6 +127,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     vs_normalizeRational(&frameDurationNum, &frameDurationDen);
     AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_NUM, frameDurationNum, paReplace);
     AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_DEN, frameDurationDen, paReplace);
+    _newSourceFrameCv.notify_all();
 
     const int64_t maxRequestOutputFrameNb = llMulDiv(processSourceFrameIters[0]->first,
                                                      MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
@@ -152,7 +152,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
-    Environment::GetInstance().Log(L"Get source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Wait to get source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedSourceLock(_sourceMutex);
 
@@ -164,13 +164,20 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
 
         // use map.lower_bound() in case the exact frame is removed by the script
         iter = _sourceFrames.lower_bound(frameNb);
-        return iter != _sourceFrames.cend();
+        if (iter == _sourceFrames.cend()) {
+            return false;
+        }
+
+        const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(iter->second.frame);
+        return AVSF_VS_API->propNumElements(frameProps, VS_PROP_NAME_DURATION_NUM) > 0 && AVSF_VS_API->propNumElements(frameProps, VS_PROP_NAME_DURATION_DEN) > 0;
     });
 
     if (_isFlushing) {
         Environment::GetInstance().Log(L"Drain for frame %6i", frameNb);
         return MainFrameServer::GetInstance().GetSourceDrainFrame();
     }
+
+    Environment::GetInstance().Log(L"Return source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
 
     return iter->second.frame;
 }
