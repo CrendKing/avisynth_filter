@@ -39,7 +39,7 @@ Run uninstall.bat to unregister the filters and clean up user data.
 
 ### Common
 
-By default, 10-bit and 16-bit input formats are not enabled for compatibility reasons. If you have a 10/16-bit capable video renderer installed, you can enable them by ticking the relevant checkboxes in the filter's settings page. On the other hand, if you don't have a said video renderer installed while enabling these input formats, you might experience compatibility issue and reduced video qualities.
+By default, 10-bit and 16-bit input formats are enabled for best video quality. However, not all video renderers are capable of processing these data. If you do not have such a video renderer installed, leaving these options on might cause compatibility issues. In that case, you should open the settings page of the filter and untick the relevant checkboxes.
 
 Examples of 10/16-bit capable video renderers: [madVR](http://madvr.com/), [MPC Video Renderer](https://github.com/Aleksoid1978/VideoRenderer).
 

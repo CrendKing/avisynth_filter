@@ -120,7 +120,7 @@ auto Environment::LoadSettingsFromIni() -> void {
 
     std::ranges::for_each(Format::PIXEL_FORMATS, [this](const Format::PixelFormat &format) {
         const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, format.name);
-        if (_ini.GetBoolValue(L"", settingName.c_str(), format.enabledByDefault)) {
+        if (_ini.GetBoolValue(L"", settingName.c_str(), true)) {
             _enabledInputFormats.emplace(format.name);
         }
     });
@@ -135,7 +135,7 @@ auto Environment::LoadSettingsFromRegistry() -> void {
 
     std::ranges::for_each(Format::PIXEL_FORMATS, [this](const Format::PixelFormat &format) {
         const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, format.name);
-        if (_registry.ReadNumber(settingName.c_str(), format.enabledByDefault) != 0) {
+        if (_registry.ReadNumber(settingName.c_str(), 1) != 0) {
             _enabledInputFormats.emplace(format.name);
         }
     });
