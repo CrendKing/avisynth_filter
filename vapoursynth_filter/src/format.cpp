@@ -12,36 +12,36 @@ namespace SynthFilter {
 // for each group of formats with the same format ID, they should appear with the most preferred -> list preferred order
 const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS = {
     // 4:2:0
-    { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .fsFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 },
-    { .name = L"YV12",  .mediaSubtype = MEDIASUBTYPE_YV12,  .fsFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV12 },
-    { .name = L"I420",  .mediaSubtype = MEDIASUBTYPE_I420,  .fsFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_I420 },
-    { .name = L"IYUV",  .mediaSubtype = MEDIASUBTYPE_IYUV,  .fsFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_IYUV },
+    { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 },
+    { .name = L"YV12",  .mediaSubtype = MEDIASUBTYPE_YV12,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV12 },
+    { .name = L"I420",  .mediaSubtype = MEDIASUBTYPE_I420,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_I420 },
+    { .name = L"IYUV",  .mediaSubtype = MEDIASUBTYPE_IYUV,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_IYUV },
 
     // P010 has the most significant 6 bits zero-padded, while VapourSynth expects the least significant bits padded
     // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
-    { .name = L"P016",  .mediaSubtype = MEDIASUBTYPE_P016,  .fsFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 },
-    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .fsFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
+    { .name = L"P016",  .mediaSubtype = MEDIASUBTYPE_P016,  .frameServerFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 },
+    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
 
     // 4:2:2
-    { .name = L"YUY2",  .mediaSubtype = MEDIASUBTYPE_YUY2,  .fsFormatId = pfCompatYUY2,  .bitCount = 16, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YUY2 },
+    { .name = L"YUY2",  .mediaSubtype = MEDIASUBTYPE_YUY2,  .frameServerFormatId = pfCompatYUY2,  .bitCount = 16, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YUY2 },
     // P210 has the same problem as P010
-    { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .fsFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 },
-    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .fsFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
+    { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 },
+    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
 
     // 4:4:4
-    { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .fsFormatId = pfYUV444P8,    .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 },
+    { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = pfYUV444P8,    .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 },
 
     // RGB
-    { .name = L"RGB32", .mediaSubtype = MEDIASUBTYPE_RGB32, .fsFormatId = pfCompatBGR32, .bitCount = 32, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_RGB32 },
+    { .name = L"RGB32", .mediaSubtype = MEDIASUBTYPE_RGB32, .frameServerFormatId = pfCompatBGR32, .bitCount = 32, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_RGB32 },
     // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
 };
 
-auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat {
+auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat {
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     REFERENCE_TIME fpsNum = UNITS;
     REFERENCE_TIME fpsDen = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
     vs_normalizeRational(&fpsNum, &fpsDen);
-    VSCore *vsCore= vsscript_getCore(scriptInstance->GetVsScript());
+    VSCore *vsCore= vsscript_getCore(frameServerInstance->GetVsScript());
 
     VideoFormat ret {
         .pixelFormat = LookupMediaSubtype(mediaType.subtype),
@@ -50,10 +50,10 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
         .hdrType = 0,
         .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType),
-        .fsEnvironment = vsCore
+        .frameServer = vsCore
     };
     ret.videoInfo = {
-        .format = AVSF_VS_API->getFormatPreset(ret.pixelFormat->fsFormatId, ret.fsEnvironment),
+        .format = AVSF_VS_API->getFormatPreset(ret.pixelFormat->frameServerFormatId, ret.frameServer),
         .fpsNum = fpsNum,
         .fpsDen = fpsDen,
         .width = ret.bmi.biWidth,
@@ -91,7 +91,7 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrameRef *srcFr
 }
 
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrameRef * {
-    VSFrameRef *frame = AVSF_VS_API->newVideoFrame(videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.fsEnvironment);
+    VSFrameRef *frame = AVSF_VS_API->newVideoFrame(videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServer);
 
     const std::array dstSlices = { AVSF_VS_API->getWritePtr(frame, 0)
                                  , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VS_API->getWritePtr(frame, 1)
@@ -123,7 +123,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
 
     vs_bitblt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
 
-    if (videoFormat.pixelFormat->fsFormatId >= cmCompat) {
+    if (videoFormat.pixelFormat->frameServerFormatId >= cmCompat) {
         return;
     }
 
@@ -189,7 +189,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
 
     vs_bitblt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
 
-    if (videoFormat.pixelFormat->fsFormatId >= cmCompat) {
+    if (videoFormat.pixelFormat->frameServerFormatId >= cmCompat) {
         return;
     }
 

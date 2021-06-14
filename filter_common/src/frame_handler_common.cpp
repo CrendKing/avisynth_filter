@@ -66,30 +66,29 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
     _filter._reloadScript = false;
 
     auto potentialOutputMediaTypes = _filter.InputToOutputMediaType(&_filter.m_pInput->CurrentMediaType());
-    const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes, [this](const CMediaType &outputMediaType) -> bool {
-        /*
-         * "QueryAccept (Downstream)" forces the downstream to use the new output media type as-is, which may lead to wrong rendering result
-         * "ReceiveConnection" allows downstream to counter-propose suitable media type for the connection
-         * after ReceiveConnection(), the next output sample should carry the new output media type, which is handled in PrepareOutputSample()
-         */
+    if (const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes, [this](const CMediaType &outputMediaType) -> bool {
+            /*
+             * "QueryAccept (Downstream)" forces the downstream to use the new output media type as-is, which may lead to wrong rendering result
+             * "ReceiveConnection" allows downstream to counter-propose suitable media type for the connection
+             * after ReceiveConnection(), the next output sample should carry the new output media type, which is handled in PrepareOutputSample()
+             */
 
-        if (_isFlushing) {
-            return false;
-        }
+            if (_isFlushing) {
+                return false;
+            }
 
-        const bool result = SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
-        Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %i", Format::LookupMediaSubtype(outputMediaType.subtype)->name, result);
+            const bool result = SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
+            Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %i", Format::LookupMediaSubtype(outputMediaType.subtype)->name, result);
 
-        if (result) {
-            _filter.m_pOutput->SetMediaType(&outputMediaType);
-            _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &MainFrameServer::GetInstance());
-            _notifyChangedOutputMediaType = true;
-        }
+            if (result) {
+                _filter.m_pOutput->SetMediaType(&outputMediaType);
+                _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &MainFrameServer::GetInstance());
+                _notifyChangedOutputMediaType = true;
+            }
 
-        return result;
-    });
-
-    if (newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {
+            return result;
+        });
+        newOutputMediaTypeIter == potentialOutputMediaTypes.end()) {
         Environment::GetInstance().Log(L"Downstream does not accept any of the new output media types");
         _filter.AbortPlayback(VFW_E_TYPE_NOT_ACCEPTED);
         return false;

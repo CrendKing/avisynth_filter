@@ -318,7 +318,9 @@ auto FrameHandler::ResetInput() -> void {
 
 auto FrameHandler::ResetOutput() -> void {
     // to ensure these non-atomic properties are only modified by their sole consumer the worker thread
-    ASSERT(std::this_thread::get_id() == _workerThread.get_id());
+    const std::thread::id actual = std::this_thread::get_id();
+    const std::thread::id expected = _workerThread.get_id();
+    ASSERT(actual == expected);
 
     _nextDeliveryFrameNb = 0;
 }

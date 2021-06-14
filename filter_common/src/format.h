@@ -26,7 +26,7 @@ public:
     struct PixelFormat {
         const WCHAR *name;
         const CLSID &mediaSubtype;
-        int fsFormatId;
+        int frameServerFormatId;
 
         // for BITMAPINFOHEADER::biBitCount
         uint8_t bitCount;
@@ -51,7 +51,7 @@ public:
         int hdrType;
         int hdrLuminance;
         BITMAPINFOHEADER bmi;
-        FrameServerInstance fsEnvironment;
+        FrameServerInstance frameServer;
 
         auto GetCodecFourCC() const -> DWORD {
             return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
@@ -60,9 +60,9 @@ public:
 
     static auto Initialize() -> void;
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat *;
-    static constexpr auto LookupFsFormatId(int fsFormatId) {
-        return PIXEL_FORMATS | std::views::filter([fsFormatId](const PixelFormat &pixelFormat) -> bool {
-            return fsFormatId == pixelFormat.fsFormatId;
+    static constexpr auto LookupFrameServerFormatId(int frameServerFormatId) {
+        return PIXEL_FORMATS | std::views::filter([frameServerFormatId](const PixelFormat &pixelFormat) -> bool {
+            return frameServerFormatId == pixelFormat.frameServerFormatId;
         });
     }
 
@@ -79,7 +79,7 @@ public:
         return nullptr;
     }
 
-    static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *scriptInstance) -> VideoFormat;
+    static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat;
     static auto WriteSample(const VideoFormat &videoFormat, ConstFrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> FrameType;
     static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
