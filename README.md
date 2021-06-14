@@ -92,7 +92,7 @@ This variable does not exist at the entry of the script. Upon return, if this va
 
 Since version 0.6.0, these filters allow other programs to remotely control it via API. By default the functionality is disabled and can be activated from settings (requires restarting the video player after changing).
 
-For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/avisynth_filter/src/api.h).
+For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/filter_common/src/api.h).
 
 ## Example scripts
 

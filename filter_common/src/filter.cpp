@@ -137,8 +137,6 @@ auto CSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
             });
             Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %s result %i", optInputPixelFormat->name, result);
         } else {
-            ASSERT(*mtIn != m_pInput->CurrentMediaType());
-
             result = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
                 return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
             });
