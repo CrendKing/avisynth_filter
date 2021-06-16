@@ -40,7 +40,6 @@ private:
                                           int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
-    auto ResetOutput() -> void;
     auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;

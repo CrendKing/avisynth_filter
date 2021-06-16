@@ -203,15 +203,7 @@ auto FrameHandler::BeginFlush() -> void {
 auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     Environment::GetInstance().Log(L"FrameHandler start EndFlush()");
 
-    /*
-     * EndFlush() can be called by either the application or the worker thread
-     *
-     * when called by former, we need to synchronize with the worker thread
-     * when called by latter, current thread ID should be same as the worker thread, and no need for sync
-     */
-    if (std::this_thread::get_id() != _workerThread.get_id()) {
-        _isWorkerLatched.wait(false);
-    }
+    _isWorkerLatched.wait(false);
 
     {
         std::shared_lock sharedOutputLock(_outputMutex);
@@ -311,18 +303,6 @@ auto FrameHandler::ResetInput() -> void {
 
     _frameRateCheckpointInputSampleNb = 0;
     _currentInputFrameRate = 0;
-
-    _frameRateCheckpointOutputFrameNb = 0;
-    _currentOutputFrameRate = 0;
-}
-
-auto FrameHandler::ResetOutput() -> void {
-    // to ensure these non-atomic properties are only modified by their sole consumer the worker thread
-    const std::thread::id actual = std::this_thread::get_id();
-    const std::thread::id expected = _workerThread.get_id();
-    ASSERT(actual == expected);
-
-    _nextDeliveryFrameNb = 0;
 }
 
 auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputFrameData &data) -> bool {
@@ -393,6 +373,13 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
 }
 
 auto FrameHandler::WorkerProc() -> void {
+    const auto ResetOutput = [this]() -> void {
+        _nextDeliveryFrameNb = 0;
+
+        _frameRateCheckpointOutputFrameNb = 0;
+        _currentOutputFrameRate = 0;
+    };
+
     Environment::GetInstance().Log(L"Start worker thread");
 
 #ifdef _DEBUG
