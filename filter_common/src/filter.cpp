@@ -29,11 +29,10 @@ CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
 CSynthFilter::~CSynthFilter() {
     Environment::GetInstance().Log(L"Destroy CSynthFilter: %p", this);
 
-    _remoteControl.reset();
-    frameHandler.reset();
-
     _numFilterInstances -= 1;
     if (_numFilterInstances == 0) {
+        _remoteControl.reset();
+        frameHandler.reset();
         AuxFrameServer::Destroy();
         MainFrameServer::Destroy();
         FrameServerCommon::Destroy();

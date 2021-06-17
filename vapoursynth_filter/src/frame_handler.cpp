@@ -230,30 +230,6 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     Environment::GetInstance().Log(L"FrameHandler finish EndFlush()");
 }
 
-auto FrameHandler::Start() -> void {
-    _isStopping = false;
-    _workerThread = std::thread(&FrameHandler::WorkerProc, this);
-}
-
-auto FrameHandler::Stop() -> void {
-    _isStopping = true;
-
-    BeginFlush();
-    EndFlush([]() -> void {
-        /*
-         * Stop the script after worker threads are paused and before flushing is done so that no new frame request (GetSourceFrame()) happens.
-         * And since _isFlushing is still on, existing frame request should also just drain instead of block.
-         *
-         * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
-         */
-        MainFrameServer::GetInstance().StopScript();
-    });
-
-    if (_workerThread.joinable()) {
-        _workerThread.join();
-    }
-}
-
 FrameHandler::SourceFrameInfo::~SourceFrameInfo() {
     AVSF_VS_API->freeFrame(frame);
 }

@@ -12,6 +12,7 @@ class CSynthFilter;
 class FrameHandler {
 public:
     explicit FrameHandler(CSynthFilter &filter);
+    ~FrameHandler();
 
     DISABLE_COPYING(FrameHandler)
 

@@ -18,7 +18,6 @@ public:
     DISABLE_COPYING(RemoteControl)
 
     auto Start() -> void;
-    auto Stop() -> void;
     auto IsRunning() const -> bool;
 
 private:

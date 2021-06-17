@@ -91,7 +91,6 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
 }
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
-    _filter._remoteControl->Stop();
     _filter.frameHandler->Stop();
 
     return __super::Inactive();

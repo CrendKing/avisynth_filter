@@ -13,16 +13,6 @@ RemoteControl::RemoteControl(CSynthFilter &filter)
 }
 
 RemoteControl::~RemoteControl() {
-    Stop();
-}
-
-auto RemoteControl::Start() -> void {
-    if (!_msgThread.joinable()) {
-        _msgThread = std::thread(&RemoteControl::Run, this);
-    }
-}
-
-auto RemoteControl::Stop() -> void {
     if (_hWnd != nullptr) {
         PostMessageW(_hWnd, WM_CLOSE, 0, 0);
     }
@@ -30,8 +20,12 @@ auto RemoteControl::Stop() -> void {
     if (_msgThread.joinable()) {
         _msgThread.join();
     }
+}
 
-    _hWnd = nullptr;
+auto RemoteControl::Start() -> void {
+    if (!_msgThread.joinable()) {
+        _msgThread = std::thread(&RemoteControl::Run, this);
+    }
 }
 
 auto RemoteControl::IsRunning() const -> bool {
