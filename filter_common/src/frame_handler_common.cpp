@@ -15,27 +15,27 @@ FrameHandler::FrameHandler(CSynthFilter &filter)
 FrameHandler::~FrameHandler() {
     if (_workerThread.joinable()) {
         _isStopping = true;
-        Stop();
+        Flush();
         _workerThread.join();
     }
 }
 
-auto FrameHandler::Start() -> void {
+auto FrameHandler::StartWorker() -> void {
     if (!_workerThread.joinable()) {
         _isStopping = false;
         _workerThread = std::thread(&FrameHandler::WorkerProc, this);
     }
 }
 
-auto FrameHandler::Stop() -> void {
+auto FrameHandler::Flush() -> void {
     BeginFlush();
     EndFlush([]() -> void {
         /*
-    * Stop the script after worker threads are paused and before flushing is done so that no new frame request (GetSourceFrame()) happens.
-    * And since _isFlushing is still on, existing frame request should also just drain instead of block.
-    *
-    * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
-    */
+         * Stop the script after worker threads are paused and before flushing is done so that no new frame request (GetSourceFrame()) happens.
+         * And since _isFlushing is still on, existing frame request should also just drain instead of block.
+         *
+         * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
+         */
         MainFrameServer::GetInstance().StopScript();
     });
 }

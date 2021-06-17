@@ -20,8 +20,8 @@ public:
     auto GetSourceFrame(int frameNb) -> PVideoFrame;
     auto BeginFlush() -> void;
     auto EndFlush(const std::function<void ()> &interim) -> void;
-    auto Start() -> void;
-    auto Stop() -> void;
+    auto StartWorker() -> void;
+    auto Flush() -> void;
     auto GetInputBufferSize() const -> int;
     constexpr auto GetSourceFrameNb() const -> int { return _nextSourceFrameNb; }
     constexpr auto GetOutputFrameNb() const -> int { return _nextOutputFrameNb; }
