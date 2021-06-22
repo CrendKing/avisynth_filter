@@ -179,7 +179,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
         return MainFrameServer::GetInstance().GetSourceDrainFrame();
     }
 
-    Environment::GetInstance().Log(L"Return source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Return source frame %6i", frameNb);
 
     return iter->second.frame;
 }
@@ -196,6 +196,9 @@ auto FrameHandler::BeginFlush() -> void {
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
     _deliverSampleCv.notify_all();
+
+    // wait for pending Receive() to finish
+    std::unique_lock uniqueReceiveLock(_filter.m_csReceive);
 
     Environment::GetInstance().Log(L"FrameHandler finish BeginFlush()");
 }
