@@ -294,8 +294,15 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
         frameDuration = MainFrameServer::GetInstance().GetScriptAvgFrameDuration();
     }
 
-    REFERENCE_TIME frameStartTime = static_cast<REFERENCE_TIME>(AVSF_VS_API->propGetFloat(frameProps, VS_PROP_NAME_ABS_TIME, 0, &propGetError) * UNITS);
+    if (_nextOutputFrameStartTime == 0) {
+        _nextOutputFrameStartTime = static_cast<REFERENCE_TIME>(AVSF_VS_API->propGetFloat(frameProps, VS_PROP_NAME_ABS_TIME, 0, &propGetError) * UNITS);
+    }
+
+    REFERENCE_TIME frameStartTime = _nextOutputFrameStartTime;
     REFERENCE_TIME frameStopTime = frameStartTime + frameDuration;
+    _nextOutputFrameStartTime = frameStopTime;
+
+    Environment::GetInstance().Log(L"Output frame: frameNb %6i startTime %10lli stopTime %10lli duration %10lli", frameNb, frameStartTime, frameStopTime, frameDuration);
 
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &frameStartTime, &frameStopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
@@ -347,6 +354,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
 
 auto FrameHandler::WorkerProc() -> void {
     const auto ResetOutput = [this]() -> void {
+        _nextOutputFrameStartTime = 0;
         _nextDeliveryFrameNb = 0;
 
         _frameRateCheckpointOutputFrameNb = 0;
