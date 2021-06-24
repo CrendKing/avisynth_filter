@@ -61,6 +61,7 @@ auto CSynthFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
 
         const std::wstring inputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler->GetCurrentInputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
         const std::wstring outputFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler->GetCurrentOutputFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
+        const std::wstring deliveryFrameRateStr = DoubleToString(static_cast<double>(_filter->frameHandler->GetCurrentDeliveryFrameRate()) / FRAME_RATE_SCALE_FACTOR, frameRatePrecision);
         const std::wstring outputParStr = DoubleToString(static_cast<double>(videoFormat.pixelAspectRatioNum) / videoFormat.pixelAspectRatioDen, parPrecision);
 
         SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler->GetInputBufferSize()).c_str());
@@ -70,7 +71,7 @@ auto CSynthFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
                         _filter->frameHandler->GetDeliveryFrameNb())
                         .c_str());
 
-        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::format(L"{} -> {}", inputFrameRateStr, outputFrameRateStr).c_str());
+        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::format(L"{} -> {} -> {}", inputFrameRateStr, outputFrameRateStr, deliveryFrameRateStr).c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());
 
         if (!_isSourcePathSet) {

@@ -50,10 +50,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         }
     }
 
-    if (_nextSourceFrameNb == 0) {
-        _frameRateCheckpointInputSampleStartTime = inputSampleStartTime;
-    }
-    RefreshInputFrameRates(_nextSourceFrameNb, inputSampleStartTime);
+    RefreshInputFrameRates(_nextSourceFrameNb);
 
     BYTE *sampleBuffer;
     hr = inputSample->GetPointer(&sampleBuffer);
@@ -343,10 +340,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
         data.hdrSideData->WriteTo(outputSampleSideData);
     }
 
-    if (frameNb == 0) {
-        _frameRateCheckpointOutputFrameStartTime = frameStartTime;
-    }
-    RefreshOutputFrameRates(frameNb, frameStartTime);
+    RefreshOutputFrameRates(frameNb);
 
     return true;
 }
@@ -357,6 +351,8 @@ auto FrameHandler::WorkerProc() -> void {
 
         _frameRateCheckpointOutputFrameNb = 0;
         _currentOutputFrameRate = 0;
+        _frameRateCheckpointDeliveryFrameNb = 0;
+        _currentDeliveryFrameRate = 0;
     };
 
     Environment::GetInstance().Log(L"Start worker thread");
@@ -409,6 +405,8 @@ auto FrameHandler::WorkerProc() -> void {
 
         if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, iter->first, iter->second)) {
             _filter.m_pOutput->Deliver(outputSample);
+            RefreshDeliveryFrameRates(iter->first);
+
             Environment::GetInstance().Log(L"Delivered output sample %6i from source frame %6i", iter->first, iter->second.sourceFrameNb);
         }
 

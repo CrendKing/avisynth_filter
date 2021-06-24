@@ -51,11 +51,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         }
     }
 
-    if (_nextSourceFrameNb == 0) {
-        _frameRateCheckpointInputSampleStartTime = inputSampleStartTime;
-    }
-
-    RefreshInputFrameRates(_nextSourceFrameNb, inputSampleStartTime);
+    RefreshInputFrameRates(_nextSourceFrameNb);
 
     BYTE *sampleBuffer;
     hr = inputSample->GetPointer(&sampleBuffer);
@@ -233,6 +229,8 @@ auto FrameHandler::WorkerProc() -> void {
 
         _frameRateCheckpointOutputFrameNb = 0;
         _currentOutputFrameRate = 0;
+        _frameRateCheckpointDeliveryFrameNb = 0;
+        _currentDeliveryFrameRate = 0;
     };
 
     Environment::GetInstance().Log(L"Start worker thread");
@@ -296,7 +294,6 @@ auto FrameHandler::WorkerProc() -> void {
 
         if (processSourceFrameIters[0]->first == 0) {
             _nextOutputFrameStartTime = processSourceFrameIters[0]->second.startTime;
-            _frameRateCheckpointOutputFrameStartTime = processSourceFrameIters[0]->second.startTime;
         }
 
         while (!_isFlushing) {
@@ -317,7 +314,7 @@ auto FrameHandler::WorkerProc() -> void {
             Environment::GetInstance().Log(L"Processing output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
                                            _nextOutputFrameNb, processSourceFrameIters[0]->first, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
 
-            RefreshOutputFrameRates(_nextOutputFrameNb, outputStartTime);
+            RefreshOutputFrameRates(_nextOutputFrameNb);
 
             if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, outputStartTime, outputStopTime)) {
                 if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(outputSample); outputSampleSideData != nullptr) {
@@ -325,6 +322,8 @@ auto FrameHandler::WorkerProc() -> void {
                 }
 
                 _filter.m_pOutput->Deliver(outputSample);
+                RefreshDeliveryFrameRates(_nextOutputFrameNb);
+
                 Environment::GetInstance().Log(L"Delivered frame %6i", _nextOutputFrameNb);
             }
 

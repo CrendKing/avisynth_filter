@@ -28,6 +28,7 @@ public:
     constexpr auto GetDeliveryFrameNb() const -> int { return _nextDeliveryFrameNb; }
     constexpr auto GetCurrentInputFrameRate() const -> int { return _currentInputFrameRate; }
     constexpr auto GetCurrentOutputFrameRate() const -> int { return _currentOutputFrameRate; }
+    constexpr auto GetCurrentDeliveryFrameRate() const -> int { return _currentDeliveryFrameRate; }
 
 private:
     struct SourceFrameInfo {
@@ -47,17 +48,16 @@ private:
     };
 
     static auto VS_CC VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void;
-    static auto RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
-                                          int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
-                                          int &currentFrameRate) -> void;
+    static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointStartTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
     auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputFrameData &data) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
-    auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
-    auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
+    auto RefreshInputFrameRates(int frameNb) -> void;
+    auto RefreshOutputFrameRates(int frameNb) -> void;
+    auto RefreshDeliveryFrameRates(int frameNb) -> void;
 
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 2;
     static constexpr const char *VS_PROP_NAME_ABS_TIME = "_AbsoluteTime";
@@ -92,11 +92,14 @@ private:
     std::atomic<bool> _isWorkerLatched = false;
 
     int _frameRateCheckpointInputSampleNb;
-    REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;
+    DWORD _frameRateCheckpointInputSampleTime;
     int _frameRateCheckpointOutputFrameNb;
-    REFERENCE_TIME _frameRateCheckpointOutputFrameStartTime;
+    DWORD _frameRateCheckpointOutputFrameTime;
+    int _frameRateCheckpointDeliveryFrameNb;
+    DWORD _frameRateCheckpointDeliveryFrameTime;
     int _currentInputFrameRate;
     int _currentOutputFrameRate;
+    int _currentDeliveryFrameRate;
 };
 
 }

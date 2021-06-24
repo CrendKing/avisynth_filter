@@ -1,6 +1,8 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
 #include "pch.h"
+
+#include "constants.h"
 #include "frame_handler.h"
 #include "filter.h"
 
@@ -46,19 +48,18 @@ auto FrameHandler::GetInputBufferSize() const -> int {
     return static_cast<int>(_sourceFrames.size());
 }
 
-auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
-                                             int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
-                                             int &currentFrameRate) -> void {
-    bool reachCheckpoint = checkpointStartTime == 0;
+auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointTime, int &currentFrameRate) -> void {
+    const DWORD currentTime = timeGetTime();
+    bool reachCheckpoint = checkpointTime == 0;
 
-    if (const REFERENCE_TIME elapsedRefTime = startTime - checkpointStartTime; elapsedRefTime >= UNITS) {
-        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, UNITS, elapsedRefTime, 0));
+    if (const REFERENCE_TIME elapsedRefTime = currentTime - checkpointTime; elapsedRefTime >= STATUS_PAGE_TIMER_INTERVAL_MS) {
+        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, MILLISECONDS, elapsedRefTime, 0));
         reachCheckpoint = true;
     }
 
     if (reachCheckpoint) {
         checkpointSampleNb = sampleNb;
-        checkpointStartTime = startTime;
+        checkpointTime = currentTime;
     }
 }
 
@@ -127,12 +128,16 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
     return true;
 }
 
-auto FrameHandler::RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void {
-    RefreshFrameRatesTemplate(frameNb, startTime, _frameRateCheckpointInputSampleNb, _frameRateCheckpointInputSampleStartTime, _currentInputFrameRate);
+auto FrameHandler::RefreshInputFrameRates(int frameNb) -> void {
+    RefreshFrameRatesTemplate(frameNb, _frameRateCheckpointInputSampleNb, _frameRateCheckpointInputSampleTime, _currentInputFrameRate);
 }
 
-auto FrameHandler::RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void {
-    RefreshFrameRatesTemplate(frameNb, startTime, _frameRateCheckpointOutputFrameNb, _frameRateCheckpointOutputFrameStartTime, _currentOutputFrameRate);
+auto FrameHandler::RefreshOutputFrameRates(int frameNb) -> void {
+    RefreshFrameRatesTemplate(frameNb, _frameRateCheckpointOutputFrameNb, _frameRateCheckpointOutputFrameTime, _currentOutputFrameRate);
+}
+
+auto FrameHandler::RefreshDeliveryFrameRates(int frameNb) -> void {
+    RefreshFrameRatesTemplate(frameNb, _frameRateCheckpointDeliveryFrameNb, _frameRateCheckpointDeliveryFrameTime, _currentDeliveryFrameRate);
 }
 
 }

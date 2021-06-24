@@ -28,6 +28,7 @@ public:
     constexpr auto GetDeliveryFrameNb() const -> int { return _nextOutputFrameNb; }
     constexpr auto GetCurrentInputFrameRate() const -> int { return _currentInputFrameRate; }
     constexpr auto GetCurrentOutputFrameRate() const -> int { return _currentOutputFrameRate; }
+    constexpr auto GetCurrentDeliveryFrameRate() const -> int { return _currentDeliveryFrameRate; }
 
 private:
     struct SourceFrameInfo {
@@ -36,17 +37,16 @@ private:
         std::shared_ptr<HDRSideData> hdrSideData;
     };
 
-    static auto RefreshFrameRatesTemplate(int sampleNb, REFERENCE_TIME startTime,
-                                          int &checkpointSampleNb, REFERENCE_TIME &checkpointStartTime,
-                                          int &currentFrameRate) -> void;
+    static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
     auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
-    auto RefreshInputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
-    auto RefreshOutputFrameRates(int frameNb, REFERENCE_TIME startTime) -> void;
+    auto RefreshInputFrameRates(int frameNb) -> void;
+    auto RefreshOutputFrameRates(int frameNb) -> void;
+    auto RefreshDeliveryFrameRates(int frameNb) -> void;
 
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 3;
 
@@ -72,11 +72,14 @@ private:
     std::atomic<bool> _isWorkerLatched = false;
 
     int _frameRateCheckpointInputSampleNb;
-    REFERENCE_TIME _frameRateCheckpointInputSampleStartTime;
+    DWORD _frameRateCheckpointInputSampleTime;
     int _frameRateCheckpointOutputFrameNb;
-    REFERENCE_TIME _frameRateCheckpointOutputFrameStartTime;
+    DWORD _frameRateCheckpointOutputFrameTime;
+    int _frameRateCheckpointDeliveryFrameNb;
+    DWORD _frameRateCheckpointDeliveryFrameTime;
     int _currentInputFrameRate;
     int _currentOutputFrameRate;
+    int _currentDeliveryFrameRate;
 };
 
 }
