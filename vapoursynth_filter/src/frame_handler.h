@@ -81,6 +81,7 @@ private:
     int _nextSourceFrameNb;
     int _nextProcessSourceFrameNb;
     int _nextOutputFrameNb;
+    REFERENCE_TIME _nextOutputFrameStartTime;
     std::atomic<int> _lastUsedSourceFrameNb;
     bool _notifyChangedOutputMediaType = false;
     int _nextDeliveryFrameNb;
