@@ -44,7 +44,7 @@ FrameServerCommon::FrameServerCommon() {
     }
 
     _versionString = std::format("VapourSynth R{} API R{}.{}", coreInfo.core, coreInfo.api >> 16, coreInfo.api & 0xffff);
-    Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString());
+    Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString().data());
 
     _vsApi->freeCore(vsCore);
 }
@@ -53,10 +53,6 @@ FrameServerCommon::~FrameServerCommon() {
     Environment::GetInstance().Log(L"~FrameServerCommon()");
 
     vsscript_finalize();
-}
-
-auto FrameServerCommon::GetVersionString() const -> const char * {
-    return _versionString.c_str();
 }
 
 auto FrameServerCommon::LinkFrameHandler(FrameHandler *frameHandler) -> void {

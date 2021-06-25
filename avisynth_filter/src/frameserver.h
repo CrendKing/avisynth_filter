@@ -23,7 +23,7 @@ public:
 
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
-    constexpr auto GetVersionString() const -> const char * { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
+    constexpr auto GetVersionString() const -> std::string_view { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
 
 private:

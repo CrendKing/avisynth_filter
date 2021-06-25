@@ -68,16 +68,14 @@ auto Environment::Log(const WCHAR *format, ...) -> void {
         return;
     }
 
-    const std::unique_lock logLock(_logMutex);
+    const std::wstring fmt = std::format(L"T {:6} @ {:8}: {}\n", GetCurrentThreadId(), timeGetTime() - _logStartTime, format);
 
-    fwprintf_s(_logFile, L"T %6lu @ %8lu: ", GetCurrentThreadId(), timeGetTime() - _logStartTime);
+    const std::unique_lock logLock(_logMutex);
 
     va_list args;
     va_start(args, format);
-    vfwprintf_s(_logFile, format, args);
+    vfwprintf_s(_logFile, fmt.c_str(), args);
     va_end(args);
-
-    fputwc(L'\n', _logFile);
 
     fflush(_logFile);
 }
@@ -98,11 +96,11 @@ auto Environment::SetRemoteControlEnabled(bool enabled) -> void {
     }
 }
 
-auto Environment::IsInputFormatEnabled(const WCHAR *formatName) const -> bool {
+auto Environment::IsInputFormatEnabled(std::wstring_view formatName) const -> bool {
     return _enabledInputFormats.contains(formatName);
 }
 
-auto Environment::SetInputFormatEnabled(const WCHAR *formatName, bool enabled) -> void {
+auto Environment::SetInputFormatEnabled(std::wstring_view formatName, bool enabled) -> void {
     if (enabled) {
         _enabledInputFormats.emplace(formatName);
     } else {
@@ -153,7 +151,7 @@ auto Environment::SaveSettingsToRegistry() const -> void {
     static_cast<void>(_registry.WriteString(SETTING_NAME_SCRIPT_FILE, _scriptPath.c_str()));
     static_cast<void>(_registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled));
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
+    std::ranges::for_each(Format::PIXEL_FORMATS, [this](std::wstring_view name) {
         const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
         static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
     }, &Format::PixelFormat::name);

@@ -22,8 +22,8 @@ public:
     DISABLE_COPYING(FrameServerCommon)
 
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
-    auto GetVersionString() const -> const char *;
     auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
+    constexpr auto GetVersionString() const -> std::string_view { return _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
     constexpr auto GetFrameHandler() const -> FrameHandler & { return *_frameHandler; }
     constexpr auto GetSourceVideoInfo() const -> const VSVideoInfo & { return _sourceVideoInfo; }

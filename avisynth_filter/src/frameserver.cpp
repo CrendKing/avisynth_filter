@@ -26,7 +26,7 @@ FrameServerCommon::FrameServerCommon() {
     IScriptEnvironment *env = CreateEnv();
     AVS_linkage = env->GetAVSLinkage();
     _versionString = env->Invoke("Eval", AVSValue("VersionString()")).AsString();
-    Environment::GetInstance().Log(L"AviSynth version: %S", GetVersionString());
+    Environment::GetInstance().Log(L"AviSynth version: %S", GetVersionString().data());
     env->DeleteScriptEnvironment();
 
     _sourceClip = new SourceClip(_sourceVideoInfo);
