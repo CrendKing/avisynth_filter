@@ -10,6 +10,8 @@ namespace SynthFilter {
 
 Environment::Environment()
     : _ini(true) {
+    _wsetlocale(LC_ALL, L".UTF8");
+
     std::array<WCHAR, MAX_PATH> processPathStr = {};
     std::filesystem::path processName;
 
@@ -32,8 +34,6 @@ Environment::Environment()
         _logFile = _wfsopen(_logPath.c_str(), L"w", _SH_DENYNO);
         if (_logFile != nullptr) {
             _logStartTime = timeGetTime();
-
-            _wsetlocale(LC_CTYPE, L".utf8");
 
             Log(L"Filter version: %S", FILTER_VERSION_STRING);
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
