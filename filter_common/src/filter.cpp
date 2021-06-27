@@ -235,6 +235,10 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                 if (optConnectionInputPixelFormat == inputPixelFormat) {
                     Environment::GetInstance().Log(L"Pin connections are settled");
                     isMediaTypesCompatible = true;
+
+                    TraverseFiltersInGraph();
+                    FrameServerCommon::GetInstance().LinkFrameHandler(frameHandler.get());
+
                     break;
                 }
 

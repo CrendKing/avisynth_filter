@@ -46,7 +46,8 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
         if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
             inputSampleStartTime <= lastSampleStartTime) {
-            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inputSampleStartTime, lastSampleStartTime);
+            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli",
+                                           inputSampleStartTime, lastSampleStartTime);
             return S_FALSE;
         }
     }
@@ -76,6 +77,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                 }
             }
         }
+    }
+
+    if (!_filter._isReadyToReceive) {
+        Environment::GetInstance().Log(L"Discarding obsolete input sample due to filter state change");
+        return S_FALSE;
     }
 
     {
@@ -141,9 +147,6 @@ auto FrameHandler::BeginFlush() -> void {
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
 
-    // wait for pending Receive() to finish
-    std::unique_lock uniqueReceiveLock(_filter.m_csReceive);
-
     Environment::GetInstance().Log(L"FrameHandler finish BeginFlush()");
 }
 
@@ -157,7 +160,6 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     }
 
     _sourceFrames.clear();
-
     ResetInput();
 
     _isFlushing = false;

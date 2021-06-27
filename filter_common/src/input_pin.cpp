@@ -76,22 +76,22 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
     _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType(), &MainFrameServer::GetInstance());
     _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &MainFrameServer::GetInstance());
 
-    _filter.TraverseFiltersInGraph();
+    // need reload here instead of CompleteConnect() so that switching video works
+    MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    _filter._isReadyToReceive = true;
 
     if (Environment::GetInstance().IsRemoteControlEnabled()) {
         _filter._remoteControl->Start();
     }
 
-    FrameServerCommon::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
-    // need reload here instead of CompleteConnect() so that switching video works
-    MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     _filter.frameHandler->StartWorker();
 
-    return __super::Active();
+    return S_OK;
 }
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
-    _filter.frameHandler->Flush();
+    _filter._isReadyToReceive = false;
+    _filter.frameHandler->TerminalFlush();
 
     return __super::Inactive();
 }

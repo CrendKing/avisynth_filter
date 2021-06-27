@@ -17,7 +17,7 @@ FrameHandler::FrameHandler(CSynthFilter &filter)
 FrameHandler::~FrameHandler() {
     if (_workerThread.joinable()) {
         _isStopping = true;
-        Flush();
+        TerminalFlush();
         _workerThread.join();
     }
 }
@@ -29,7 +29,7 @@ auto FrameHandler::StartWorker() -> void {
     }
 }
 
-auto FrameHandler::Flush() -> void {
+auto FrameHandler::TerminalFlush() -> void {
     BeginFlush();
     EndFlush([]() -> void {
         /*

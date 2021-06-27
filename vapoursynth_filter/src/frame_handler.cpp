@@ -82,6 +82,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         }
     }
 
+    if (!_filter._isReadyToReceive) {
+        Environment::GetInstance().Log(L"Discarding obsolete input sample due to filter state change");
+        return S_FALSE;
+    }
+
     {
         const std::unique_lock uniqueSourceLock(_sourceMutex);
 

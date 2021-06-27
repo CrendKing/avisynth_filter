@@ -21,7 +21,7 @@ public:
     auto BeginFlush() -> void;
     auto EndFlush(const std::function<void ()> &interim) -> void;
     auto StartWorker() -> void;
-    auto Flush() -> void;
+    auto TerminalFlush() -> void;
     auto GetInputBufferSize() const -> int;
     constexpr auto GetSourceFrameNb() const -> int { return _nextSourceFrameNb; }
     constexpr auto GetOutputFrameNb() const -> int { return _nextOutputFrameNb; }
