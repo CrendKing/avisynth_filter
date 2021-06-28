@@ -124,7 +124,6 @@ auto Environment::LoadSettingsFromIni() -> void {
     });
 
     _isRemoteControlEnabled = _ini.GetBoolValue(L"", SETTING_NAME_REMOTE_CONTROL, false);
-    _extraSourceBuffer = _ini.GetLongValue(L"", SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
     _logPath = _ini.GetValue(L"", SETTING_NAME_LOG_FILE, L"");
 }
 
@@ -139,7 +138,6 @@ auto Environment::LoadSettingsFromRegistry() -> void {
     });
 
     _isRemoteControlEnabled = _registry.ReadNumber(SETTING_NAME_REMOTE_CONTROL, 0) != 0;
-    _extraSourceBuffer = _registry.ReadNumber(SETTING_NAME_EXTRA_SOURCE_BUFFER, EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY);
     _logPath = _registry.ReadString(SETTING_NAME_LOG_FILE);
 }
 

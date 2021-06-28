@@ -134,9 +134,11 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     Environment::GetInstance().Log(L"ReloadScript from main instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
+        const int64_t sourceFpsNum = FrameServerCommon::GetInstance()._sourceVideoInfo.fps_numerator;
+        const int64_t sourceFpsDen = FrameServerCommon::GetInstance()._sourceVideoInfo.fps_denominator;
+        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceFpsNum, FRAME_RATE_SCALE_FACTOR, sourceFpsDen, 0));
+        _sourceAvgFrameDuration = llMulDiv(sourceFpsDen, UNITS, sourceFpsNum, 0);
         _sourceDrainFrame = _env->NewVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo);
-        _sourceAvgFrameRate = static_cast<int>(llMulDiv(FrameServerCommon::GetInstance()._sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, _scriptVideoInfo.fps_denominator, 0));
-        _sourceAvgFrameDuration = llMulDiv(FrameServerCommon::GetInstance()._sourceVideoInfo.fps_denominator, UNITS, FrameServerCommon::GetInstance()._sourceVideoInfo.fps_numerator, 0);
 
         return true;
     }

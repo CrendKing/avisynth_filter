@@ -39,52 +39,45 @@ private:
         std::shared_ptr<HDRSideData> hdrSideData;
     };
 
-    struct OutputFrameData {
-        ~OutputFrameData();
-
-        int sourceFrameNb;
-        std::shared_ptr<HDRSideData> hdrSideData;
-        const VSFrameRef *frame = nullptr;
-    };
-
     static auto VS_CC VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void;
     static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointStartTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
-    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputFrameData &data) -> bool;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int outputFrameNb, const VSFrameRef *outputFrame, int sourceFrameNb) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
+    auto UpdateExtraSourceBuffer() -> void;
     auto RefreshInputFrameRates(int frameNb) -> void;
     auto RefreshOutputFrameRates(int frameNb) -> void;
     auto RefreshDeliveryFrameRates(int frameNb) -> void;
 
-    static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 2;
-    static constexpr const char *VS_PROP_NAME_ABS_TIME = "_AbsoluteTime";
-    static constexpr const char *VS_PROP_NAME_DURATION_NUM = "_DurationNum";
-    static constexpr const char *VS_PROP_NAME_DURATION_DEN = "_DurationDen";
+    static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING  = 2;
+    static constexpr const char *VS_PROP_NAME_ABS_TIME        = "_AbsoluteTime";
+    static constexpr const char *VS_PROP_NAME_DURATION_NUM    = "_DurationNum";
+    static constexpr const char *VS_PROP_NAME_DURATION_DEN    = "_DurationDen";
+    static constexpr const char *VS_PROP_NAME_SOURCE_FRAME_NB = "VPSF_SourceFrameNb";
 
     CSynthFilter &_filter;
 
     std::map<int, SourceFrameInfo> _sourceFrames;
-    std::map<int, OutputFrameData> _outputFrames;
+    std::map<int, const VSFrameRef *> _outputFrames;
 
     mutable std::shared_mutex _sourceMutex;
     std::shared_mutex _outputMutex;
 
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
-
     std::condition_variable_any _deliverSampleCv;
-    std::condition_variable_any _flushOutputSampleCv;
 
     int _nextSourceFrameNb;
     int _nextProcessSourceFrameNb;
     int _nextOutputFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
     std::atomic<int> _lastUsedSourceFrameNb;
-    bool _notifyChangedOutputMediaType = false;
+    bool _notifyChangedOutputMediaType;
     int _nextDeliveryFrameNb;
+    unsigned int _extraSourceBuffer;
 
     std::thread _workerThread;
 

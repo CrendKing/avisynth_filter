@@ -20,11 +20,9 @@ static const GUID MEDIASUBTYPE_YV24                                = FOURCCMap('
 // interface version 7 = AviSynth+ 3.5
 static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION = 7;
 
-/*
- * Extra number of frames received before blocking upstream from flooding the input queue.
- * Once reached, it must wait until the output thread delivers and GC source frames.
- */
-static constexpr const int EXTRA_SOURCE_FRAMES_AHEAD_OF_DELIVERY   = 1;
+static constexpr const double EXTRA_SOURCE_BUFFER_INCREASE_THRESHOLD = 0.95;
+static constexpr const double EXTRA_SOURCE_BUFFER_DECREASE_THRESHOLD = 1.05;
+static constexpr const int MAXIMUM_EXTRA_SOURCE_BUFFER = 14;
 
 /*
  * If an output frame's stop time is this value close to the the next source frame's

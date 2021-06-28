@@ -10,18 +10,20 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
+    UpdateExtraSourceBuffer();
+
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
             return true;
         }
 
         // at least NUM_SRC_FRAMES_PER_PROCESSING source frames are needed in queue for stop time calculation
-        if (_sourceFrames.size() < NUM_SRC_FRAMES_PER_PROCESSING) {
+        if (_sourceFrames.size() < NUM_SRC_FRAMES_PER_PROCESSING + _extraSourceBuffer) {
             return true;
         }
 
         // add headroom to avoid blocking and context switch
-        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + NUM_SRC_FRAMES_PER_PROCESSING + Environment::GetInstance().GetExtraSourceBuffer();
+        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + NUM_SRC_FRAMES_PER_PROCESSING + 1;
     });
 
     if (_isFlushing || _isStopping) {
@@ -122,6 +124,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
             }
         }
     }
+    _nextProcessSourceFrameNb = processSourceFrameIters[1]->first;
 
     frameProps = AVSF_VS_API->getFramePropsRW(processSourceFrameIters[0]->second.frame);
     REFERENCE_TIME frameDurationNum = processSourceFrameIters[1]->second.startTime - processSourceFrameIters[0]->second.startTime;
@@ -131,32 +134,20 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_DEN, frameDurationDen, paReplace);
     _newSourceFrameCv.notify_all();
 
-    const int64_t maxRequestOutputFrameNb = llMulDiv(processSourceFrameIters[0]->first,
-                                                     MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
-                                                     MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
-                                                     0);
+    const int maxRequestOutputFrameNb = static_cast<int>(llMulDiv(processSourceFrameIters[0]->first,
+                                                                  MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
+                                                                  MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
+                                                                  0));
     while (_nextOutputFrameNb <= maxRequestOutputFrameNb) {
-        // preemptively put frame data into the queue instead of passing a new pointer to the callback userdata
-        // so that if the callback is not called due to frameserver shutdown, there won't be memory leak
-        {
-            std::unique_lock uniqueOutputLock(_outputMutex);
-
-            _outputFrames.emplace(std::piecewise_construct,
-                                   std::forward_as_tuple(_nextOutputFrameNb),
-                                   std::forward_as_tuple(processSourceFrameIters[0]->first, processSourceFrameIters[0]->second.hdrSideData));
-        }
         AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
-
         _nextOutputFrameNb += 1;
     }
-
-    _nextProcessSourceFrameNb = processSourceFrameIters[1]->first;
 
     return S_OK;
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
-    Environment::GetInstance().Log(L"Wait to get source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Waiting for source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedSourceLock(_sourceMutex);
 
@@ -183,7 +174,11 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
 
     Environment::GetInstance().Log(L"Return source frame %6i", frameNb);
 
-    return iter->second.frame;
+    VSFrameRef *sourceFrame = iter->second.frame;
+    VSMap *frameProps = AVSF_VS_API->getFramePropsRW(sourceFrame);
+    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, frameNb, paReplace);
+
+    return sourceFrame;
 }
 
 auto FrameHandler::BeginFlush() -> void {
@@ -211,13 +206,12 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     _isWorkerLatched.wait(false);
 
     {
-        std::shared_lock sharedOutputLock(_outputMutex);
+        std::unique_lock uniqueOutputLock(_outputMutex);
 
-        _flushOutputSampleCv.wait(sharedOutputLock, [this]() {
-            return std::ranges::all_of(_outputFrames | std::views::values, [](const OutputFrameData &data) {
-                return data.frame!= nullptr;
-            });
-        });
+        for (const VSFrameRef *frame : _outputFrames | std::views::values) {
+            AVSF_VS_API->freeFrame(frame);
+        }
+        _outputFrames.clear();
     }
 
     if (interim) {
@@ -225,8 +219,6 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     }
 
     _sourceFrames.clear();
-    _outputFrames.clear();
-
     ResetInput();
 
     _isFlushing = false;
@@ -239,12 +231,6 @@ FrameHandler::SourceFrameInfo::~SourceFrameInfo() {
     AVSF_VS_API->freeFrame(frame);
 }
 
-FrameHandler::OutputFrameData::~OutputFrameData() {
-    if (frame != nullptr) {
-        AVSF_VS_API->freeFrame(frame);
-    }
-}
-
 auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void {
     if (f == nullptr) {
         Environment::GetInstance().Log(L"Failed to generate output frame %6i with message: %S", n, errorMsg);
@@ -255,21 +241,12 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f
     Environment::GetInstance().Log(L"Output frame %6i is ready, output queue size %2zu", n, frameHandler->_outputFrames.size());
 
     if (frameHandler->_isFlushing) {
-        {
-            std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
-
-            frameHandler->_outputFrames.erase(n);
-        }
-        frameHandler->_flushOutputSampleCv.notify_all();
-
         AVSF_VS_API->freeFrame(f);
     } else {
         {
-            std::shared_lock sharedOutputLock(frameHandler->_outputMutex);
+            std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
 
-            const decltype(frameHandler->_outputFrames)::iterator iter = frameHandler->_outputFrames.find(n);
-            ASSERT(iter != frameHandler->_outputFrames.end());
-            iter->second.frame = f;
+            frameHandler->_outputFrames[n] = f;
         }
         frameHandler->_deliverSampleCv.notify_all();
     }
@@ -281,13 +258,14 @@ auto FrameHandler::ResetInput() -> void {
     _nextOutputFrameNb = 0;
     _lastUsedSourceFrameNb = 0;
     _notifyChangedOutputMediaType = false;
+    _extraSourceBuffer = 0;
 
     _frameRateCheckpointInputSampleNb = 0;
     _currentInputFrameRate = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int frameNb, OutputFrameData &data) -> bool {
-    const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(data.frame);
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int outputFrameNb, const VSFrameRef *outputFrame, int sourceFrameNb) -> bool {
+    const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(outputFrame);
     int propGetError;
     const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_NUM, 0, &propGetError);
     const int64_t frameDurationDen = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_DEN, 0, &propGetError);
@@ -307,7 +285,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
     REFERENCE_TIME frameStopTime = frameStartTime + frameDuration;
     _nextOutputFrameStartTime = frameStopTime;
 
-    Environment::GetInstance().Log(L"Output frame: frameNb %6i startTime %10lli stopTime %10lli duration %10lli", frameNb, frameStartTime, frameStopTime, frameDuration);
+    Environment::GetInstance().Log(L"Output frame: frameNb %6i startTime %10lli stopTime %10lli duration %10lli", outputFrameNb, frameStartTime, frameStopTime, frameDuration);
 
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &frameStartTime, &frameStopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
@@ -337,7 +315,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
         return false;
     }
 
-    if (frameNb == 0 && FAILED(sample->SetDiscontinuity(TRUE))) {
+    if (outputFrameNb == 0 && FAILED(sample->SetDiscontinuity(TRUE))) {
         return false;
     }
 
@@ -346,13 +324,13 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int f
         return false;
     }
 
-    Format::WriteSample(_filter._outputVideoFormat, data.frame, outputBuffer);
+    Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
 
     if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(sample); outputSampleSideData != nullptr) {
-        data.hdrSideData->WriteTo(outputSampleSideData);
+        _sourceFrames[sourceFrameNb].hdrSideData->WriteTo(outputSampleSideData);
     }
 
-    RefreshOutputFrameRates(frameNb);
+    RefreshOutputFrameRates(outputFrameNb);
 
     return true;
 }
@@ -405,7 +383,7 @@ auto FrameHandler::WorkerProc() -> void {
                     return false;
                 }
 
-                return iter->second.frame != nullptr;
+                return iter->second != nullptr;
             });
         }
 
@@ -413,23 +391,28 @@ auto FrameHandler::WorkerProc() -> void {
             continue;
         }
 
-        _lastUsedSourceFrameNb = iter->second.sourceFrameNb;
+        const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(iter->second);
+        int propGetError;
+        const int sourceFrameNb = static_cast<int>(AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, 0, &propGetError));
+
+        _lastUsedSourceFrameNb = sourceFrameNb;
         _addInputSampleCv.notify_all();
 
-        if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, iter->first, iter->second)) {
+        if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, iter->first, iter->second, sourceFrameNb)) {
             _filter.m_pOutput->Deliver(outputSample);
             RefreshDeliveryFrameRates(iter->first);
 
-            Environment::GetInstance().Log(L"Delivered output sample %6i from source frame %6i", iter->first, iter->second.sourceFrameNb);
+            Environment::GetInstance().Log(L"Delivered output sample %6i from source frame %6i", iter->first, sourceFrameNb);
         }
 
+        AVSF_VS_API->freeFrame(iter->second);
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
             _outputFrames.erase(iter);
         }
 
-        GarbageCollect(_lastUsedSourceFrameNb - 1);
+        GarbageCollect(sourceFrameNb - 1);
         _nextDeliveryFrameNb += 1;
     }
 

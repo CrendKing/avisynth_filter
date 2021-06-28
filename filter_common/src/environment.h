@@ -24,7 +24,6 @@ public:
     auto SetInputFormatEnabled(std::wstring_view formatName, bool enabled) -> void;
     constexpr auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
     auto SetRemoteControlEnabled(bool enabled) -> void;
-    constexpr auto GetExtraSourceBuffer() const -> int { return _extraSourceBuffer; }
     constexpr auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
     constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
 
@@ -44,7 +43,6 @@ private:
     std::filesystem::path _scriptPath;
     std::unordered_set<std::wstring_view> _enabledInputFormats;
     bool _isRemoteControlEnabled = false;
-    int _extraSourceBuffer;
 
     std::filesystem::path _logPath;
     FILE *_logFile = nullptr;

@@ -44,6 +44,7 @@ private:
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
+    auto UpdateExtraSourceBuffer() -> void;
     auto RefreshInputFrameRates(int frameNb) -> void;
     auto RefreshOutputFrameRates(int frameNb) -> void;
     auto RefreshDeliveryFrameRates(int frameNb) -> void;
@@ -63,7 +64,8 @@ private:
     std::atomic<int> _maxRequestedFrameNb;
     int _nextOutputFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
-    bool _notifyChangedOutputMediaType = false;
+    bool _notifyChangedOutputMediaType;
+    unsigned int _extraSourceBuffer;
 
     std::thread _workerThread;
 
