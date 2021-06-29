@@ -46,9 +46,9 @@ auto FrameHandler::UpdateExtraSourceBuffer() -> void {
     if (const int sourceAvgFps = MainFrameServer::GetInstance().GetSourceAvgFrameRate();
         _currentInputFrameRate > 0 && _nextSourceFrameNb % (sourceAvgFps / FRAME_RATE_SCALE_FACTOR) == 0) {
         if (const double ratio = static_cast<double>(_currentInputFrameRate) / sourceAvgFps;
-            ratio < EXTRA_SOURCE_BUFFER_INCREASE_THRESHOLD) {
+            ratio < 1 - EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD) {
             _extraSourceBuffer = min(_extraSourceBuffer, MAXIMUM_EXTRA_SOURCE_BUFFER) + 1;
-        } else if (ratio > EXTRA_SOURCE_BUFFER_DECREASE_THRESHOLD) {
+        } else if (ratio > 1 + EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD) {
             _extraSourceBuffer = max(_extraSourceBuffer, 1) - 1;
         }
     }

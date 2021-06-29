@@ -10,8 +10,6 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
-    UpdateExtraSourceBuffer();
-
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
             return true;
@@ -97,10 +95,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                               std::forward_as_tuple(frame, inputSampleStartTime, hdrSideData));
     }
 
-    Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli, last used: %6i",
-                                   _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _lastUsedSourceFrameNb.load());
+    Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli, last_used %6i, extra_buffer %6i",
+                                   _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _lastUsedSourceFrameNb.load(), _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
+    UpdateExtraSourceBuffer();
 
     /*
      * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
