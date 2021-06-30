@@ -154,10 +154,9 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     Environment::GetInstance().Log(L"ReloadScript from main instance");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
-        const int64_t sourceFpsNum = FrameServerCommon::GetInstance()._sourceVideoInfo.fpsNum;
-        const int64_t sourceFpsDen = FrameServerCommon::GetInstance()._sourceVideoInfo.fpsDen;
-        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceFpsNum, FRAME_RATE_SCALE_FACTOR, sourceFpsDen, 0));
-        _sourceAvgFrameDuration = llMulDiv(sourceFpsDen, UNITS, sourceFpsNum, 0);
+        const VSVideoInfo &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
+        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo.fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo.fpsDen, 0));
+        _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo.fpsDen, UNITS, sourceVideoInfo.fpsNum, 0);
 
         AVSF_VS_API->freeFrame(_sourceDrainFrame);
         _sourceDrainFrame = AVSF_VS_API->newVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo.format,

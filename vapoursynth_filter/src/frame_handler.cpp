@@ -64,6 +64,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     AVSF_VS_API->propSetFloat(frameProps, VS_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, _nextSourceFrameNb, paReplace);
 
     std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
     {
@@ -138,7 +139,16 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                                                   MainFrameServer::GetInstance().GetScriptAvgFrameDuration(),
                                                                   0));
     while (_nextOutputFrameNb <= maxRequestOutputFrameNb) {
+        // before every async request to a frame, we need to keep track of the request so that when flushing we can wait for
+        // any pending request to finish before destroying the script
+
+        {
+            std::unique_lock uniqueOutputLock(_outputMutex);
+
+            _outputFrames.emplace(_nextOutputFrameNb, nullptr);
+        }
         AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
+
         _nextOutputFrameNb += 1;
     }
 
@@ -173,11 +183,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
 
     Environment::GetInstance().Log(L"Return source frame %6i", frameNb);
 
-    VSFrameRef *sourceFrame = iter->second.frame;
-    VSMap *frameProps = AVSF_VS_API->getFramePropsRW(sourceFrame);
-    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, frameNb, paReplace);
-
-    return sourceFrame;
+    return iter->second.frame;
 }
 
 auto FrameHandler::BeginFlush() -> void {
@@ -205,17 +211,25 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     _isWorkerLatched.wait(false);
 
     {
-        std::unique_lock uniqueOutputLock(_outputMutex);
+        std::shared_lock sharedOutputLock(_outputMutex);
 
-        for (const VSFrameRef *frame : _outputFrames | std::views::values) {
-            AVSF_VS_API->freeFrame(frame);
-        }
-        _outputFrames.clear();
+        _flushOutputSampleCv.wait(sharedOutputLock, [this]() {
+            return std::ranges::all_of(_outputFrames | std::views::values, [](const VSFrameRef *frame) {
+                return frame != nullptr;
+            });
+        });
     }
 
     if (interim) {
         interim();
     }
+
+    // only the current thread is active here, no need to lock
+
+    for (const VSFrameRef *frame : _outputFrames | std::views::values) {
+        AVSF_VS_API->freeFrame(frame);
+    }
+    _outputFrames.clear();
 
     _sourceFrames.clear();
     ResetInput();
@@ -240,10 +254,17 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f
     Environment::GetInstance().Log(L"Output frame %6i is ready, output queue size %2zu", n, frameHandler->_outputFrames.size());
 
     if (frameHandler->_isFlushing) {
+        {
+            std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
+
+            frameHandler->_outputFrames.erase(n);
+        }
+        frameHandler->_flushOutputSampleCv.notify_all();
+
         AVSF_VS_API->freeFrame(f);
     } else {
         {
-            std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
+            std::shared_lock sharedOutputLock(frameHandler->_outputMutex);
 
             frameHandler->_outputFrames[n] = f;
         }
@@ -404,10 +425,10 @@ auto FrameHandler::WorkerProc() -> void {
             Environment::GetInstance().Log(L"Delivered output sample %6i from source frame %6i", iter->first, sourceFrameNb);
         }
 
-        AVSF_VS_API->freeFrame(iter->second);
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
+            AVSF_VS_API->freeFrame(iter->second);
             _outputFrames.erase(iter);
         }
 

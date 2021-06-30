@@ -69,6 +69,7 @@ private:
     std::condition_variable_any _addInputSampleCv;
     std::condition_variable_any _newSourceFrameCv;
     std::condition_variable_any _deliverSampleCv;
+    std::condition_variable_any _flushOutputSampleCv;
 
     int _nextSourceFrameNb;
     int _nextProcessSourceFrameNb;
