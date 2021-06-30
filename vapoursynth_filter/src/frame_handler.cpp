@@ -66,7 +66,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
     AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, _nextSourceFrameNb, paReplace);
 
-    std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
+    std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
     {
         if (const ATL::CComQIPtr<IMediaSideData> inputSampleSideData(inputSample); inputSampleSideData != nullptr) {
             hdrSideData->ReadFrom(inputSampleSideData);
@@ -93,7 +93,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(frame, inputSampleStartTime, hdrSideData));
+                              std::forward_as_tuple(frame, inputSampleStartTime, std::move(hdrSideData)));
     }
 
     Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli, last_used %6i, extra_buffer %6i",

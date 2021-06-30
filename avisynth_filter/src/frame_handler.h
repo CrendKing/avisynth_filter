@@ -34,7 +34,7 @@ private:
     struct SourceFrameInfo {
         PVideoFrame frame;
         REFERENCE_TIME startTime;
-        std::shared_ptr<HDRSideData> hdrSideData;
+        std::unique_ptr<HDRSideData> hdrSideData;
     };
 
     static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointTime, int &currentFrameRate) -> void;

@@ -62,7 +62,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
     const PVideoFrame frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
 
-    std::shared_ptr<HDRSideData> hdrSideData = std::make_shared<HDRSideData>();
+    std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
     {
         if (const ATL::CComQIPtr<IMediaSideData> inputSampleSideData(inputSample); inputSampleSideData != nullptr) {
             hdrSideData->ReadFrom(inputSampleSideData);
@@ -89,7 +89,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(frame, inputSampleStartTime, hdrSideData));
+                              std::forward_as_tuple(frame, inputSampleStartTime, std::move(hdrSideData)));
     }
     _newSourceFrameCv.notify_all();
 

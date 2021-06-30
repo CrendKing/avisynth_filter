@@ -36,7 +36,7 @@ private:
 
         VSFrameRef *frame;
         REFERENCE_TIME startTime;
-        std::shared_ptr<HDRSideData> hdrSideData;
+        std::unique_ptr<HDRSideData> hdrSideData;
     };
 
     static auto VS_CC VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void;
