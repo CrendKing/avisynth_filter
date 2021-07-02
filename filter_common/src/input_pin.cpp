@@ -91,7 +91,11 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
     _filter._isReadyToReceive = false;
-    _filter.frameHandler->TerminalFlush();
+
+    _filter.frameHandler->BeginFlush();
+    _filter.frameHandler->EndFlush([this]() -> void {
+        MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    });
 
     return __super::Inactive();
 }

@@ -347,7 +347,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
     Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
 
     if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(sample); outputSampleSideData != nullptr) {
-        _sourceFrames[sourceFrameNb].hdrSideData->WriteTo(outputSampleSideData);
+        const decltype(_sourceFrames)::const_iterator iter = _sourceFrames.find(sourceFrameNb);
+        ASSERT(iter != _sourceFrames.end());
+        iter->second.hdrSideData->WriteTo(outputSampleSideData);
     }
 
     RefreshOutputFrameRates(outputFrameNb);

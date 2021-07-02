@@ -17,7 +17,12 @@ FrameHandler::FrameHandler(CSynthFilter &filter)
 FrameHandler::~FrameHandler() {
     if (_workerThread.joinable()) {
         _isStopping = true;
-        TerminalFlush();
+
+        BeginFlush();
+        EndFlush([]() -> void {
+            MainFrameServer::GetInstance().StopScript();
+        });
+
         _workerThread.join();
     }
 }
@@ -29,25 +34,12 @@ auto FrameHandler::StartWorker() -> void {
     }
 }
 
-auto FrameHandler::TerminalFlush() -> void {
-    BeginFlush();
-    EndFlush([]() -> void {
-        /*
-         * Stop the script after worker threads are paused and before flushing is done so that no new frame request (GetSourceFrame()) happens.
-         * And since _isFlushing is still on, existing frame request should also just drain instead of block.
-         *
-         * If no stop here, since AddInputSample() no longer adds frame, existing GetSourceFrame() calls will stuck forever.
-         */
-        MainFrameServer::GetInstance().StopScript();
-    });
-}
-
 auto FrameHandler::UpdateExtraSourceBuffer() -> void {
     if (const int sourceAvgFps = MainFrameServer::GetInstance().GetSourceAvgFrameRate();
         _currentInputFrameRate > 0 && _nextSourceFrameNb % (sourceAvgFps / FRAME_RATE_SCALE_FACTOR) == 0) {
         if (const double ratio = static_cast<double>(_currentInputFrameRate) / sourceAvgFps;
             ratio < 1 - EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD) {
-            _extraSourceBuffer = min(_extraSourceBuffer, MAXIMUM_EXTRA_SOURCE_BUFFER) + 1;
+            _extraSourceBuffer = min(_extraSourceBuffer, MAXIMUM_EXTRA_SOURCE_BUFFER) + 2;
         } else if (ratio > 1 + EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD) {
             _extraSourceBuffer = max(_extraSourceBuffer, 1) - 1;
         }
