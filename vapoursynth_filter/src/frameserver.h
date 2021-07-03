@@ -25,7 +25,7 @@ public:
     auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
     constexpr auto GetVersionString() const -> std::string_view { return _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
-    constexpr auto GetFrameHandler() const -> FrameHandler & { return *_frameHandler; }
+    constexpr auto GetFrameHandler() const -> FrameHandler * { return _frameHandler; }
     constexpr auto GetSourceVideoInfo() const -> const VSVideoInfo & { return _sourceVideoInfo; }
     constexpr auto GetVsApi() const -> const VSAPI * { return _vsApi; }
 

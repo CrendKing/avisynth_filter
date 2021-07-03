@@ -73,18 +73,9 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::GetAllocator(__deref_out IMemAlloca
 }
 
 auto CSynthFilterInputPin::Active() -> HRESULT {
-    _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType(), &MainFrameServer::GetInstance());
-    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &MainFrameServer::GetInstance());
-
     // need reload here instead of CompleteConnect() so that switching video works
     MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     _filter._isReadyToReceive = true;
-
-    if (Environment::GetInstance().IsRemoteControlEnabled()) {
-        _filter._remoteControl->Start();
-    }
-
-    _filter.frameHandler->StartWorker();
 
     return S_OK;
 }
