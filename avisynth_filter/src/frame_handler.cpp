@@ -29,7 +29,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
-    if ((_filter._changeOutputMediaType || _filter._reloadScript) && !ChangeOutputFormat()) {
+    if ((_filter._inputMediaTypeChanged || _filter._reloadScript) && !ChangeOutputFormat()) {
         return S_FALSE;
     }
 

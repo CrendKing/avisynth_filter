@@ -17,7 +17,7 @@ static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode 
 static auto VS_CC SourceGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrameRef * {
     FrameHandler *frameHandler = FrameServerCommon::GetInstance().GetFrameHandler();
     if (frameHandler == nullptr) {
-        AVSF_VS_API->setFilterError("VapourSynth Filter: source frame is requested before the frame handler is ready", frameCtx);
+        AVSF_VS_API->setFilterError("VapourSynth Filter: Source frame is requested before the frame handler is ready", frameCtx);
         return nullptr;
     }
 

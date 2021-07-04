@@ -100,7 +100,7 @@ private:
     Format::VideoFormat _inputVideoFormat;
     Format::VideoFormat _outputVideoFormat;
 
-    bool _changeOutputMediaType = false;
+    bool _inputMediaTypeChanged = false;
     bool _reloadScript = false;
     std::atomic<bool> _isReadyToReceive = false;
 

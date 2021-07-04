@@ -95,7 +95,7 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
         MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     });
 
-    _filter._changeOutputMediaType = false;
+    _filter._inputMediaTypeChanged = false;
     _filter._reloadScript = false;
 
     auto potentialOutputMediaTypes = _filter.InputToOutputMediaType(&_filter.m_pInput->CurrentMediaType());

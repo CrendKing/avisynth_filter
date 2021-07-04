@@ -28,7 +28,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
-    if ((_filter._changeOutputMediaType || _filter._reloadScript) && !ChangeOutputFormat()) {
+    if ((_filter._inputMediaTypeChanged || _filter._reloadScript) && !ChangeOutputFormat()) {
         return S_FALSE;
     }
 
@@ -60,11 +60,17 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
     VSFrameRef *frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
     VSMap *frameProps = AVSF_VS_API->getFramePropsRW(frame);
-    AVSF_VS_API->propSetInt(frameProps, "_FieldBased", 0, paReplace);
     AVSF_VS_API->propSetFloat(frameProps, VS_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
     AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
     AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, _nextSourceFrameNb, paReplace);
+
+    if (const std::optional<int> &optColorRange = _filter._inputVideoFormat.colorSpaceInfo.colorRange) {
+        AVSF_VS_API->propSetInt(frameProps, "_ColorRange", *optColorRange, paReplace);
+    }
+    AVSF_VS_API->propSetInt(frameProps, "_Primaries", _filter._inputVideoFormat.colorSpaceInfo.primaries, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, "_Matrix", _filter._inputVideoFormat.colorSpaceInfo.matrix, paReplace);
+    AVSF_VS_API->propSetInt(frameProps, "_Transfer", _filter._inputVideoFormat.colorSpaceInfo.transfer, paReplace);
 
     std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
     {

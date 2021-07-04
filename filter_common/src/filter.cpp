@@ -284,7 +284,7 @@ auto CSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         _inputVideoFormat = Format::GetVideoFormat(*pmt, &MainFrameServer::GetInstance());
         DeleteMediaType(pmt);
 
-        _changeOutputMediaType = true;
+        _inputMediaTypeChanged = true;
     }
 
     if (ShouldSkipFrame(pSample)) {

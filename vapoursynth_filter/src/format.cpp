@@ -63,7 +63,9 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     };
 
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        if (const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat); vih2->dwPictAspectRatioY > 0) {
+        const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
+
+        if (vih2->dwPictAspectRatioY > 0) {
             /*
              * pixel aspect ratio = display aspect ratio (DAR) / storage aspect ratio (SAR)
              * DAR comes from VIDEOINFOHEADER2.dwPictAspectRatioX / VIDEOINFOHEADER2.dwPictAspectRatioY
@@ -72,6 +74,10 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
             ret.pixelAspectRatioNum = vih2->dwPictAspectRatioX * ret.videoInfo.height;
             ret.pixelAspectRatioDen = vih2->dwPictAspectRatioY * ret.videoInfo.width;
             vs_normalizeRational(&ret.pixelAspectRatioNum, &ret.pixelAspectRatioDen);
+        }
+
+        if ((vih2->dwControlFlags & AMCONTROL_USED) && (vih2->dwControlFlags & AMCONTROL_COLORINFO_PRESENT)) {
+            ret.colorSpaceInfo.Update(reinterpret_cast<const DXVA_ExtendedFormat &>(vih2->dwControlFlags));
         }
     }
 

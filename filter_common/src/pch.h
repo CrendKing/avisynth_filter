@@ -32,6 +32,7 @@
 #include <cguid.h>
 #include <commctrl.h>
 #include <commdlg.h>
+#include <dxva.h>
 #include <immintrin.h>
 #include <initguid.h>
 #include <intrin.h>

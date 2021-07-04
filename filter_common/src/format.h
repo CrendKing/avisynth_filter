@@ -44,10 +44,20 @@ public:
     };
 
     struct VideoFormat {
+        struct ColorSpaceInfo {
+            std::optional<int> colorRange;
+            int primaries = 2;
+            int matrix = 2;
+            int transfer = 2;
+
+            auto Update(const DXVA_ExtendedFormat &dxvaExtFormat) -> void;
+        };
+
         const PixelFormat *pixelFormat;
         VideoInfoType videoInfo;
         int64_t pixelAspectRatioNum;
         int64_t pixelAspectRatioDen;
+        ColorSpaceInfo colorSpaceInfo;
         int hdrType;
         int hdrLuminance;
         BITMAPINFOHEADER bmi;
