@@ -11,6 +11,8 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
+    UpdateExtraSourceBuffer();
+
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
             return true;
@@ -97,7 +99,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _maxRequestedFrameNb.load(), _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
-    UpdateExtraSourceBuffer();
 
     return S_OK;
 }

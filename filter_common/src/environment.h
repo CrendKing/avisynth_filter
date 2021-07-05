@@ -26,6 +26,8 @@ public:
     auto SetRemoteControlEnabled(bool enabled) -> void;
     constexpr auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
     constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
+    constexpr auto GetMinExtraSourceBuffer() const -> unsigned int { return _minExtraSourceBuffer; }
+    constexpr auto GetMaxExtraSourceBuffer() const -> unsigned int { return _maxExtraSourceBuffer; }
 
 private:
     auto LoadSettingsFromIni() -> void;
@@ -43,6 +45,8 @@ private:
     std::filesystem::path _scriptPath;
     std::unordered_set<std::wstring_view> _enabledInputFormats;
     bool _isRemoteControlEnabled = false;
+    unsigned int _minExtraSourceBuffer;
+    unsigned int _maxExtraSourceBuffer;
 
     std::filesystem::path _logPath;
     FILE *_logFile = nullptr;

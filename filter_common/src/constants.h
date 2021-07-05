@@ -21,7 +21,10 @@ static const GUID MEDIASUBTYPE_YV24                                = FOURCCMap('
 static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION = 7;
 
 static constexpr const double EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD = 0.1;
-static constexpr const int MAXIMUM_EXTRA_SOURCE_BUFFER = 14;
+static constexpr const int MIN_EXTRA_SOURCE_BUFFER                 = 0;
+static constexpr const int EXTRA_SOURCE_BUFFER_DEC_STEP            = 1;
+static constexpr const int MAX_EXTRA_SOURCE_BUFFER                 = 15;
+static constexpr const int EXTRA_SOURCE_BUFFER_INC_STEP            = 2;
 
 /*
  * If an output frame's stop time is this value close to the the next source frame's
@@ -52,7 +55,8 @@ static constexpr const WCHAR *SETTING_NAME_SCRIPT_FILE             = L"ScriptFil
 static constexpr const WCHAR *SETTING_NAME_LOG_FILE                = L"LogFile";
 static constexpr const WCHAR *SETTING_NAME_INPUT_FORMAT_PREFIX     = L"InputFormat_";
 static constexpr const WCHAR *SETTING_NAME_REMOTE_CONTROL          = L"RemoteControl";
-static constexpr const WCHAR *SETTING_NAME_EXTRA_SOURCE_BUFFER     = L"ExtraSourceBuffer";
+static constexpr const WCHAR *SETTING_NAME_MIN_EXTRA_SOURCE_BUFFER = L"MinExtraSourceBuffer";
+static constexpr const WCHAR *SETTING_NAME_MAX_EXTRA_SOURCE_BUFFER = L"MaxExtraSourceBuffer";
 
 static constexpr const int REMOTE_CONTROL_SMTO_TIMEOUT_MS          = 1000;
 

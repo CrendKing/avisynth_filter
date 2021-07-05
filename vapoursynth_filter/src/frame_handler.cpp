@@ -10,6 +10,8 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
+    UpdateExtraSourceBuffer();
+
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
             return true;
@@ -106,7 +108,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _lastUsedSourceFrameNb.load(), _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
-    UpdateExtraSourceBuffer();
 
     /*
      * Some video decoders set the correct start time but the wrong stop time (stop time always being start time + average frame time).
@@ -284,7 +285,6 @@ auto FrameHandler::ResetInput() -> void {
     _nextOutputFrameNb = 0;
     _lastUsedSourceFrameNb = 0;
     _notifyChangedOutputMediaType = false;
-    _extraSourceBuffer = 0;
 
     _frameRateCheckpointInputSampleNb = 0;
     _currentInputFrameRate = 0;
