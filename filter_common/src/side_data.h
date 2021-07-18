@@ -1,3 +1,5 @@
+// https://github.com/Nevcairiel/LAVFilters/blob/master/common/includes/IMediaSideData.h
+
 // -----------------------------------------------------------------
 // IMediaSideData interface and data structure definitions
 // -----------------------------------------------------------------
@@ -6,8 +8,6 @@
 
 
 namespace SynthFilter {
-
-// https://github.com/Nevcairiel/LAVFilters/blob/master/common/includes/IMediaSideData.h
 
 // -----------------------------------------------------------------
 // Interface to exchange binary side data
