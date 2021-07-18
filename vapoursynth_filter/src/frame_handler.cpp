@@ -60,6 +60,14 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
+    DWORD typeSpecificFlags = AM_VIDEO_FLAG_INTERLEAVED_FRAME;
+    if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(inputSample); mediaSample2 != nullptr) {
+        AM_SAMPLE2_PROPERTIES props;
+        if (SUCCEEDED(mediaSample2->GetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props)))) {
+            typeSpecificFlags = props.dwTypeSpecificFlags;
+        }
+	}
+
     VSFrameRef *frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
     VSMap *frameProps = AVSF_VS_API->getFramePropsRW(frame);
     AVSF_VS_API->propSetFloat(frameProps, VS_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), paReplace);
@@ -101,7 +109,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(frame, inputSampleStartTime, std::move(hdrSideData)));
+                              std::forward_as_tuple(frame, inputSampleStartTime, typeSpecificFlags, std::move(hdrSideData)));
     }
 
     Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli, last_used %6i, extra_buffer %6i",
@@ -352,10 +360,19 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
 
     Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
 
-    if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(sample); outputSampleSideData != nullptr) {
-        const decltype(_sourceFrames)::const_iterator iter = _sourceFrames.find(sourceFrameNb);
-        ASSERT(iter != _sourceFrames.end());
-        iter->second.hdrSideData->WriteTo(outputSampleSideData);
+    const decltype(_sourceFrames)::const_iterator iter = _sourceFrames.find(sourceFrameNb);
+    ASSERT(iter != _sourceFrames.end());
+
+    if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(sample); mediaSample2 != nullptr) {
+        AM_SAMPLE2_PROPERTIES props;
+        if (SUCCEEDED(mediaSample2->GetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props)))) {
+            props.dwTypeSpecificFlags = iter->second.typeSpecificFlags;
+            mediaSample2->SetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props));
+        }
+    }
+
+    if (const ATL::CComQIPtr<IMediaSideData> sideData(sample); sideData != nullptr) {
+        iter->second.hdrSideData->WriteTo(sideData);
     }
 
     RefreshOutputFrameRates(outputFrameNb);

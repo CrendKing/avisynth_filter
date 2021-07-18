@@ -33,6 +33,7 @@ private:
     struct SourceFrameInfo {
         PVideoFrame frame;
         REFERENCE_TIME startTime;
+        DWORD typeSpecificFlags;
         std::unique_ptr<HDRSideData> hdrSideData;
     };
 

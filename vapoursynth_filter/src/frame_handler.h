@@ -35,6 +35,7 @@ private:
 
         VSFrameRef *frame;
         REFERENCE_TIME startTime;
+        DWORD typeSpecificFlags;
         std::unique_ptr<HDRSideData> hdrSideData;
     };
 

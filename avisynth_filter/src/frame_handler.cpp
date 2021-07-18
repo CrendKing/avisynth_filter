@@ -62,6 +62,14 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
+    DWORD typeSpecificFlags = AM_VIDEO_FLAG_INTERLEAVED_FRAME;
+    if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(inputSample); mediaSample2 != nullptr) {
+        AM_SAMPLE2_PROPERTIES props;
+        if (SUCCEEDED(mediaSample2->GetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props)))) {
+            typeSpecificFlags = props.dwTypeSpecificFlags;
+        }
+	}
+
     const PVideoFrame frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
 
     std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
@@ -91,7 +99,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(frame, inputSampleStartTime, std::move(hdrSideData)));
+                              std::forward_as_tuple(frame, inputSampleStartTime, typeSpecificFlags, std::move(hdrSideData)));
     }
     _newSourceFrameCv.notify_all();
 
@@ -322,8 +330,16 @@ auto FrameHandler::WorkerProc() -> void {
             RefreshOutputFrameRates(_nextOutputFrameNb);
 
             if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, outputStartTime, outputStopTime)) {
-                if (const ATL::CComQIPtr<IMediaSideData> outputSampleSideData(outputSample); outputSampleSideData != nullptr) {
-                    processSourceFrameIters[0]->second.hdrSideData->WriteTo(outputSampleSideData);
+                if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(outputSample); mediaSample2 != nullptr) {
+                    AM_SAMPLE2_PROPERTIES props;
+                    if (SUCCEEDED(mediaSample2->GetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props)))) {
+                        props.dwTypeSpecificFlags = processSourceFrameIters[0]->second.typeSpecificFlags;
+                        mediaSample2->SetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props));
+                    }
+                }
+
+                if (const ATL::CComQIPtr<IMediaSideData> sideData(outputSample); sideData != nullptr) {
+                    processSourceFrameIters[0]->second.hdrSideData->WriteTo(sideData);
                 }
 
                 _filter.m_pOutput->Deliver(outputSample);
