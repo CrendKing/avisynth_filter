@@ -238,14 +238,8 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
 
                     TraverseFiltersInGraph();
 
-                    _inputVideoFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType(), &MainFrameServer::GetInstance());
-                    _outputVideoFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType(), &MainFrameServer::GetInstance());
                     FrameServerCommon::GetInstance().LinkFrameHandler(frameHandler.get());
                     frameHandler->StartWorker();
-
-                    if (Environment::GetInstance().IsRemoteControlEnabled()) {
-                        _remoteControl->Start();
-                    }
 
                     break;
                 }
