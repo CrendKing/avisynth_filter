@@ -2,6 +2,7 @@
 
 #include "pch.h"
 #include "frame_handler.h"
+#include "constants.h"
 #include "filter.h"
 
 
@@ -63,7 +64,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     DWORD typeSpecificFlags = AM_VIDEO_FLAG_INTERLEAVED_FRAME;
     if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(inputSample); mediaSample2 != nullptr) {
         AM_SAMPLE2_PROPERTIES props;
-        if (SUCCEEDED(mediaSample2->GetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props)))) {
+        if (SUCCEEDED(mediaSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props)))) {
             typeSpecificFlags = props.dwTypeSpecificFlags;
         }
 	}
@@ -365,9 +366,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
 
     if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(sample); mediaSample2 != nullptr) {
         AM_SAMPLE2_PROPERTIES props;
-        if (SUCCEEDED(mediaSample2->GetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props)))) {
+        if (SUCCEEDED(mediaSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props)))) {
             props.dwTypeSpecificFlags = iter->second.typeSpecificFlags;
-            mediaSample2->SetProperties(sizeof(props), reinterpret_cast<BYTE *>(&props));
+            mediaSample2->SetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props));
         }
     }
 

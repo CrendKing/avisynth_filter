@@ -19,6 +19,7 @@ static const GUID MEDIASUBTYPE_YV24                                = FOURCCMap('
 
 // interface version 7 = AviSynth+ 3.5
 static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION = 7;
+static constexpr const DWORD SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE      = offsetof(AM_SAMPLE2_PROPERTIES, dwSampleFlags);
 
 static constexpr const double EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD = 0.1;
 static constexpr const int MIN_EXTRA_SOURCE_BUFFER                 = 0;
