@@ -62,15 +62,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
-    DWORD typeSpecificFlags = AM_VIDEO_FLAG_INTERLEAVED_FRAME;
-    if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(inputSample); mediaSample2 != nullptr) {
-        AM_SAMPLE2_PROPERTIES props;
-        if (SUCCEEDED(mediaSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props)))) {
-            typeSpecificFlags = props.dwTypeSpecificFlags;
-        }
-	}
-
-    const PVideoFrame frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
+    PVideoFrame frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
 
     std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
     {
@@ -99,7 +91,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
-                              std::forward_as_tuple(frame, inputSampleStartTime, typeSpecificFlags, std::move(hdrSideData)));
+                              std::forward_as_tuple(frame, inputSampleStartTime, _filter.m_pInput->SampleProps()->dwTypeSpecificFlags, std::move(hdrSideData)));
     }
     _newSourceFrameCv.notify_all();
 
@@ -188,15 +180,15 @@ auto FrameHandler::ResetInput() -> void {
     _currentInputFrameRate = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime) -> bool {
-    if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&sample, &startTime, &stopTime, 0))) {
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime, DWORD sourceTypeSpecificFlags) -> bool {
+    if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&outSample, &startTime, &stopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
-        sample.Detach();
+        outSample.Detach();
         return false;
     }
 
     AM_MEDIA_TYPE *pmtOut;
-    sample->GetMediaType(&pmtOut);
+    outSample->GetMediaType(&pmtOut);
 
     if (const std::shared_ptr<AM_MEDIA_TYPE> pmtOutPtr(pmtOut, &DeleteMediaType);
         pmtOut != nullptr && pmtOut->pbFormat != nullptr) {
@@ -206,22 +198,22 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, REFER
     }
 
     if (_notifyChangedOutputMediaType) {
-        sample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
+        outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
         _notifyChangedOutputMediaType = false;
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
                                        _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
     }
 
-    if (FAILED(sample->SetTime(&startTime, &stopTime))) {
+    if (FAILED(outSample->SetTime(&startTime, &stopTime))) {
         return false;
     }
 
-    if (_nextOutputFrameNb == 0 && FAILED(sample->SetDiscontinuity(TRUE))) {
+    if (_nextOutputFrameNb == 0 && FAILED(outSample->SetDiscontinuity(TRUE))) {
         return false;
     }
 
-    if (BYTE *outputBuffer; FAILED(sample->GetPointer(&outputBuffer))) {
+    if (BYTE *outputBuffer; FAILED(outSample->GetPointer(&outputBuffer))) {
         return false;
     } else {
         try {
@@ -329,20 +321,20 @@ auto FrameHandler::WorkerProc() -> void {
 
             RefreshOutputFrameRates(_nextOutputFrameNb);
 
-            if (ATL::CComPtr<IMediaSample> outputSample; PrepareOutputSample(outputSample, outputStartTime, outputStopTime)) {
-                if (const ATL::CComQIPtr<IMediaSample2> mediaSample2(outputSample); mediaSample2 != nullptr) {
+            if (ATL::CComPtr<IMediaSample> outSample; PrepareOutputSample(outSample, outputStartTime, outputStopTime, processSourceFrameIters[0]->second.typeSpecificFlags)) {
+                if (const ATL::CComQIPtr<IMediaSample2> outSample2(outSample); outSample2 != nullptr) {
                     AM_SAMPLE2_PROPERTIES props;
-                    if (SUCCEEDED(mediaSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props)))) {
+                    if (SUCCEEDED(outSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props)))) {
                         props.dwTypeSpecificFlags = processSourceFrameIters[0]->second.typeSpecificFlags;
-                        mediaSample2->SetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props));
+                        outSample2->SetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props));
                     }
                 }
 
-                if (const ATL::CComQIPtr<IMediaSideData> sideData(outputSample); sideData != nullptr) {
+                if (const ATL::CComQIPtr<IMediaSideData> sideData(outSample); sideData != nullptr) {
                     processSourceFrameIters[0]->second.hdrSideData->WriteTo(sideData);
                 }
 
-                _filter.m_pOutput->Deliver(outputSample);
+                _filter.m_pOutput->Deliver(outSample);
                 RefreshDeliveryFrameRates(_nextOutputFrameNb);
 
                 Environment::GetInstance().Log(L"Delivered frame %6i", _nextOutputFrameNb);

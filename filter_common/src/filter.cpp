@@ -271,6 +271,10 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
 auto CSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
     HRESULT hr;
 
+    if (m_pInput->SampleProps()->dwStreamId != AM_STREAM_MEDIA) {
+        return m_pOutput->Deliver(pSample);
+    }
+
     AM_MEDIA_TYPE *pmt;
     pSample->GetMediaType(&pmt);
     if (pmt != nullptr && pmt->pbFormat != nullptr) {
