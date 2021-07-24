@@ -261,6 +261,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
                             sampleProps.dwTypeSpecificFlags = 0;
                         }
                     } else {
+                        // there is no way to convey interlace status without the "_FieldBased" frame property
+                        // default to progressive to avoid unwanted deinterlacing
+                        // TODO: remove this hack when support for AviSynth+ 3.5 is dropped
                         sampleProps.dwTypeSpecificFlags = AM_VIDEO_FLAG_WEAVE;
                     }
 
