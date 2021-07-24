@@ -11,17 +11,17 @@ static constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
 static constexpr const char *VPS_VAR_NAME_DISCONNECT  = "VpsFilterDisconnect";
 
 static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) -> void {
-    AVSF_VS_API->setVideoInfo(&FrameServerCommon::GetInstance().GetSourceVideoInfo(), 1, node);
+    AVSF_VPS_API->setVideoInfo(&FrameServerCommon::GetInstance().GetSourceVideoInfo(), 1, node);
 }
 
 static auto VS_CC SourceGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrameRef * {
     FrameHandler *frameHandler = FrameServerCommon::GetInstance().GetFrameHandler();
     if (frameHandler == nullptr) {
-        AVSF_VS_API->setFilterError("VapourSynth Filter: Source frame is requested before the frame handler is ready", frameCtx);
+        AVSF_VPS_API->setFilterError("VapourSynth Filter: Source frame is requested before the frame handler is ready", frameCtx);
         return nullptr;
     }
 
-    return AVSF_VS_API->cloneFrameRef(frameHandler->GetSourceFrame(n));
+    return AVSF_VPS_API->cloneFrameRef(frameHandler->GetSourceFrame(n));
 }
 
 FrameServerCommon::FrameServerCommon() {
@@ -67,7 +67,7 @@ auto FrameServerCommon::LinkFrameHandler(FrameHandler *frameHandler) -> void {
 auto FrameServerBase::StopScript() -> void {
     if (_scriptClip != nullptr) {
         Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
-        AVSF_VS_API->freeNode(_scriptClip);
+        AVSF_VPS_API->freeNode(_scriptClip);
         _scriptClip = nullptr;
     }
 }
@@ -89,16 +89,16 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     FrameServerCommon::GetInstance()._sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
 
-    VSMap *filterInputs = AVSF_VS_API->createMap();
-    VSMap *filterOutputs = AVSF_VS_API->createMap();
+    VSMap *filterInputs = AVSF_VPS_API->createMap();
+    VSMap *filterOutputs = AVSF_VPS_API->createMap();
 
-    AVSF_VS_API->createFilter(filterInputs, filterOutputs, "VpsFilter_Source", SourceInit, SourceGetFrame, nullptr, fmParallel, nfNoCache, nullptr, vsscript_getCore(_vsScript));
-    VSNodeRef *sourceClip = AVSF_VS_API->propGetNode(filterOutputs, "clip", 0, nullptr);
-    AVSF_VS_API->propSetNode(filterInputs, VPS_VAR_NAME_SOURCE_NODE, sourceClip, 0);
+    AVSF_VPS_API->createFilter(filterInputs, filterOutputs, "VpsFilter_Source", SourceInit, SourceGetFrame, nullptr, fmParallel, nfNoCache, nullptr, vsscript_getCore(_vsScript));
+    VSNodeRef *sourceClip = AVSF_VPS_API->propGetNode(filterOutputs, "clip", 0, nullptr);
+    AVSF_VPS_API->propSetNode(filterInputs, VPS_VAR_NAME_SOURCE_NODE, sourceClip, 0);
     vsscript_setVariable(_vsScript, filterInputs);
 
-    AVSF_VS_API->freeMap(filterOutputs);
-    AVSF_VS_API->freeMap(filterInputs);
+    AVSF_VPS_API->freeMap(filterOutputs);
+    AVSF_VPS_API->freeMap(filterInputs);
 
     _errorString.clear();
 
@@ -110,12 +110,12 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
         if (vsscript_evaluateFile(&_vsScript, utf8Filename.c_str(), efSetWorkingDir) == 0) {
             _scriptClip = vsscript_getOutput(_vsScript, 0);
 
-            VSMap *scriptOutputs = AVSF_VS_API->createMap();
+            VSMap *scriptOutputs = AVSF_VPS_API->createMap();
             vsscript_getVariable(_vsScript, VPS_VAR_NAME_DISCONNECT, scriptOutputs);
-            if (AVSF_VS_API->propNumElements(scriptOutputs, VPS_VAR_NAME_DISCONNECT) == 1) {
-                toDisconnect = AVSF_VS_API->propGetInt(scriptOutputs, VPS_VAR_NAME_DISCONNECT, 0, nullptr) != 0;
+            if (AVSF_VPS_API->propNumElements(scriptOutputs, VPS_VAR_NAME_DISCONNECT) == 1) {
+                toDisconnect = AVSF_VPS_API->propGetInt(scriptOutputs, VPS_VAR_NAME_DISCONNECT, 0, nullptr) != 0;
             }
-            AVSF_VS_API->freeMap(scriptOutputs);
+            AVSF_VPS_API->freeMap(scriptOutputs);
         } else {
             _errorString = vsscript_getError(_vsScript);
         }
@@ -137,7 +137,7 @@ core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorStr
     }
 
     if (sourceClip != _scriptClip) {
-        AVSF_VS_API->freeNode(sourceClip);
+        AVSF_VPS_API->freeNode(sourceClip);
     }
 
     if (toDisconnect && !ignoreDisconnect) {
@@ -145,14 +145,14 @@ core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorStr
     }
 
     Environment::GetInstance().Log(L"New script clip: %p", _scriptClip);
-    _scriptVideoInfo = *AVSF_VS_API->getVideoInfo(_scriptClip);
+    _scriptVideoInfo = *AVSF_VPS_API->getVideoInfo(_scriptClip);
     _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fpsDen, UNITS, _scriptVideoInfo.fpsNum, 0);
 
     return true;
 }
 
 MainFrameServer::~MainFrameServer() {
-    AVSF_VS_API->freeFrame(_sourceDrainFrame);
+    AVSF_VPS_API->freeFrame(_sourceDrainFrame);
 }
 
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
@@ -163,8 +163,8 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
         _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo.fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo.fpsDen, 0));
         _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo.fpsDen, UNITS, sourceVideoInfo.fpsNum, 0);
 
-        AVSF_VS_API->freeFrame(_sourceDrainFrame);
-        _sourceDrainFrame = AVSF_VS_API->newVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo.format,
+        AVSF_VPS_API->freeFrame(_sourceDrainFrame);
+        _sourceDrainFrame = AVSF_VPS_API->newVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo.format,
                                                        FrameServerCommon::GetInstance()._sourceVideoInfo.width,
                                                        FrameServerCommon::GetInstance()._sourceVideoInfo.height,
                                                        nullptr, vsscript_getCore(_vsScript));

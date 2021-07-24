@@ -91,6 +91,6 @@ public:
     constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.format->id; }
 };
 
-#define AVSF_VS_API FrameServerCommon::GetInstance().GetVsApi()
+#define AVSF_VPS_API FrameServerCommon::GetInstance().GetVsApi()
 
 }

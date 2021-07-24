@@ -86,4 +86,6 @@ public:
     constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.pixel_type; }
 };
 
+#define AVSF_AVS_API MainFrameServer::GetInstance().GetEnv()
+
 }

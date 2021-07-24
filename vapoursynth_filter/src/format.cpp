@@ -53,7 +53,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
         .frameServer = vsCore
     };
     ret.videoInfo = {
-        .format = AVSF_VS_API->getFormatPreset(ret.pixelFormat->frameServerFormatId, ret.frameServer),
+        .format = AVSF_VPS_API->getFormatPreset(ret.pixelFormat->frameServerFormatId, ret.frameServer),
         .fpsNum = fpsNum,
         .fpsDen = fpsDen,
         .width = ret.bmi.biWidth,
@@ -85,29 +85,29 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
 }
 
 auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrameRef *srcFrame, BYTE *dstBuffer) -> void {
-    const std::array srcSlices = { AVSF_VS_API->getReadPtr(srcFrame, 0)
-                                 , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VS_API->getReadPtr(srcFrame, 1)
-                                 , videoFormat.videoInfo.format->numPlanes < 3 ? nullptr : AVSF_VS_API->getReadPtr(srcFrame, 2) };
-    const std::array srcStrides = { AVSF_VS_API->getStride(srcFrame, 0)
-                                  , videoFormat.videoInfo.format->numPlanes < 2 ? 0 : AVSF_VS_API->getStride(srcFrame, 1)
-                                  , videoFormat.videoInfo.format->numPlanes < 3 ? 0 : AVSF_VS_API->getStride(srcFrame, 2) };
-    const int rowSize = AVSF_VS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format->bytesPerSample;
+    const std::array srcSlices = { AVSF_VPS_API->getReadPtr(srcFrame, 0)
+                                 , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1)
+                                 , videoFormat.videoInfo.format->numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2) };
+    const std::array srcStrides = { AVSF_VPS_API->getStride(srcFrame, 0)
+                                  , videoFormat.videoInfo.format->numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1)
+                                  , videoFormat.videoInfo.format->numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2) };
+    const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format->bytesPerSample;
 
-    CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, rowSize, AVSF_VS_API->getFrameHeight(srcFrame, 0));
+    CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, rowSize, AVSF_VPS_API->getFrameHeight(srcFrame, 0));
 }
 
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrameRef * {
-    VSFrameRef *frame = AVSF_VS_API->newVideoFrame(videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServer);
+    VSFrameRef *frame = AVSF_VPS_API->newVideoFrame(videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServer);
 
-    const std::array dstSlices = { AVSF_VS_API->getWritePtr(frame, 0)
-                                 , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VS_API->getWritePtr(frame, 1)
-                                 , videoFormat.videoInfo.format->numPlanes < 3 ? nullptr : AVSF_VS_API->getWritePtr(frame, 2) };
-    const std::array dstStrides = { AVSF_VS_API->getStride(frame, 0)
-                                  , videoFormat.videoInfo.format->numPlanes < 2 ? 0 : AVSF_VS_API->getStride(frame, 1)
-                                  , videoFormat.videoInfo.format->numPlanes < 3 ? 0 : AVSF_VS_API->getStride(frame, 2) };
-    const int rowSize = AVSF_VS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format->bytesPerSample;
+    const std::array dstSlices = { AVSF_VPS_API->getWritePtr(frame, 0)
+                                 , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1)
+                                 , videoFormat.videoInfo.format->numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2) };
+    const std::array dstStrides = { AVSF_VPS_API->getStride(frame, 0)
+                                  , videoFormat.videoInfo.format->numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1)
+                                  , videoFormat.videoInfo.format->numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2) };
+    const int rowSize = AVSF_VPS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format->bytesPerSample;
 
-    CopyFromInput(videoFormat, srcBuffer, dstSlices, dstStrides, rowSize, AVSF_VS_API->getFrameHeight(frame, 0));
+    CopyFromInput(videoFormat, srcBuffer, dstSlices, dstStrides, rowSize, AVSF_VPS_API->getFrameHeight(frame, 0));
 
     return frame;
 }

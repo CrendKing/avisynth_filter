@@ -70,18 +70,18 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 	}
 
     VSFrameRef *frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
-    VSMap *frameProps = AVSF_VS_API->getFramePropsRW(frame);
-    AVSF_VS_API->propSetFloat(frameProps, VS_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), paReplace);
-    AVSF_VS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
-    AVSF_VS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
-    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, _nextSourceFrameNb, paReplace);
+    VSMap *frameProps = AVSF_VPS_API->getFramePropsRW(frame);
+    AVSF_VPS_API->propSetFloat(frameProps, VS_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, _nextSourceFrameNb, paReplace);
 
     if (const std::optional<int> &optColorRange = _filter._inputVideoFormat.colorSpaceInfo.colorRange) {
-        AVSF_VS_API->propSetInt(frameProps, "_ColorRange", *optColorRange, paReplace);
+        AVSF_VPS_API->propSetInt(frameProps, "_ColorRange", *optColorRange, paReplace);
     }
-    AVSF_VS_API->propSetInt(frameProps, "_Primaries", _filter._inputVideoFormat.colorSpaceInfo.primaries, paReplace);
-    AVSF_VS_API->propSetInt(frameProps, "_Matrix", _filter._inputVideoFormat.colorSpaceInfo.matrix, paReplace);
-    AVSF_VS_API->propSetInt(frameProps, "_Transfer", _filter._inputVideoFormat.colorSpaceInfo.transfer, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, "_Primaries", _filter._inputVideoFormat.colorSpaceInfo.primaries, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, "_Matrix", _filter._inputVideoFormat.colorSpaceInfo.matrix, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, "_Transfer", _filter._inputVideoFormat.colorSpaceInfo.transfer, paReplace);
 
     std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
     {
@@ -142,12 +142,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     }
     _nextProcessSourceFrameNb = processSourceFrameIters[1]->first;
 
-    frameProps = AVSF_VS_API->getFramePropsRW(processSourceFrameIters[0]->second.frame);
+    frameProps = AVSF_VPS_API->getFramePropsRW(processSourceFrameIters[0]->second.frame);
     REFERENCE_TIME frameDurationNum = processSourceFrameIters[1]->second.startTime - processSourceFrameIters[0]->second.startTime;
     REFERENCE_TIME frameDurationDen = UNITS;
     vs_normalizeRational(&frameDurationNum, &frameDurationDen);
-    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_NUM, frameDurationNum, paReplace);
-    AVSF_VS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_DEN, frameDurationDen, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_NUM, frameDurationNum, paReplace);
+    AVSF_VPS_API->propSetInt(frameProps, VS_PROP_NAME_DURATION_DEN, frameDurationDen, paReplace);
     _newSourceFrameCv.notify_all();
 
     const int maxRequestOutputFrameNb = static_cast<int>(llMulDiv(processSourceFrameIters[0]->first,
@@ -163,7 +163,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
             _outputFrames.emplace(_nextOutputFrameNb, nullptr);
         }
-        AVSF_VS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
+        AVSF_VPS_API->getFrameAsync(_nextOutputFrameNb, MainFrameServer::GetInstance().GetScriptClip(), VpsGetFrameCallback, this);
 
         _nextOutputFrameNb += 1;
     }
@@ -188,8 +188,8 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
             return false;
         }
 
-        const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(iter->second.frame);
-        return AVSF_VS_API->propNumElements(frameProps, VS_PROP_NAME_DURATION_NUM) > 0 && AVSF_VS_API->propNumElements(frameProps, VS_PROP_NAME_DURATION_DEN) > 0;
+        const VSMap *frameProps = AVSF_VPS_API->getFramePropsRO(iter->second.frame);
+        return AVSF_VPS_API->propNumElements(frameProps, VS_PROP_NAME_DURATION_NUM) > 0 && AVSF_VPS_API->propNumElements(frameProps, VS_PROP_NAME_DURATION_DEN) > 0;
     });
 
     if (_isFlushing) {
@@ -243,7 +243,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     // only the current thread is active here, no need to lock
 
     for (const VSFrameRef *frame : _outputFrames | std::views::values) {
-        AVSF_VS_API->freeFrame(frame);
+        AVSF_VPS_API->freeFrame(frame);
     }
     _outputFrames.clear();
 
@@ -257,7 +257,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
 }
 
 FrameHandler::SourceFrameInfo::~SourceFrameInfo() {
-    AVSF_VS_API->freeFrame(frame);
+    AVSF_VPS_API->freeFrame(frame);
 }
 
 auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void {
@@ -277,7 +277,7 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f
         }
         frameHandler->_flushOutputSampleCv.notify_all();
 
-        AVSF_VS_API->freeFrame(f);
+        AVSF_VPS_API->freeFrame(f);
     } else {
         {
             std::shared_lock sharedOutputLock(frameHandler->_outputMutex);
@@ -300,10 +300,10 @@ auto FrameHandler::ResetInput() -> void {
 }
 
 auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int outputFrameNb, const VSFrameRef *outputFrame, int sourceFrameNb) -> bool {
-    const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(outputFrame);
+    const VSMap *frameProps = AVSF_VPS_API->getFramePropsRO(outputFrame);
     int propGetError;
-    const int64_t frameDurationNum = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_NUM, 0, &propGetError);
-    const int64_t frameDurationDen = AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_DEN, 0, &propGetError);
+    const int64_t frameDurationNum = AVSF_VPS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_NUM, 0, &propGetError);
+    const int64_t frameDurationDen = AVSF_VPS_API->propGetInt(frameProps, VS_PROP_NAME_DURATION_DEN, 0, &propGetError);
     int64_t frameDuration;
 
     if (frameDurationNum > 0 && frameDurationDen > 0) {
@@ -313,7 +313,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &sample, int o
     }
 
     if (_nextOutputFrameStartTime == 0) {
-        _nextOutputFrameStartTime = static_cast<REFERENCE_TIME>(AVSF_VS_API->propGetFloat(frameProps, VS_PROP_NAME_ABS_TIME, 0, &propGetError) * UNITS);
+        _nextOutputFrameStartTime = static_cast<REFERENCE_TIME>(AVSF_VPS_API->propGetFloat(frameProps, VS_PROP_NAME_ABS_TIME, 0, &propGetError) * UNITS);
     }
 
     REFERENCE_TIME frameStartTime = _nextOutputFrameStartTime;
@@ -437,9 +437,9 @@ auto FrameHandler::WorkerProc() -> void {
             continue;
         }
 
-        const VSMap *frameProps = AVSF_VS_API->getFramePropsRO(iter->second);
+        const VSMap *frameProps = AVSF_VPS_API->getFramePropsRO(iter->second);
         int propGetError;
-        const int sourceFrameNb = static_cast<int>(AVSF_VS_API->propGetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, 0, &propGetError));
+        const int sourceFrameNb = static_cast<int>(AVSF_VPS_API->propGetInt(frameProps, VS_PROP_NAME_SOURCE_FRAME_NB, 0, &propGetError));
 
         _lastUsedSourceFrameNb = sourceFrameNb;
         _addInputSampleCv.notify_all();
@@ -454,7 +454,7 @@ auto FrameHandler::WorkerProc() -> void {
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
-            AVSF_VS_API->freeFrame(iter->second);
+            AVSF_VPS_API->freeFrame(iter->second);
             _outputFrames.erase(iter);
         }
 
