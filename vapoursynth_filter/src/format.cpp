@@ -40,7 +40,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     const VIDEOINFOHEADER *vih = reinterpret_cast<VIDEOINFOHEADER *>(mediaType.pbFormat);
     REFERENCE_TIME fpsNum = UNITS;
     REFERENCE_TIME fpsDen = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
-    vs_normalizeRational(&fpsNum, &fpsDen);
+    CoprimeIntegers(fpsNum, fpsDen);
     VSCore *vsCore= vsscript_getCore(frameServerInstance->GetVsScript());
 
     VideoFormat ret {
@@ -73,7 +73,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
              */
             ret.pixelAspectRatioNum = vih2->dwPictAspectRatioX * ret.videoInfo.height;
             ret.pixelAspectRatioDen = vih2->dwPictAspectRatioY * ret.videoInfo.width;
-            vs_normalizeRational(&ret.pixelAspectRatioNum, &ret.pixelAspectRatioDen);
+            CoprimeIntegers(ret.pixelAspectRatioNum, ret.pixelAspectRatioDen);
         }
 
         if ((vih2->dwControlFlags & AMCONTROL_USED) && (vih2->dwControlFlags & AMCONTROL_COLORINFO_PRESENT)) {

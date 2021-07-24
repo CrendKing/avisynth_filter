@@ -52,12 +52,6 @@ private:
     auto RefreshDeliveryFrameRates(int frameNb) -> void;
 
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING      = 2;
-    static constexpr const char *VS_PROP_NAME_ABS_TIME            = "_AbsoluteTime";
-    static constexpr const char *VS_PROP_NAME_DURATION_NUM        = "_DurationNum";
-    static constexpr const char *VS_PROP_NAME_DURATION_DEN        = "_DurationDen";
-    static constexpr const char *VS_PROP_NAME_FIELD_BASED         = "_FieldBased";
-    static constexpr const char *VS_PROP_NAME_SOURCE_FRAME_NB     = "VPSF_SourceFrameNb";
-    static constexpr const char *VS_PROP_NAME_TYPE_SPECIFIC_FLAGS = "VPSF_TypeSpecificFlags";
 
     CSynthFilter &_filter;
 

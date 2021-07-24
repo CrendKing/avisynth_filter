@@ -25,8 +25,18 @@ FrameServerCommon::FrameServerCommon() {
 
     IScriptEnvironment *env = CreateEnv();
     AVS_linkage = env->GetAVSLinkage();
+
     _versionString = env->Invoke("Eval", AVSValue("VersionString()")).AsString();
     Environment::GetInstance().Log(L"AviSynth version: %S", GetVersionString().data());
+
+    try {
+        // AVS+ 3.6 is interface version 8
+        env->CheckVersion(8);
+        _isFramePropsSupported = true;
+        Environment::GetInstance().Log(L"AviSynth supports frame properties");
+    } catch (...) {
+    }
+
     env->DeleteScriptEnvironment();
 
     _sourceClip = new SourceClip(_sourceVideoInfo);

@@ -51,6 +51,17 @@ static constexpr const WCHAR *UNAVAILABLE_SOURCE_PATH              = L"N/A";
  */
 static constexpr const int NUM_FRAMES_FOR_INFINITE_STREAM          = 10810800;
 
+/*
+ * AviSynth+ and VapourSynth frame property names
+ * The ones prefixed with "AVSF_" are specific private properties of this filter, both variants
+ */
+static constexpr const char *FRAME_PROP_NAME_ABS_TIME              = "_AbsoluteTime";
+static constexpr const char *FRAME_PROP_NAME_DURATION_NUM          = "_DurationNum";
+static constexpr const char *FRAME_PROP_NAME_DURATION_DEN          = "_DurationDen";
+static constexpr const char *FRAME_PROP_NAME_FIELD_BASED           = "_FieldBased";
+static constexpr const char *FRAME_PROP_NAME_SOURCE_FRAME_NB       = "AVSF_SourceFrameNb";
+static constexpr const char *FRAME_PROP_NAME_TYPE_SPECIFIC_FLAGS   = "AVSF_TypeSpecificFlags";
+
 static constexpr const WCHAR *REGISTRY_KEY_NAME_PREFIX             = L"Software\\AviSynthFilter\\";
 static constexpr const WCHAR *SETTING_NAME_SCRIPT_FILE             = L"ScriptFile";
 static constexpr const WCHAR *SETTING_NAME_LOG_FILE                = L"LogFile";

@@ -64,6 +64,32 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
     PVideoFrame frame = Format::CreateFrame(_filter._inputVideoFormat, sampleBuffer);
 
+    if (FrameServerCommon::GetInstance().IsFramePropsSupported()) {
+        AVSMap *frameProps = AVSF_AVS_API->getFramePropsRW(frame);
+
+        AVSF_AVS_API->propSetFloat(frameProps, FRAME_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), PROPAPPENDMODE_REPLACE);
+        AVSF_AVS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, PROPAPPENDMODE_REPLACE);
+        AVSF_AVS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, PROPAPPENDMODE_REPLACE);
+
+        if (const std::optional<int> &optColorRange = _filter._inputVideoFormat.colorSpaceInfo.colorRange) {
+            AVSF_AVS_API->propSetInt(frameProps, "_ColorRange", *optColorRange, PROPAPPENDMODE_REPLACE);
+        }
+        AVSF_AVS_API->propSetInt(frameProps, "_Primaries", _filter._inputVideoFormat.colorSpaceInfo.primaries, PROPAPPENDMODE_REPLACE);
+        AVSF_AVS_API->propSetInt(frameProps, "_Matrix", _filter._inputVideoFormat.colorSpaceInfo.matrix, PROPAPPENDMODE_REPLACE);
+        AVSF_AVS_API->propSetInt(frameProps, "_Transfer", _filter._inputVideoFormat.colorSpaceInfo.transfer, PROPAPPENDMODE_REPLACE);
+
+        const DWORD typeSpecificFlags = _filter.m_pInput->SampleProps()->dwTypeSpecificFlags;
+        int rfpFieldBased;
+        if (typeSpecificFlags & AM_VIDEO_FLAG_WEAVE) {
+            rfpFieldBased = 0;
+        } else if (typeSpecificFlags & AM_VIDEO_FLAG_FIELD1FIRST) {
+            rfpFieldBased = 2;
+        } else {
+            rfpFieldBased = 1;
+        }
+        AVSF_AVS_API->propSetInt(frameProps, FRAME_PROP_NAME_FIELD_BASED, rfpFieldBased, PROPAPPENDMODE_REPLACE);
+    }
+
     std::unique_ptr<HDRSideData> hdrSideData = std::make_unique<HDRSideData>();
     {
         if (const ATL::CComQIPtr<IMediaSideData> inputSampleSideData(inputSample); inputSampleSideData != nullptr) {
@@ -218,8 +244,35 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
     } else {
         try {
             // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
-            const PVideoFrame scriptFrame = MainFrameServer::GetInstance().GetFrame(_nextOutputFrameNb);
-            Format::WriteSample(_filter._outputVideoFormat, scriptFrame, outputBuffer);
+            const PVideoFrame outputFrame = MainFrameServer::GetInstance().GetFrame(_nextOutputFrameNb);
+
+            if (const ATL::CComQIPtr<IMediaSample2> outSample2(outSample); outSample2 != nullptr) {
+                if (AM_SAMPLE2_PROPERTIES sampleProps; SUCCEEDED(outSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&sampleProps)))) {
+                    if (FrameServerCommon::GetInstance().IsFramePropsSupported()) {
+                        const AVSMap *frameProps = AVSF_AVS_API->getFramePropsRO(outputFrame);
+                        int propGetError;
+
+                        if (const int64_t rfpFieldBased = AVSF_AVS_API->propGetInt(frameProps, FRAME_PROP_NAME_FIELD_BASED, 0, &propGetError);
+                            propGetError == GETPROPERROR_UNSET || rfpFieldBased == 0) {
+                            sampleProps.dwTypeSpecificFlags = AM_VIDEO_FLAG_WEAVE;
+                        } else if (rfpFieldBased == 2) {
+                            sampleProps.dwTypeSpecificFlags = AM_VIDEO_FLAG_FIELD1FIRST;
+                        } else {
+                            sampleProps.dwTypeSpecificFlags = 0;
+                        }
+                    } else {
+                        sampleProps.dwTypeSpecificFlags = AM_VIDEO_FLAG_WEAVE;
+                    }
+
+                    if (sourceTypeSpecificFlags & AM_VIDEO_FLAG_REPEAT_FIELD) {
+                        sampleProps.dwTypeSpecificFlags |= AM_VIDEO_FLAG_REPEAT_FIELD;
+                    }
+
+                    outSample2->SetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&sampleProps));
+                }
+            }
+
+            Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
         } catch (AvisynthError) {
             return false;
         }
@@ -266,7 +319,7 @@ auto FrameHandler::WorkerProc() -> void {
          * Therefore instead of directly using the stop time from the current sample, we use the start time of the next sample.
          */
 
-        std::array<decltype(_sourceFrames)::const_iterator, NUM_SRC_FRAMES_PER_PROCESSING> processSourceFrameIters;
+        std::array<decltype(_sourceFrames)::iterator, NUM_SRC_FRAMES_PER_PROCESSING> processSourceFrameIters;
         std::array<REFERENCE_TIME, NUM_SRC_FRAMES_PER_PROCESSING - 1> outputFrameDurations;
 
         {
@@ -316,20 +369,21 @@ auto FrameHandler::WorkerProc() -> void {
             }
             _nextOutputFrameStartTime = outputStopTime;
 
+            if (FrameServerCommon::GetInstance().IsFramePropsSupported()) {
+                AVSMap *frameProps = AVSF_AVS_API->getFramePropsRW(processSourceFrameIters[0]->second.frame);
+                REFERENCE_TIME frameDurationNum = processSourceFrameIters[1]->second.startTime - processSourceFrameIters[0]->second.startTime;
+                REFERENCE_TIME frameDurationDen = UNITS;
+                CoprimeIntegers(frameDurationNum, frameDurationDen);
+                AVSF_AVS_API->propSetInt(frameProps, FRAME_PROP_NAME_DURATION_NUM, frameDurationNum, PROPAPPENDMODE_REPLACE);
+                AVSF_AVS_API->propSetInt(frameProps, FRAME_PROP_NAME_DURATION_DEN, frameDurationDen, PROPAPPENDMODE_REPLACE);
+            }
+
             Environment::GetInstance().Log(L"Processing output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
                                            _nextOutputFrameNb, processSourceFrameIters[0]->first, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
 
             RefreshOutputFrameRates(_nextOutputFrameNb);
 
             if (ATL::CComPtr<IMediaSample> outSample; PrepareOutputSample(outSample, outputStartTime, outputStopTime, processSourceFrameIters[0]->second.typeSpecificFlags)) {
-                if (const ATL::CComQIPtr<IMediaSample2> outSample2(outSample); outSample2 != nullptr) {
-                    AM_SAMPLE2_PROPERTIES props;
-                    if (SUCCEEDED(outSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props)))) {
-                        props.dwTypeSpecificFlags = processSourceFrameIters[0]->second.typeSpecificFlags;
-                        outSample2->SetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&props));
-                    }
-                }
-
                 if (const ATL::CComQIPtr<IMediaSideData> sideData(outSample); sideData != nullptr) {
                     processSourceFrameIters[0]->second.hdrSideData->WriteTo(sideData);
                 }

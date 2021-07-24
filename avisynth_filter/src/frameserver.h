@@ -24,12 +24,14 @@ public:
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     constexpr auto GetVersionString() const -> std::string_view { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
+    constexpr auto IsFramePropsSupported() const -> bool { return _isFramePropsSupported; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
 
 private:
     auto CreateEnv() const -> IScriptEnvironment *;
 
     const char *_versionString;
+    bool _isFramePropsSupported = false;
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     VideoInfo _sourceVideoInfo = {};
     PClip _sourceClip;

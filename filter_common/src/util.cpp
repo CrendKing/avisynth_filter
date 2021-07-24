@@ -20,8 +20,8 @@ auto ConvertUtf8ToWide(std::string_view utf8String) -> std::wstring {
     return ret;
 }
 
-auto DoubleToString(double d, int precision) -> std::wstring {
-    const std::wstring str = std::to_wstring(d);
+auto DoubleToString(double num, int precision) -> std::wstring {
+    const std::wstring str = std::to_wstring(num);
     return str.substr(0, str.find(L'.') + 1 + precision);
 }
 
@@ -42,6 +42,13 @@ auto ReplaceSubstr(std::string &str, std::string_view from, std::string_view to)
     }
 
     return str;
+}
+
+auto CoprimeIntegers(int64_t &a, int64_t &b) -> void {
+    if (const int64_t gcd = std::gcd(a, b); gcd > 1) {
+        a /= gcd;
+        b /= gcd;
+    }
 }
 
 }
