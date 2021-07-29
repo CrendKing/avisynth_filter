@@ -45,6 +45,18 @@ Examples of 10/16-bit capable video renderers: [madVR](http://madvr.com/), [MPC 
 
 Examples of video renderers having issues: [Enhanced Video Renderer](https://docs.microsoft.com/en-us/windows/win32/medfound/enhanced-video-renderer) ([related issue](https://github.com/clsid2/mpc-hc/issues/767#issuecomment-735239261)), [PotPlayer "Built-in" video renderers](http://potplayer.daum.net/) ([related issue](https://github.com/CrendKing/avisynth_filter/issues/37#issuecomment-858152467)).
 
+The following [Reserved Frame Properties](http://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties) are supported (AviSynth+ v3.6.0 and above, VapourSynth):
+
+* `_Primaries`
+* `_Matrix`
+* `_Transfer`
+* `_FieldBased`
+* `_AbsoluteTime`
+* `_DurationNum`
+* `_DurationDen`
+* `_SARNum`
+* `_SARDen`
+
 ### AviSynth Filter
 
 The filter exposes the following functions to the AviSynth script:
@@ -74,15 +86,6 @@ The filter exposes the following variables to the VapourSynth Python script:
 This variable has the type of [`VideoNode`](http://www.vapoursynth.com/doc/pythonreference.html#VideoNode). It serves as the source clip.
 
 Note that the [`fps`](http://www.vapoursynth.com/doc/pythonreference.html#VideoNode.fps) property of the video node is set to the average framerate instead of 0 / 1, regardless if frames have variable frame durations. It is equivalent to mpv's [`container_fps`](https://mpv.io/manual/master/#video-filters-container-fps) variable.
-
-The following [Reserved Frame Properties](http://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties) are supported:
-
-* `_FieldBased` (always 0)
-* `_AbsoluteTime`
-* `_DurationNum`
-* `_DurationDen`
-* `_SARNum`
-* `_SARDen`
 
 #### `VpsFilterDisconnect`
 
