@@ -285,7 +285,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
 }
 
 auto FrameHandler::WorkerProc() -> void {
-    static const auto ResetOutput = [this]() -> void {
+    const auto ResetOutput = [this]() -> void {
         _nextOutputFrameNb = 0;
 
         _frameRateCheckpointOutputFrameNb = 0;
