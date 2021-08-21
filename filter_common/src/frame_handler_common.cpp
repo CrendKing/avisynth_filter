@@ -81,11 +81,11 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
     _addInputSampleCv.notify_all();
 
-    Environment::GetInstance().Log(L"GarbageCollect frames until %6i pre size %3zu post size %3zu", srcFrameNb, dbgPreSize, _sourceFrames.size());
+    Environment::GetInstance().Log(L"GarbageCollect frames until %6d pre size %3zd post size %3zd", srcFrameNb, dbgPreSize, _sourceFrames.size());
 }
 
 auto FrameHandler::ChangeOutputFormat() -> bool {
-    Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5li, height %5li",
+    Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5ld, height %5ld",
                                    _filter._inputVideoFormat.pixelFormat->name, _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
 
     _filter.StopStreaming();
@@ -111,7 +111,7 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
             }
 
             const bool result = SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
-            Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %i", Format::LookupMediaSubtype(outputMediaType.subtype)->name, result);
+            Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %d", Format::LookupMediaSubtype(outputMediaType.subtype)->name, result);
 
             if (result) {
                 _filter.m_pOutput->SetMediaType(&outputMediaType);

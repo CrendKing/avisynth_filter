@@ -48,7 +48,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
         if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
             inputSampleStartTime <= lastSampleStartTime) {
-            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli", inputSampleStartTime, lastSampleStartTime);
+            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
             return S_FALSE;
         }
     }
@@ -119,7 +119,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                               std::forward_as_tuple(frame, inputSampleStartTime, std::move(hdrSideData)));
     }
 
-    Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli, last_used %6i, extra_buffer %6i",
+    Environment::GetInstance().Log(L"Stored source frame: %6d at %10lld ~ %10lld duration(literal) %10lld, last_used %6d, extra_buffer %6d",
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _lastUsedSourceFrameNb.load(), _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
@@ -178,7 +178,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
-    Environment::GetInstance().Log(L"Waiting for source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Waiting for source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedSourceLock(_sourceMutex);
 
@@ -199,11 +199,11 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrameRef * {
     });
 
     if (_isFlushing) {
-        Environment::GetInstance().Log(L"Drain for frame %6i", frameNb);
+        Environment::GetInstance().Log(L"Drain for frame %6d", frameNb);
         return MainFrameServer::GetInstance().GetSourceDrainFrame();
     }
 
-    Environment::GetInstance().Log(L"Return source frame %6i", frameNb);
+    Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
 
     return iter->second.frame;
 }
@@ -268,12 +268,12 @@ FrameHandler::SourceFrameInfo::~SourceFrameInfo() {
 
 auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void {
     if (f == nullptr) {
-        Environment::GetInstance().Log(L"Failed to generate output frame %6i with message: %S", n, errorMsg);
+        Environment::GetInstance().Log(L"Failed to generate output frame %6d with message: %S", n, errorMsg);
         return;
     }
 
     FrameHandler *frameHandler = static_cast<FrameHandler *>(userData);
-    Environment::GetInstance().Log(L"Output frame %6i is ready, output queue size %2zu", n, frameHandler->_outputFrames.size());
+    Environment::GetInstance().Log(L"Output frame %6d is ready, output queue size %2zd", n, frameHandler->_outputFrames.size());
 
     if (frameHandler->_isFlushing) {
         {
@@ -326,7 +326,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, in
     REFERENCE_TIME frameStopTime = frameStartTime + frameDuration;
     _nextOutputFrameStartTime = frameStopTime;
 
-    Environment::GetInstance().Log(L"Output frame: frameNb %6i startTime %10lli stopTime %10lli duration %10lli", outputFrameNb, frameStartTime, frameStopTime, frameDuration);
+    Environment::GetInstance().Log(L"Output frame: frameNb %6d startTime %10lld stopTime %10lld duration %10lld", outputFrameNb, frameStartTime, frameStopTime, frameDuration);
 
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&outSample, &frameStartTime, &frameStopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
@@ -348,7 +348,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, in
         outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
         _notifyChangedOutputMediaType = false;
 
-        Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
+        Environment::GetInstance().Log(L"New output format: name %s, width %5ld, height %5ld",
                                        _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
     }
 
@@ -466,7 +466,7 @@ auto FrameHandler::WorkerProc() -> void {
             _filter.m_pOutput->Deliver(outSample);
             RefreshDeliveryFrameRates(iter->first);
 
-            Environment::GetInstance().Log(L"Delivered output sample %6i from source frame %6i", iter->first, sourceFrameNb);
+            Environment::GetInstance().Log(L"Delivered output sample %6d from source frame %6d", iter->first, sourceFrameNb);
         }
 
         {

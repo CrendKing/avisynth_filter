@@ -75,7 +75,7 @@ static auto RegisterFilter() -> HRESULT {
     const HRESULT hr = AMovieDllRegisterServer2(TRUE);
     if (FAILED(hr)) {
         Environment::Create();
-        Environment::GetInstance().Log(L"Registeration failed: %li", hr);
+        Environment::GetInstance().Log(L"Registeration failed: %ld", hr);
         Environment::Destroy();
     }
 

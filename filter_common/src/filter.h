@@ -76,7 +76,7 @@ private:
             return AuxFrameServer::GetInstance().GenerateMediaType(pixelFormat, mtIn);
         });
         if (ret.empty()) {
-            Environment::GetInstance().Log(L"Unable to find any supported pixel format for script pixel type %i", scriptPixelType);
+            Environment::GetInstance().Log(L"Unable to find any supported pixel format for script pixel type %d", scriptPixelType);
         }
         return ret;
     }

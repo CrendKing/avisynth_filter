@@ -59,13 +59,13 @@ auto RemoteControl::Run() -> void {
     wc.hInstance = g_hInst;
     wc.lpszClassName = API_WND_CLASS_NAME;
     if (RegisterClassA(&wc) == 0) {
-        Environment::GetInstance().Log(L"Remote control failed to register window class: %5lu", GetLastError());
+        Environment::GetInstance().Log(L"Remote control failed to register window class: %5ld", GetLastError());
         return;
     }
 
     _hWnd = CreateWindowExA(0, wc.lpszClassName, nullptr, 0, 0, 0, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
     if (_hWnd == nullptr) {
-        Environment::GetInstance().Log(L"Remote control Failed to create window: %5lu", GetLastError());
+        Environment::GetInstance().Log(L"Remote control Failed to create window: %5ld", GetLastError());
         return;
     }
     SetWindowLongPtrW(_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
@@ -76,7 +76,7 @@ auto RemoteControl::Run() -> void {
     BOOL msgRet;
     while ((msgRet = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
         if (msgRet == -1) {
-            Environment::GetInstance().Log(L"Remote control message loop error: %5lu", GetLastError());
+            Environment::GetInstance().Log(L"Remote control message loop error: %5ld", GetLastError());
             break;
         }
 
@@ -85,12 +85,12 @@ auto RemoteControl::Run() -> void {
     }
 
     if (!DestroyWindow(_hWnd)) {
-        Environment::GetInstance().Log(L"Remote control failed to destroy window: %5lu", GetLastError());
+        Environment::GetInstance().Log(L"Remote control failed to destroy window: %5ld", GetLastError());
         return;
     }
 
     if (!UnregisterClassA(API_WND_CLASS_NAME, wc.hInstance)) {
-        Environment::GetInstance().Log(L"Remote control failed to unregister window class: %5lu", GetLastError());
+        Environment::GetInstance().Log(L"Remote control failed to unregister window class: %5ld", GetLastError());
         return;
     }
 

@@ -48,7 +48,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
         if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
             inputSampleStartTime <= lastSampleStartTime) {
-            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lli last %10lli",
+            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lld last %10lld",
                                            inputSampleStartTime, lastSampleStartTime);
             return S_FALSE;
         }
@@ -121,7 +121,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     }
     _newSourceFrameCv.notify_all();
 
-    Environment::GetInstance().Log(L"Stored source frame: %6i at %10lli ~ %10lli duration(literal) %10lli max_requested %6i extra_buffer %6i",
+    Environment::GetInstance().Log(L"Stored source frame: %6d at %10lld ~ %10lld duration(literal) %10lld max_requested %6d extra_buffer %6d",
                                    _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _maxRequestedFrameNb.load(), _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
@@ -130,7 +130,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 }
 
 auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
-    Environment::GetInstance().Log(L"Get source frame: frameNb %6i input queue size %2zu", frameNb, _sourceFrames.size());
+    Environment::GetInstance().Log(L"Get source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
     std::shared_lock sharedSourceLock(_sourceMutex);
 
@@ -150,15 +150,15 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
 
     if (_isFlushing || iter->second.frame == nullptr) {
         if (_isFlushing) {
-            Environment::GetInstance().Log(L"Drain for frame %6i", frameNb);
+            Environment::GetInstance().Log(L"Drain for frame %6d", frameNb);
         } else {
-            Environment::GetInstance().Log(L"Bad frame %6i", frameNb);
+            Environment::GetInstance().Log(L"Bad frame %6d", frameNb);
         }
 
         return MainFrameServer::GetInstance().GetSourceDrainFrame();
     }
 
-    Environment::GetInstance().Log(L"Return source frame %6i", frameNb);
+    Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
 
     return iter->second.frame;
 }
@@ -227,7 +227,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
         outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
         _notifyChangedOutputMediaType = false;
 
-        Environment::GetInstance().Log(L"New output format: name %s, width %5li, height %5li",
+        Environment::GetInstance().Log(L"New output format: name %5s, width %5ld, height %5ld",
                                        _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
     }
 
@@ -360,7 +360,7 @@ auto FrameHandler::WorkerProc() -> void {
         while (!_isFlushing) {
             const REFERENCE_TIME outputFrameDurationBeforeEdgePortion = min(processSourceFrameIters[1]->second.startTime - _nextOutputFrameStartTime, outputFrameDurations[0]);
             if (outputFrameDurationBeforeEdgePortion <= 0) {
-                Environment::GetInstance().Log(L"Frame time drift: %10lli", -outputFrameDurationBeforeEdgePortion);
+                Environment::GetInstance().Log(L"Frame time drift: %10lld", -outputFrameDurationBeforeEdgePortion);
                 break;
             }
             const REFERENCE_TIME outputFrameDurationAfterEdgePortion = outputFrameDurations[1] - llMulDiv(outputFrameDurations[1], outputFrameDurationBeforeEdgePortion, outputFrameDurations[0], 0);
@@ -381,7 +381,7 @@ auto FrameHandler::WorkerProc() -> void {
                 AVSF_AVS_API->propSetInt(frameProps, FRAME_PROP_NAME_DURATION_DEN, frameDurationDen, PROPAPPENDMODE_REPLACE);
             }
 
-            Environment::GetInstance().Log(L"Processing output frame %6i for source frame %6i at %10lli ~ %10lli duration %10lli",
+            Environment::GetInstance().Log(L"Processing output frame %6d for source frame %6d at %10lld ~ %10lld duration %10lld",
                                            _nextOutputFrameNb, processSourceFrameIters[0]->first, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
 
             RefreshOutputFrameRates(_nextOutputFrameNb);
@@ -394,7 +394,7 @@ auto FrameHandler::WorkerProc() -> void {
                 _filter.m_pOutput->Deliver(outSample);
                 RefreshDeliveryFrameRates(_nextOutputFrameNb);
 
-                Environment::GetInstance().Log(L"Delivered frame %6i", _nextOutputFrameNb);
+                Environment::GetInstance().Log(L"Delivered frame %6d", _nextOutputFrameNb);
             }
 
             _nextOutputFrameNb += 1;

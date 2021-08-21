@@ -102,7 +102,7 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
                         if (std::ranges::find(_availableOutputMediaTypes, outputMediaType) == _availableOutputMediaTypes.end()) {
                             _availableOutputMediaTypes.emplace_back(outputMediaType);
                         }
-                        Environment::GetInstance().Log(L"Add compatible formats: input %s output %s", optInputPixelFormat->name, frameServerPixelFormat.name);
+                        Environment::GetInstance().Log(L"Add compatible formats: input %5s output %5s", optInputPixelFormat->name, frameServerPixelFormat.name);
                     }
                 }
             } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
@@ -134,12 +134,12 @@ auto CSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
             result = std::ranges::any_of(_compatibleMediaTypes, [optInputPixelFormat](const MediaTypePair &pair) -> bool {
                 return optInputPixelFormat == pair.inputPixelFormat;
             });
-            Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %s result %i", optInputPixelFormat->name, result);
+            Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %5s result %d", optInputPixelFormat->name, result);
         } else {
             result = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
                 return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
             });
-            Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %s result %i", optInputPixelFormat->name, result);
+            Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %5s result %d", optInputPixelFormat->name, result);
         }
     } else {
         Environment::GetInstance().Log(L"Unknown input media type in CheckInputType()");
@@ -162,7 +162,7 @@ auto CSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESUL
     }
 
     *pMediaType = _availableOutputMediaTypes[iPosition];
-    Environment::GetInstance().Log(L"GetMediaType() offers media type %d with %s", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
+    Environment::GetInstance().Log(L"GetMediaType() offers media type %2d with %5s", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
 
     return S_OK;
 }
@@ -224,7 +224,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
             Environment::GetInstance().Log(L"Unexpected input or output format");
             return E_UNEXPECTED;
         }
-        Environment::GetInstance().Log(L"Pins are connected with media types: %s -> %s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
+        Environment::GetInstance().Log(L"Pins are connected with media types: %5s -> %5s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
 
         bool isMediaTypesCompatible = false;
         int mediaTypeReconnectionIndex = 0;
@@ -256,11 +256,11 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
 
         if (!isMediaTypesCompatible) {
             if (reconnectInputMediaType == nullptr) {
-                Environment::GetInstance().Log(L"Failed to reconnect with any of the %i candidate input media types", _mediaTypeReconnectionWatermark);
+                Environment::GetInstance().Log(L"Failed to reconnect with any of the %d candidate input media types", _mediaTypeReconnectionWatermark);
                 return E_UNEXPECTED;
             }
 
-            Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %s", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
+            Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %5s", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
             CheckHr(ReconnectPin(m_pInput, reconnectInputMediaType));
         }
     }

@@ -39,7 +39,7 @@ Environment::Environment()
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
 
             std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-                Log(L"Configured input format %s: %i", name, _enabledInputFormats.contains(name));
+                Log(L"Configured input format %5s: %d", name, _enabledInputFormats.contains(name));
             }, &Format::PixelFormat::name);
 
             Log(L"Loading process: %s", processName.c_str());
@@ -68,7 +68,7 @@ auto Environment::Log(const WCHAR *format, ...) -> void {
         return;
     }
 
-    const std::wstring fmt = std::format(L"T {:6} @ {:8}: {}\n", GetCurrentThreadId(), timeGetTime() - _logStartTime, format);
+    const std::wstring fmt = std::format(L"T {:6d} @ {:8d}: {}\n", GetCurrentThreadId(), timeGetTime() - _logStartTime, format);
 
     const std::unique_lock logLock(_logMutex);
 
