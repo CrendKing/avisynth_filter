@@ -25,14 +25,14 @@
     <TargetName>$(ProjectName)_$(PlatformArchitecture)</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
-    <Keyword>Win32Proj</Keyword>
     <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
     <UseDebugLibraries Condition="'$(Configuration)' == 'Debug'">true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization Condition="'$(Configuration)' == 'Release'">true</WholeProgramOptimization>
   </PropertyGroup>
   <ImportGroup Label="ExtensionSettings">

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "pch.h"
 #include "side_data.h"
 
 

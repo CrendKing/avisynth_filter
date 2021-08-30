@@ -81,11 +81,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         const DWORD typeSpecificFlags = _filter.m_pInput->SampleProps()->dwTypeSpecificFlags;
         int rfpFieldBased;
         if (typeSpecificFlags & AM_VIDEO_FLAG_WEAVE) {
-            rfpFieldBased = 0;
+            rfpFieldBased = VSFieldBased::VSC_FIELD_PROGRESSIVE;
         } else if (typeSpecificFlags & AM_VIDEO_FLAG_FIELD1FIRST) {
-            rfpFieldBased = 2;
+            rfpFieldBased = VSFieldBased::VSC_FIELD_TOP;
         } else {
-            rfpFieldBased = 1;
+            rfpFieldBased = VSFieldBased::VSC_FIELD_BOTTOM;
         }
         AVSF_AVS_API->propSetInt(frameProps, FRAME_PROP_NAME_FIELD_BASED, rfpFieldBased, PROPAPPENDMODE_REPLACE);
     }

@@ -10,62 +10,62 @@ namespace SynthFilter {
 auto Format::VideoFormat::ColorSpaceInfo::Update(const DXVA_ExtendedFormat &dxvaExtFormat) -> void {
     switch (dxvaExtFormat.NominalRange) {
     case DXVA_NominalRange_Normal:
-        colorRange = 0;
+        colorRange = VSColorRange::VSC_RANGE_FULL;
         break;
     case DXVA_NominalRange_Wide:
-        colorRange = 1;
+        colorRange = VSColorRange::VSC_RANGE_LIMITED;
         break;
     }
 
     switch (dxvaExtFormat.VideoPrimaries) {
     case DXVA_VideoPrimaries_BT709:
-        primaries = 1;
+        primaries = VSColorPrimaries::VSC_PRIMARIES_BT709;
         break;
     case DXVA_VideoPrimaries_BT470_2_SysM:
-        primaries = 4;
+        primaries = VSColorPrimaries::VSC_PRIMARIES_BT470_M;
         break;
     case DXVA_VideoPrimaries_BT470_2_SysBG:
-        primaries = 5;
+        primaries = VSColorPrimaries::VSC_PRIMARIES_BT470_BG;
         break;
     case DXVA_VideoPrimaries_SMPTE170M:
     case DXVA_VideoPrimaries_SMPTE_C:
-        primaries = 6;
+        primaries = VSColorPrimaries::VSC_PRIMARIES_ST170_M;
         break;
     case DXVA_VideoPrimaries_SMPTE240M:
-        primaries = 7;
+        primaries = VSColorPrimaries::VSC_PRIMARIES_ST240_M;
         break;
     case DXVA_VideoPrimaries_EBU3213:
-        primaries = 22;
+        primaries = VSColorPrimaries::VSC_PRIMARIES_EBU3213_E;
         break;
     }
 
     switch (dxvaExtFormat.VideoTransferMatrix) {
     case DXVA_VideoTransferMatrix_BT709:
-        matrix = 1;
+        matrix = VSMatrixCoefficients::VSC_MATRIX_BT709;
         break;
     case DXVA_VideoTransferMatrix_BT601:
-        matrix = 5;
+        matrix = VSMatrixCoefficients::VSC_MATRIX_BT470_BG;
         break;
     case DXVA_VideoTransferMatrix_SMPTE240M:
-        matrix = 7;
+        matrix = VSMatrixCoefficients::VSC_MATRIX_ST240_M;
         break;
     }
 
     switch (dxvaExtFormat.VideoTransferFunction) {
     case DXVA_VideoTransFunc_10:
-        transfer = 8;
+        transfer = VSTransferCharacteristics::VSC_TRANSFER_LINEAR;
         break;
     case DXVA_VideoTransFunc_22:
-        transfer = 4;
+        transfer = VSTransferCharacteristics::VSC_TRANSFER_BT470_M;
         break;
     case DXVA_VideoTransFunc_22_709:
-        transfer = 1;
+        transfer = VSTransferCharacteristics::VSC_TRANSFER_BT709;
         break;
     case DXVA_VideoTransFunc_22_240M:
-        transfer = 7;
+        transfer = VSTransferCharacteristics::VSC_TRANSFER_ST240_M;
         break;
     case DXVA_VideoTransFunc_28:
-        transfer = 5;
+        transfer = VSTransferCharacteristics::VSC_TRANSFER_BT470_BG;
         break;
     }
 }

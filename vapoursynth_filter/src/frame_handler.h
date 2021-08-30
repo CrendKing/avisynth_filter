@@ -17,7 +17,7 @@ public:
     DISABLE_COPYING(FrameHandler)
 
     auto AddInputSample(IMediaSample *inputSample) -> HRESULT;
-    auto GetSourceFrame(int frameNb) -> const VSFrameRef *;
+    auto GetSourceFrame(int frameNb) -> const VSFrame *;
     auto BeginFlush() -> void;
     auto EndFlush(const std::function<void ()> &interim) -> void;
     auto StartWorker() -> void;
@@ -33,16 +33,16 @@ private:
     struct SourceFrameInfo {
         ~SourceFrameInfo();
 
-        VSFrameRef *frame;
+        VSFrame *frame;
         REFERENCE_TIME startTime;
         std::unique_ptr<HDRSideData> hdrSideData;
     };
 
-    static auto VS_CC VpsGetFrameCallback(void *userData, const VSFrameRef *f, int n, VSNodeRef *node, const char *errorMsg) -> void;
+    static auto VS_CC VpsGetFrameCallback(void *userData, const VSFrame *f, int n, VSNode *node, const char *errorMsg) -> void;
     static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointStartTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
-    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, int outputFrameNb, const VSFrameRef *outputFrame, int sourceFrameNb) -> bool;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, int outputFrameNb, const VSFrame *outputFrame, int sourceFrameNb) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
@@ -56,7 +56,7 @@ private:
     CSynthFilter &_filter;
 
     std::map<int, SourceFrameInfo> _sourceFrames;
-    std::map<int, const VSFrameRef *> _outputFrames;
+    std::map<int, const VSFrame *> _outputFrames;
 
     mutable std::shared_mutex _sourceMutex;
     std::shared_mutex _outputMutex;

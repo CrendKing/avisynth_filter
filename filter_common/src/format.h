@@ -11,14 +11,14 @@ class FrameServerBase;
 
 class Format {
 #ifdef AVSF_AVISYNTH
-    using FrameServerInstance = void *;
+    using FrameServerCore = void *;
     using FrameType = PVideoFrame;
     using ConstFrameType = const PVideoFrame &;
     using VideoInfoType = VideoInfo;
 #else
-    using FrameServerInstance = VSCore *;
-    using FrameType = VSFrameRef *;
-    using ConstFrameType = const VSFrameRef *;
+    using FrameServerCore = VSCore *;
+    using FrameType = VSFrame *;
+    using ConstFrameType = const VSFrame *;
     using VideoInfoType = VSVideoInfo;
 #endif
 
@@ -46,9 +46,9 @@ public:
     struct VideoFormat {
         struct ColorSpaceInfo {
             std::optional<int> colorRange;
-            int primaries = 2;
-            int matrix = 2;
-            int transfer = 2;
+            int primaries = VSColorPrimaries::VSC_PRIMARIES_UNSPECIFIED;
+            int matrix = VSMatrixCoefficients::VSC_MATRIX_UNSPECIFIED;
+            int transfer = VSTransferCharacteristics::VSC_TRANSFER_UNSPECIFIED;
 
             auto Update(const DXVA_ExtendedFormat &dxvaExtFormat) -> void;
         };
@@ -61,7 +61,7 @@ public:
         int hdrType;
         int hdrLuminance;
         BITMAPINFOHEADER bmi;
-        FrameServerInstance frameServer;
+        FrameServerCore frameServerCore;
 
         auto GetCodecFourCC() const -> DWORD {
             return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
@@ -70,7 +70,7 @@ public:
 
     static auto Initialize() -> void;
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat *;
-    static constexpr auto LookupFrameServerFormatId(int frameServerFormatId) {
+    static auto LookupFrameServerFormatId(int frameServerFormatId) {
         return PIXEL_FORMATS | std::views::filter([frameServerFormatId](const PixelFormat &pixelFormat) -> bool {
             return frameServerFormatId == pixelFormat.frameServerFormatId;
         });

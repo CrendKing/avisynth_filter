@@ -8,7 +8,7 @@
 
 namespace SynthFilter {
 
-// for each group of formats with the same format ID, they should appear with the most preferred -> list preferred order
+// for each group of formats with the same format ID, they should appear with the most preferred -> least preferred order
 const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     // 4:2:0
     { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .frameServerFormatId = VideoInfo::CS_YV12,      .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 },

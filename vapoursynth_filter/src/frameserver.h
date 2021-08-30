@@ -17,7 +17,6 @@ class FrameServerCommon : public RefCountedSingleton<FrameServerCommon> {
 
 public:
     FrameServerCommon();
-    ~FrameServerCommon();
 
     DISABLE_COPYING(FrameServerCommon)
 
@@ -26,20 +25,24 @@ public:
     constexpr auto GetVersionString() const -> std::string_view { return _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
     constexpr auto GetFrameHandler() const -> FrameHandler * { return _frameHandler; }
-    constexpr auto GetSourceVideoInfo() const -> const VSVideoInfo & { return _sourceVideoInfo; }
     constexpr auto GetVsApi() const -> const VSAPI * { return _vsApi; }
+    constexpr auto GetVsScriptApi() const -> const VSSCRIPTAPI * { return _vsScriptApi; }
 
 private:
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     std::string _versionString;
     FrameHandler *_frameHandler = nullptr;
-    VSVideoInfo _sourceVideoInfo {};
     const VSAPI *_vsApi;
+    const VSSCRIPTAPI *_vsScriptApi;
 };
+
+#define AVSF_VPS_API        FrameServerCommon::GetInstance().GetVsApi()
+#define AVSF_VPS_SCRIPT_API FrameServerCommon::GetInstance().GetVsScriptApi()
 
 class FrameServerBase {
 public:
     constexpr auto GetVsScript() const -> VSScript * { return _vsScript; }
+    auto GetVsCore() const -> VSCore *;
 
 protected:
     FrameServerBase();
@@ -51,8 +54,8 @@ protected:
     auto StopScript() -> void;
 
     VSScript *_vsScript = nullptr;
-    VSNodeRef *_scriptClip = nullptr;
-    VSVideoInfo _scriptVideoInfo {};
+    VSNode *_sourceClip = nullptr;
+    VSNode *_scriptClip = nullptr;
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
 };
@@ -67,15 +70,15 @@ public:
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
-    constexpr auto GetScriptClip() const -> VSNodeRef * { return _scriptClip; }
-    constexpr auto GetSourceDrainFrame() const -> const VSFrameRef * { return _sourceDrainFrame; }
+    constexpr auto GetScriptClip() const -> VSNode * { return _scriptClip; }
+    constexpr auto GetSourceDrainFrame() const -> const VSFrame * { return _sourceDrainFrame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
     constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration; }
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-    const VSFrameRef *_sourceDrainFrame = nullptr;
+    const VSFrame *_sourceDrainFrame = nullptr;
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
 };
@@ -88,9 +91,10 @@ public:
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto GenerateMediaType(const Format::PixelFormat &pixelFormat, const AM_MEDIA_TYPE *templateMediaType) const -> CMediaType;
-    constexpr auto GetScriptPixelType() const -> int { return _scriptVideoInfo.format->id; }
-};
+    auto GetScriptPixelType() const -> uint32_t;
 
-#define AVSF_VPS_API FrameServerCommon::GetInstance().GetVsApi()
+private:
+    VSVideoInfo _scriptVideoInfo;
+};
 
 }

@@ -9,7 +9,7 @@
 
 namespace SynthFilter {
 
-// for each group of formats with the same format ID, they should appear with the most preferred -> list preferred order
+// for each group of formats with the same format ID, they should appear with the most preferred -> least preferred order
 const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     // 4:2:0
     { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 },
@@ -23,7 +23,7 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
 
     // 4:2:2
-    { .name = L"YUY2",  .mediaSubtype = MEDIASUBTYPE_YUY2,  .frameServerFormatId = pfCompatYUY2,  .bitCount = 16, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YUY2 },
+    // VapourSynth does not support YUY2 format
     // P210 has the same problem as P010
     { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 },
     { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
@@ -31,9 +31,7 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     // 4:4:4
     { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = pfYUV444P8,    .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 },
 
-    // RGB
-    { .name = L"RGB32", .mediaSubtype = MEDIASUBTYPE_RGB32, .frameServerFormatId = pfCompatBGR32, .bitCount = 32, .subsampleWidthRatio = 0, .subsampleHeightRatio = 0, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_RGB32 },
-    // RGB48 will not work because LAV Filters outputs R-G-B pixel order while AviSynth+ expects B-G-R
+    // VapourSynth does not support packed RGB formats
 };
 
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat {
@@ -41,7 +39,6 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     REFERENCE_TIME fpsNum = UNITS;
     REFERENCE_TIME fpsDen = vih->AvgTimePerFrame > 0 ? vih->AvgTimePerFrame : DEFAULT_AVG_TIME_PER_FRAME;
     CoprimeIntegers(fpsNum, fpsDen);
-    VSCore *vsCore= vsscript_getCore(frameServerInstance->GetVsScript());
 
     VideoFormat ret {
         .pixelFormat = LookupMediaSubtype(mediaType.subtype),
@@ -50,17 +47,16 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
         .hdrType = 0,
         .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType),
-        .frameServer = vsCore
+        .frameServerCore = frameServerInstance->GetVsCore()
     };
     ret.videoInfo = {
-        .format = AVSF_VPS_API->getFormatPreset(ret.pixelFormat->frameServerFormatId, ret.frameServer),
         .fpsNum = fpsNum,
         .fpsDen = fpsDen,
         .width = ret.bmi.biWidth,
         .height = abs(ret.bmi.biHeight),
-        .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM,
-        .flags = nfNoCache,
+        .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM
     };
+    AVSF_VPS_API->getVideoFormatByID(&ret.videoInfo.format, ret.pixelFormat->frameServerFormatId, ret.frameServerCore);
 
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
         const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
@@ -84,28 +80,28 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     return ret;
 }
 
-auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrameRef *srcFrame, BYTE *dstBuffer) -> void {
+auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame, BYTE *dstBuffer) -> void {
     const std::array srcSlices { AVSF_VPS_API->getReadPtr(srcFrame, 0)
-                               , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1)
-                               , videoFormat.videoInfo.format->numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2) };
-    const std::array srcStrides { AVSF_VPS_API->getStride(srcFrame, 0)
-                                , videoFormat.videoInfo.format->numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1)
-                                , videoFormat.videoInfo.format->numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2) };
-    const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format->bytesPerSample;
+                               , videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1)
+                               , videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2) };
+    const std::array srcStrides { static_cast<int>(AVSF_VPS_API->getStride(srcFrame, 0))
+                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1))
+                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2)) };
+    const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
     CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, rowSize, AVSF_VPS_API->getFrameHeight(srcFrame, 0));
 }
 
-auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrameRef * {
-    VSFrameRef *frame = AVSF_VPS_API->newVideoFrame(videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServer);
+auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrame * {
+    VSFrame *frame = AVSF_VPS_API->newVideoFrame(&videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServerCore);
 
     const std::array dstSlices { AVSF_VPS_API->getWritePtr(frame, 0)
-                               , videoFormat.videoInfo.format->numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1)
-                               , videoFormat.videoInfo.format->numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2) };
-    const std::array dstStrides { AVSF_VPS_API->getStride(frame, 0)
-                                , videoFormat.videoInfo.format->numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1)
-                                , videoFormat.videoInfo.format->numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2) };
-    const int rowSize = AVSF_VPS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format->bytesPerSample;
+                               , videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1)
+                               , videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2) };
+    const std::array dstStrides { static_cast<int>(AVSF_VPS_API->getStride(frame, 0))
+                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1))
+                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2)) };
+    const int rowSize = AVSF_VPS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
     CopyFromInput(videoFormat, srcBuffer, dstSlices, dstStrides, rowSize, AVSF_VPS_API->getFrameHeight(frame, 0));
 
@@ -114,7 +110,7 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
 
 auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
     // bmi.biWidth should be "set equal to the surface stride in pixels" according to the doc of BITMAPINFOHEADER
-    int srcMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format->bytesPerSample;
+    int srcMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format.bytesPerSample;
     ASSERT(rowSize <= srcMainPlaneStride);
     ASSERT(height == abs(videoFormat.bmi.biHeight));
     const int srcMainPlaneSize = srcMainPlaneStride * height;
@@ -127,11 +123,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         srcMainPlaneStride = -srcMainPlaneStride;
     }
 
-    vs_bitblt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
-
-    if (videoFormat.pixelFormat->frameServerFormatId >= cmCompat) {
-        return;
-    }
+    vsh::bitblt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
 
     if (const int srcUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio; videoFormat.pixelFormat->areUVPlanesInterleaved) {
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
@@ -139,7 +131,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
         decltype(Deinterleave<0, 0>)* DeinterleaveFunc;
-        if (videoFormat.videoInfo.format->bytesPerSample == 1) {
+        if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
                 DeinterleaveFunc = Deinterleave<2, 1>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
@@ -175,13 +167,13 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
             srcV = srcUVPlane2;
         }
 
-        vs_bitblt(dstSlices[1], dstStrides[1], srcU, srcUVStride, srcUVRowSize, srcUVHeight);
-        vs_bitblt(dstSlices[2], dstStrides[2], srcV, srcUVStride, srcUVRowSize, srcUVHeight);
+        vsh::bitblt(dstSlices[1], dstStrides[1], srcU, srcUVStride, srcUVRowSize, srcUVHeight);
+        vsh::bitblt(dstSlices[2], dstStrides[2], srcV, srcUVStride, srcUVRowSize, srcUVHeight);
     }
 }
 
 auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void {
-    int dstMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format->bytesPerSample;
+    int dstMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format.bytesPerSample;
     ASSERT(rowSize <= dstMainPlaneStride);
     ASSERT(height >= abs(videoFormat.bmi.biHeight));
     const int dstMainPlaneSize = dstMainPlaneStride * height;
@@ -193,11 +185,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         dstMainPlaneStride = -dstMainPlaneStride;
     }
 
-    vs_bitblt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
-
-    if (videoFormat.pixelFormat->frameServerFormatId >= cmCompat) {
-        return;
-    }
+    vsh::bitblt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
 
     if (const int dstUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio; videoFormat.pixelFormat->areUVPlanesInterleaved) {
         BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
@@ -205,7 +193,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         const int dstUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
         decltype(Interleave<0, 0>)* InterleaveFunc;
-        if (videoFormat.videoInfo.format->bytesPerSample == 1) {
+        if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
                 InterleaveFunc = Interleave<2, 1>;
             } else {
@@ -235,8 +223,8 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
             dstV = dstUVPlane2;
         }
 
-        vs_bitblt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
-        vs_bitblt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
+        vsh::bitblt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
+        vsh::bitblt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
     }
 }
 

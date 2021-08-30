@@ -46,10 +46,11 @@
 #ifdef AVSF_AVISYNTH
 #include <avisynth.h>
 #else
-#include <VapourSynth.h>
-#include <VSScript.h>
-#include <VSHelper.h>
+#include <VapourSynth4.h>
+#include <VSScript4.h>
+#include <VSHelper4.h>
 #endif
+#include <VSConstants4.h>
 
 #include <SimpleIni.h>
 

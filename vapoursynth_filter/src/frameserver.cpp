@@ -10,54 +10,32 @@ namespace SynthFilter {
 static constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
 static constexpr const char *VPS_VAR_NAME_DISCONNECT  = "VpsFilterDisconnect";
 
-static auto VS_CC SourceInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) -> void {
-    AVSF_VPS_API->setVideoInfo(&FrameServerCommon::GetInstance().GetSourceVideoInfo(), 1, node);
-}
-
-static auto VS_CC SourceGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrameRef * {
+static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrame * {
     FrameHandler *frameHandler = FrameServerCommon::GetInstance().GetFrameHandler();
     if (frameHandler == nullptr) {
         AVSF_VPS_API->setFilterError("VapourSynth Filter: Source frame is requested before the frame handler is ready", frameCtx);
         return nullptr;
     }
 
-    return AVSF_VPS_API->cloneFrameRef(frameHandler->GetSourceFrame(n));
+    return AVSF_VPS_API->addFrameRef(frameHandler->GetSourceFrame(n));
 }
 
 FrameServerCommon::FrameServerCommon() {
     Environment::GetInstance().Log(L"FrameServerCommon()");
 
-    const int vsInitCounter = vsscript_init();
-    ASSERT(vsInitCounter == 1);
-
-    int vsApiVersion = VAPOURSYNTH_API_VERSION;
-    _vsApi = vsscript_getVSApi2(vsApiVersion);
-    if (_vsApi == nullptr) {
-        // Minimum supported API version R3.5
-        vsApiVersion = 0x30005;
-        _vsApi = vsscript_getVSApi2(vsApiVersion);
+    _vsScriptApi = getVSScriptAPI(VSSCRIPT_API_VERSION);
+    _vsApi = getVapourSynthAPI(VAPOURSYNTH_API_VERSION);
+    if (_vsApi == nullptr || _vsScriptApi == nullptr) {
+        throw "VapourSynth API 4.0 is required";
     }
 
     VSCore *vsCore = _vsApi->createCore(0);
-
     VSCoreInfo coreInfo;
-    if (vsApiVersion == VAPOURSYNTH_API_VERSION) {
-        _vsApi->getCoreInfo2(vsCore, &coreInfo);
-    } else {
-        #pragma warning(suppress: 4996)
-        coreInfo = *_vsApi->getCoreInfo(vsCore);
-    }
+    _vsApi->getCoreInfo(vsCore, &coreInfo);
+    _vsApi->freeCore(vsCore);
 
     _versionString = std::format("VapourSynth R{} API R{}.{}", coreInfo.core, coreInfo.api >> 16, coreInfo.api & 0xffff);
     Environment::GetInstance().Log(L"VapourSynth version: %S", GetVersionString().data());
-
-    _vsApi->freeCore(vsCore);
-}
-
-FrameServerCommon::~FrameServerCommon() {
-    Environment::GetInstance().Log(L"~FrameServerCommon()");
-
-    vsscript_finalize();
 }
 
 auto FrameServerCommon::LinkFrameHandler(FrameHandler *frameHandler) -> void {
@@ -73,12 +51,17 @@ auto FrameServerBase::StopScript() -> void {
 }
 
 FrameServerBase::FrameServerBase() {
-    vsscript_createScript(&_vsScript);
+    _vsScript = AVSF_VPS_SCRIPT_API->createScript(nullptr);
 }
 
 FrameServerBase::~FrameServerBase() {
     StopScript();
-    vsscript_freeScript(_vsScript);
+    AVSF_VPS_API->freeNode(_sourceClip);
+    AVSF_VPS_SCRIPT_API->freeScript(_vsScript);
+}
+
+auto FrameServerBase::GetVsCore() const -> VSCore * {
+    return AVSF_VPS_SCRIPT_API->getCore(_vsScript);
 }
 
 /**
@@ -86,19 +69,16 @@ FrameServerBase::~FrameServerBase() {
  */
 auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     StopScript();
+    AVSF_VPS_API->freeNode(_sourceClip);
 
-    FrameServerCommon::GetInstance()._sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
+    const VSVideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
+    _sourceClip = AVSF_VPS_API->createVideoFilter2("VpsFilter_Source", &sourceVideoInfo, SourceGetFrame, nullptr, fmParallelRequests, nullptr, 0, nullptr, GetVsCore());
+    AVSF_VPS_API->setCacheMode(_sourceClip, 0);
 
-    VSMap *filterInputs = AVSF_VPS_API->createMap();
-    VSMap *filterOutputs = AVSF_VPS_API->createMap();
-
-    AVSF_VPS_API->createFilter(filterInputs, filterOutputs, "VpsFilter_Source", SourceInit, SourceGetFrame, nullptr, fmParallel, nfNoCache, nullptr, vsscript_getCore(_vsScript));
-    VSNodeRef *sourceClip = AVSF_VPS_API->propGetNode(filterOutputs, "clip", 0, nullptr);
-    AVSF_VPS_API->propSetNode(filterInputs, VPS_VAR_NAME_SOURCE_NODE, sourceClip, 0);
-    vsscript_setVariable(_vsScript, filterInputs);
-
-    AVSF_VPS_API->freeMap(filterOutputs);
-    AVSF_VPS_API->freeMap(filterInputs);
+    VSMap *sourceInputs = AVSF_VPS_API->createMap();
+    AVSF_VPS_API->mapSetNode(sourceInputs, VPS_VAR_NAME_SOURCE_NODE, _sourceClip, 0);
+    AVSF_VPS_SCRIPT_API->setVariables(_vsScript, sourceInputs);
+    AVSF_VPS_API->freeMap(sourceInputs);
 
     _errorString.clear();
 
@@ -107,37 +87,35 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     if (!FrameServerCommon::GetInstance()._scriptPath.empty()) {
         const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath.native());
 
-        if (vsscript_evaluateFile(&_vsScript, utf8Filename.c_str(), efSetWorkingDir) == 0) {
-            _scriptClip = vsscript_getOutput(_vsScript, 0);
+        if (AVSF_VPS_SCRIPT_API->evaluateFile(_vsScript, utf8Filename.c_str()) == 0) {
+            _scriptClip = AVSF_VPS_SCRIPT_API->getOutputNode(_vsScript, 0);
 
             VSMap *scriptOutputs = AVSF_VPS_API->createMap();
-            vsscript_getVariable(_vsScript, VPS_VAR_NAME_DISCONNECT, scriptOutputs);
-            if (AVSF_VPS_API->propNumElements(scriptOutputs, VPS_VAR_NAME_DISCONNECT) == 1) {
-                toDisconnect = AVSF_VPS_API->propGetInt(scriptOutputs, VPS_VAR_NAME_DISCONNECT, 0, nullptr) != 0;
+            AVSF_VPS_SCRIPT_API->getVariable(_vsScript, VPS_VAR_NAME_DISCONNECT, scriptOutputs);
+            if (AVSF_VPS_API->mapNumElements(scriptOutputs, VPS_VAR_NAME_DISCONNECT) == 1) {
+                toDisconnect = AVSF_VPS_API->mapGetInt(scriptOutputs, VPS_VAR_NAME_DISCONNECT, 0, nullptr) != 0;
             }
             AVSF_VPS_API->freeMap(scriptOutputs);
         } else {
-            _errorString = vsscript_getError(_vsScript);
+            _errorString = AVSF_VPS_SCRIPT_API->getError(_vsScript);
         }
     }
 
     if (_errorString.empty()) {
         if (_scriptClip == nullptr) {
-            _scriptClip = sourceClip;
+            _scriptClip = _sourceClip;
+            AVSF_VPS_API->addNodeRef(_sourceClip);
         }
     } else {
         const std::string errorScript = std::format(
 "from vapoursynth import core\n\
 core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorString);
-        if (vsscript_evaluateScript(&_vsScript, errorScript.c_str(), "VpsFilter_Error", efSetWorkingDir) == 0) {
-            _scriptClip = vsscript_getOutput(_vsScript, 0);
+        if (AVSF_VPS_SCRIPT_API->evaluateBuffer(_vsScript, errorScript.c_str(), "VpsFilter_Error") == 0) {
+            _scriptClip = AVSF_VPS_SCRIPT_API->getOutputNode(_vsScript, 0);
         } else {
-            _scriptClip = sourceClip;
+            _scriptClip = _sourceClip;
+            AVSF_VPS_API->addNodeRef(_sourceClip);
         }
-    }
-
-    if (sourceClip != _scriptClip) {
-        AVSF_VPS_API->freeNode(sourceClip);
     }
 
     if (toDisconnect && !ignoreDisconnect) {
@@ -145,8 +123,8 @@ core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorStr
     }
 
     Environment::GetInstance().Log(L"New script clip: %p", _scriptClip);
-    _scriptVideoInfo = *AVSF_VPS_API->getVideoInfo(_scriptClip);
-    _scriptAvgFrameDuration = llMulDiv(_scriptVideoInfo.fpsDen, UNITS, _scriptVideoInfo.fpsNum, 0);
+    const VSVideoInfo *scriptVideoInfo = AVSF_VPS_API->getVideoInfo(_scriptClip);
+    _scriptAvgFrameDuration = llMulDiv(scriptVideoInfo->fpsDen, UNITS, scriptVideoInfo->fpsNum, 0);
 
     return true;
 }
@@ -156,18 +134,15 @@ MainFrameServer::~MainFrameServer() {
 }
 
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    Environment::GetInstance().Log(L"ReloadScript from main instance");
+    Environment::GetInstance().Log(L"ReloadScript from main frameserver");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
-        const VSVideoInfo &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
-        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo.fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo.fpsDen, 0));
-        _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo.fpsDen, UNITS, sourceVideoInfo.fpsNum, 0);
+        const VSVideoInfo *sourceVideoInfo = AVSF_VPS_API->getVideoInfo(_sourceClip);
+        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo->fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo->fpsDen, 0));
+        _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo->fpsDen, UNITS, sourceVideoInfo->fpsNum, 0);
 
         AVSF_VPS_API->freeFrame(_sourceDrainFrame);
-        _sourceDrainFrame = AVSF_VPS_API->newVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo.format,
-                                                       FrameServerCommon::GetInstance()._sourceVideoInfo.width,
-                                                       FrameServerCommon::GetInstance()._sourceVideoInfo.height,
-                                                       nullptr, vsscript_getCore(_vsScript));
+        _sourceDrainFrame = AVSF_VPS_API->newVideoFrame(&sourceVideoInfo->format, sourceVideoInfo->width, sourceVideoInfo->height, nullptr, GetVsCore());
 
         return true;
     }
@@ -176,15 +151,25 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 }
 
 auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    Environment::GetInstance().Log(L"ReloadScript from checking instance");
+    Environment::GetInstance().Log(L"ReloadScript from auxiliary frameserver");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
+        _scriptVideoInfo = *AVSF_VPS_API->getVideoInfo(_scriptClip);
         StopScript();
 
         return true;
     }
 
     return false;
+}
+
+auto AuxFrameServer::GetScriptPixelType() const -> uint32_t {
+    return AVSF_VPS_API->queryVideoFormatID(_scriptVideoInfo.format.colorFamily,
+                                            _scriptVideoInfo.format.sampleType,
+                                            _scriptVideoInfo.format.bitsPerSample,
+                                            _scriptVideoInfo.format.subSamplingW,
+                                            _scriptVideoInfo.format.subSamplingH,
+                                            GetVsCore());
 }
 
 }

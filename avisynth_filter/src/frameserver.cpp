@@ -141,7 +141,7 @@ MainFrameServer::~MainFrameServer() {
 }
 
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    Environment::GetInstance().Log(L"ReloadScript from main instance");
+    Environment::GetInstance().Log(L"ReloadScript from main frameserver");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         const VideoInfo &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
@@ -160,7 +160,7 @@ auto MainFrameServer::GetFrame(int frameNb) const -> PVideoFrame {
 }
 
 auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    Environment::GetInstance().Log(L"ReloadScript from checking instance");
+    Environment::GetInstance().Log(L"ReloadScript from auxiliary frameserver");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         StopScript();
