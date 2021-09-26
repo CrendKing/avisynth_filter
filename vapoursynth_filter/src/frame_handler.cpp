@@ -130,7 +130,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
      */
 
     // use map.lower_bound() in case the exact frame is removed by the script
-    std::array<decltype(_sourceFrames)::const_iterator, NUM_SRC_FRAMES_PER_PROCESSING> processSourceFrameIters = { _sourceFrames.lower_bound(_nextProcessSourceFrameNb) };
+    std::array<decltype(_sourceFrames)::const_iterator, NUM_SRC_FRAMES_PER_PROCESSING> processSourceFrameIters { _sourceFrames.lower_bound(_nextProcessSourceFrameNb) };
 
     {
         const std::shared_lock sharedSourceLock(_sourceMutex);

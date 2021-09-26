@@ -54,7 +54,7 @@ auto RemoteControl::Run() -> void {
     SetThreadDescription(GetCurrentThread(), L"CSynthFilter Remote Control");
 #endif
 
-    WNDCLASSA wc = {};
+    WNDCLASSA wc {};
     wc.lpfnWndProc = &RemoteControl::WndProc;
     wc.hInstance = g_hInst;
     wc.lpszClassName = API_WND_CLASS_NAME;

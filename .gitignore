@@ -364,7 +364,7 @@ FodyWeavers.xsd
 
 /wiki/
 /dep_*/
-release*.bat
+release*.cmd
 *.zip
 *.sln.startup.json
 /filter_common/src/git_hash.h

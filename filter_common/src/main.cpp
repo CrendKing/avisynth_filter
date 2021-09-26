@@ -19,7 +19,7 @@
 
 namespace SynthFilter {
 
-static REGFILTERPINS REG_PINS[] = {
+static REGFILTERPINS REG_PINS[] {
     { .strName = nullptr                              // pin name (obsolete)
     , .bRendered = FALSE                              // is pin rendered?
     , .bOutput = FALSE                                // is this output pin?
@@ -43,7 +43,7 @@ static REGFILTERPINS REG_PINS[] = {
     },
 };
 
-static constexpr AMOVIESETUP_FILTER REG_FILTER = {
+static constexpr AMOVIESETUP_FILTER REG_FILTER {
     .clsID = &__uuidof(CSynthFilter),                 // filter CLSID
     .strName = FILTER_NAME_FULL,                      // filter name
     .dwMerit = MERIT_DO_NOT_USE + 1,                  // filter merit
@@ -84,7 +84,7 @@ static auto RegisterFilter() -> HRESULT {
 
 }
 
-CFactoryTemplate g_Templates[] = {
+CFactoryTemplate g_Templates[] {
     { .m_Name = FILTER_NAME_FULL
     , .m_ClsID = &__uuidof(SynthFilter::CSynthFilter)
     , .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilter>

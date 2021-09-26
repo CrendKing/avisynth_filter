@@ -33,7 +33,7 @@ private:
     const char *_versionString;
     bool _isFramePropsSupported = false;
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
-    VideoInfo _sourceVideoInfo = {};
+    VideoInfo _sourceVideoInfo {};
     PClip _sourceClip;
 };
 
@@ -48,7 +48,7 @@ protected:
 
     IScriptEnvironment *_env = FrameServerCommon::GetInstance().CreateEnv();
     PClip _scriptClip = nullptr;
-    VideoInfo _scriptVideoInfo = {};
+    VideoInfo _scriptVideoInfo {};
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
 };

@@ -92,8 +92,8 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     if (!FrameServerCommon::GetInstance()._scriptPath.empty()) {
         const std::string utf8Filename = ConvertWideToUtf8(FrameServerCommon::GetInstance()._scriptPath.native());
-        const std::array<AVSValue, 2> args = { utf8Filename.c_str(), true };
-        const std::array<char *const, args.size()> argNames = { nullptr, "utf8" };
+        const std::array<AVSValue, 2> args { utf8Filename.c_str(), true };
+        const std::array<char *const, args.size()> argNames { nullptr, "utf8" };
 
         try {
             invokeResult = _env->Invoke("Import", AVSValue(args.data(), static_cast<int>(args.size())), argNames.data());

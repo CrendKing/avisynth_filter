@@ -12,7 +12,7 @@ Environment::Environment()
     : _ini(true) {
     _wsetlocale(LC_ALL, L".UTF8");
 
-    std::array<WCHAR, MAX_PATH> processPathStr = {};
+    std::array<WCHAR, MAX_PATH> processPathStr {};
     std::filesystem::path processName;
 
     if (GetModuleFileNameW(nullptr, processPathStr.data(), static_cast<DWORD>(processPathStr.size())) != 0) {
