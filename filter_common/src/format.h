@@ -12,15 +12,18 @@ class FrameServerBase;
 class Format {
 #ifdef AVSF_AVISYNTH
     using FrameServerCore = void *;
-    using FrameType = PVideoFrame;
-    using ConstFrameType = const PVideoFrame &;
+    using OutputFrameType = PVideoFrame;
     using VideoInfoType = VideoInfo;
 #else
     using FrameServerCore = VSCore *;
-    using FrameType = VSFrame *;
-    using ConstFrameType = const VSFrame *;
+    using OutputFrameType = VSFrame *;
     using VideoInfoType = VSVideoInfo;
 #endif
+    // add const reference or const pointer to the type
+    using InputFrameType = std::conditional_t<std::is_pointer_v<OutputFrameType>,
+        std::add_pointer_t<std::add_const_t<std::remove_pointer_t<OutputFrameType>>>,
+        std::add_lvalue_reference_t<std::add_const_t<OutputFrameType>>
+    >;
 
 public:
     struct PixelFormat {
@@ -90,8 +93,8 @@ public:
     }
 
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat;
-    static auto WriteSample(const VideoFormat &videoFormat, ConstFrameType srcFrame, BYTE *dstBuffer) -> void;
-    static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> FrameType;
+    static auto WriteSample(const VideoFormat &videoFormat, InputFrameType srcFrame, BYTE *dstBuffer) -> void;
+    static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> OutputFrameType;
     static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
     static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
 
