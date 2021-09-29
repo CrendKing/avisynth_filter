@@ -2,26 +2,32 @@
 
 #pragma once
 
+#include "pch.h"
+
 
 namespace SynthFilter {
 
 template <typename T>
-class RefCountedSingleton {
+class OnDemandSingleton {
 public:
     static constexpr auto GetInstance() -> T & {
         return *_instance;
     }
 
     static constexpr auto Create() -> void {
-        _instance = std::make_unique<T>();
+        T *expected = nullptr;
+        if (!_instance.compare_exchange_strong(expected, new T)) {
+            throw L"Attempt to create duplicate instances for singleton";
+        }
     }
 
     static constexpr auto Destroy() -> void {
-        _instance.reset();
+        delete _instance;
+        _instance = nullptr;
     }
 
 private:
-    static inline std::unique_ptr<T> _instance;
+    static inline std::atomic<T *> _instance = nullptr;
 };
 
 }

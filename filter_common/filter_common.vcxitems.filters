@@ -51,7 +51,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_status.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\rc_singleton.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\singleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\registry.h">

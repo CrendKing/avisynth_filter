@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include "rc_singleton.h"
+#include "singleton.h"
 #include "registry.h"
 
 
 namespace SynthFilter {
 
-class Environment : public RefCountedSingleton<Environment> {
+class Environment : public OnDemandSingleton<Environment> {
 public:
     Environment();
     ~Environment();

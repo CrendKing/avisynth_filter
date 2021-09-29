@@ -5,12 +5,12 @@
 #include "environment.h"
 #include "format.h"
 #include "frame_handler.h"
-#include "rc_singleton.h"
+#include "singleton.h"
 
 
 namespace SynthFilter {
 
-class FrameServerCommon : public RefCountedSingleton<FrameServerCommon> {
+class FrameServerCommon : public OnDemandSingleton<FrameServerCommon> {
     friend class FrameServerBase;
     friend class MainFrameServer;
     friend class AuxFrameServer;
@@ -62,7 +62,7 @@ protected:
 
 class MainFrameServer
     : public FrameServerBase
-    , public RefCountedSingleton<MainFrameServer> {
+    , public OnDemandSingleton<MainFrameServer> {
 public:
     ~MainFrameServer();
 
@@ -85,7 +85,7 @@ private:
 
 class AuxFrameServer
     : public FrameServerBase
-    , public RefCountedSingleton<AuxFrameServer> {
+    , public OnDemandSingleton<AuxFrameServer> {
 public:
     CTOR_WITHOUT_COPYING(AuxFrameServer)
 

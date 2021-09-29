@@ -36,7 +36,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_settings.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_status.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\rc_singleton.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\singleton.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\registry.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\remote_control.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\resource.h" />
