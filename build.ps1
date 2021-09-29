@@ -1,4 +1,4 @@
-$vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -latest -property installationPath
+$vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -utf8 -property installationPath -latest
 Import-Module "${vsPath}\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
 Enter-VsDevShell -VsInstallPath $vsPath -DevCmdArguments "-arch=amd64 -host_arch=amd64 -no_logo" -SkipAutomaticLocation
 
@@ -26,7 +26,7 @@ if (-Not (Test-Path $workingDir)) {
     Remove-Item -Recurse -Force 'AviSynthPlus', '*.7z'
 }
 
-$workingDir = "${PSScriptRoot}\dep_vapoursynth_plus"
+$workingDir = "${PSScriptRoot}\dep_vapoursynth"
 if (-Not (Test-Path $workingDir)) {
     mkdir $workingDir
     Set-Location $workingDir
