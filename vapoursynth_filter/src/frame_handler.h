@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "frameserver.h"
 #include "hdr.h"
 
 
@@ -31,9 +32,7 @@ public:
 
 private:
     struct SourceFrameInfo {
-        ~SourceFrameInfo();
-
-        VSFrame *frame;
+        AutoReleaseVSFrame autoFrame;
         REFERENCE_TIME startTime;
         std::unique_ptr<HDRSideData> hdrSideData;
     };
@@ -56,7 +55,7 @@ private:
     CSynthFilter &_filter;
 
     std::map<int, SourceFrameInfo> _sourceFrames;
-    std::map<int, const VSFrame *> _outputFrames;
+    std::map<int, AutoReleaseVSFrame> _outputFrames;
 
     mutable std::shared_mutex _sourceMutex;
     std::shared_mutex _outputMutex;

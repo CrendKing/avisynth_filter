@@ -4,11 +4,26 @@
 
 #include "environment.h"
 #include "format.h"
-#include "frame_handler.h"
 #include "singleton.h"
 
 
 namespace SynthFilter {
+
+class AutoReleaseVSFrame {
+public:
+    AutoReleaseVSFrame() = default;
+    AutoReleaseVSFrame(VSFrame *newFrame);
+    ~AutoReleaseVSFrame();
+
+    auto operator=(VSFrame *other) -> const AutoReleaseVSFrame &;
+
+    VSFrame *frame = nullptr;
+
+private:
+    auto Destroy() -> void;
+};
+
+class FrameHandler;
 
 class FrameServerCommon : public OnDemandSingleton<FrameServerCommon> {
     friend class FrameServerBase;
@@ -64,21 +79,19 @@ class MainFrameServer
     : public FrameServerBase
     , public OnDemandSingleton<MainFrameServer> {
 public:
-    ~MainFrameServer();
-
     CTOR_WITHOUT_COPYING(MainFrameServer)
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
     constexpr auto GetScriptClip() const -> VSNode * { return _scriptClip; }
-    constexpr auto GetSourceDrainFrame() const -> const VSFrame * { return _sourceDrainFrame; }
+    constexpr auto GetSourceDrainFrame() const -> const VSFrame * { return _sourceDrainAutoFrame.frame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
     constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration; }
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-    const VSFrame *_sourceDrainFrame = nullptr;
+    AutoReleaseVSFrame _sourceDrainAutoFrame;
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
 };

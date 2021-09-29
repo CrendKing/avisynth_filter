@@ -147,7 +147,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     }
     _nextProcessSourceFrameNb = processSourceFrameIters[1]->first;
 
-    frameProps = AVSF_VPS_API->getFramePropertiesRW(processSourceFrameIters[0]->second.frame);
+    frameProps = AVSF_VPS_API->getFramePropertiesRW(processSourceFrameIters[0]->second.autoFrame.frame);
     REFERENCE_TIME frameDurationNum = processSourceFrameIters[1]->second.startTime - processSourceFrameIters[0]->second.startTime;
     REFERENCE_TIME frameDurationDen = UNITS;
     CoprimeIntegers(frameDurationNum, frameDurationDen);
@@ -193,7 +193,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
             return false;
         }
 
-        const VSMap *frameProps = AVSF_VPS_API->getFramePropertiesRO(iter->second.frame);
+        const VSMap *frameProps = AVSF_VPS_API->getFramePropertiesRO(iter->second.autoFrame.frame);
         return AVSF_VPS_API->mapNumElements(frameProps, FRAME_PROP_NAME_DURATION_NUM) > 0 && AVSF_VPS_API->mapNumElements(frameProps, FRAME_PROP_NAME_DURATION_DEN) > 0;
     });
 
@@ -204,7 +204,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
 
-    return iter->second.frame;
+    return iter->second.autoFrame.frame;
 }
 
 auto FrameHandler::BeginFlush() -> void {
@@ -237,7 +237,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
         _flushOutputSampleCv.wait(sharedOutputLock, [this]() {
             return std::ranges::all_of(_outputFrames | std::views::values, [](const VSFrame *frame) {
                 return frame != nullptr;
-            });
+            }, &AutoReleaseVSFrame::frame);
         });
     }
 
@@ -247,11 +247,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
 
     // only the current thread is active here, no need to lock
 
-    for (const VSFrame *frame : _outputFrames | std::views::values) {
-        AVSF_VPS_API->freeFrame(frame);
-    }
     _outputFrames.clear();
-
     _sourceFrames.clear();
     ResetInput();
 
@@ -259,10 +255,6 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     _isFlushing.notify_all();
 
     Environment::GetInstance().Log(L"FrameHandler finish EndFlush()");
-}
-
-FrameHandler::SourceFrameInfo::~SourceFrameInfo() {
-    AVSF_VPS_API->freeFrame(frame);
 }
 
 auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrame *f, int n, VSNode *node, const char *errorMsg) -> void {
@@ -287,7 +279,7 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrame *f, i
         {
             std::shared_lock sharedOutputLock(frameHandler->_outputMutex);
 
-            frameHandler->_outputFrames[n] = f;
+            frameHandler->_outputFrames[n] = const_cast<VSFrame *>(f);
         }
         frameHandler->_deliverSampleCv.notify_all();
     }
@@ -446,7 +438,7 @@ auto FrameHandler::WorkerProc() -> void {
                     return false;
                 }
 
-                return iter->second != nullptr;
+                return iter->second.frame != nullptr;
             });
         }
 
@@ -454,14 +446,14 @@ auto FrameHandler::WorkerProc() -> void {
             continue;
         }
 
-        const VSMap *frameProps = AVSF_VPS_API->getFramePropertiesRO(iter->second);
+        const VSMap *frameProps = AVSF_VPS_API->getFramePropertiesRO(iter->second.frame);
         int propGetError;
         const int sourceFrameNb = static_cast<int>(AVSF_VPS_API->mapGetInt(frameProps, FRAME_PROP_NAME_SOURCE_FRAME_NB, 0, &propGetError));
 
         _lastUsedSourceFrameNb = sourceFrameNb;
         _addInputSampleCv.notify_all();
 
-        if (ATL::CComPtr<IMediaSample> outSample; PrepareOutputSample(outSample, iter->first, iter->second, sourceFrameNb)) {
+        if (ATL::CComPtr<IMediaSample> outSample; PrepareOutputSample(outSample, iter->first, iter->second.frame, sourceFrameNb)) {
             _filter.m_pOutput->Deliver(outSample);
             RefreshDeliveryFrameRates(iter->first);
 
@@ -471,7 +463,6 @@ auto FrameHandler::WorkerProc() -> void {
         {
             std::unique_lock uniqueOutputLock(_outputMutex);
 
-            AVSF_VPS_API->freeFrame(iter->second);
             _outputFrames.erase(iter);
         }
 

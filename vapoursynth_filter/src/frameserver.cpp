@@ -3,6 +3,7 @@
 #include "pch.h"
 #include "frameserver.h"
 #include "api.h"
+#include "frame_handler.h"
 
 
 namespace SynthFilter {
@@ -18,6 +19,24 @@ static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData
     }
 
     return AVSF_VPS_API->addFrameRef(frameHandler->GetSourceFrame(n));
+}
+
+AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame) : frame(newFrame) {
+}
+
+AutoReleaseVSFrame::~AutoReleaseVSFrame() {
+    Destroy();
+}
+
+auto AutoReleaseVSFrame::operator=(VSFrame *other) -> const AutoReleaseVSFrame & {
+    Destroy();
+    frame = other;
+    return *this;
+}
+
+auto AutoReleaseVSFrame::Destroy() -> void {
+    AVSF_VPS_API->freeFrame(frame);
+    frame = nullptr;
 }
 
 FrameServerCommon::FrameServerCommon() {
@@ -129,10 +148,6 @@ core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorStr
     return true;
 }
 
-MainFrameServer::~MainFrameServer() {
-    AVSF_VPS_API->freeFrame(_sourceDrainFrame);
-}
-
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     Environment::GetInstance().Log(L"ReloadScript from main frameserver");
 
@@ -141,8 +156,7 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
         _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo->fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo->fpsDen, 0));
         _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo->fpsDen, UNITS, sourceVideoInfo->fpsNum, 0);
 
-        AVSF_VPS_API->freeFrame(_sourceDrainFrame);
-        _sourceDrainFrame = AVSF_VPS_API->newVideoFrame(&sourceVideoInfo->format, sourceVideoInfo->width, sourceVideoInfo->height, nullptr, GetVsCore());
+        _sourceDrainAutoFrame = AVSF_VPS_API->newVideoFrame(&sourceVideoInfo->format, sourceVideoInfo->width, sourceVideoInfo->height, nullptr, GetVsCore());
 
         return true;
     }
