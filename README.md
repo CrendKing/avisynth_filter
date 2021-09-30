@@ -29,12 +29,12 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 
 * Before anything, install AviSynth+ or VapourSynth. Make sure the frame server's dll files are reachable either in the directory of the video player, system directories or directories from the `PATH` environment variable.
 * Unpack the archive.
-* Run install.bat to register the filter .ax files.
+* Run install.cmd to register the filter .ax files.
 * Enable `AviSynth Filter` or `VapourSynth Filter` in video player.
 
 ## Uninstall
 
-Run uninstall.bat to unregister the filters and clean up user data.
+Run uninstall.cmd to unregister the filters and clean up user data.
 
 ## Usage
 

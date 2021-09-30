@@ -8,7 +8,7 @@ namespace SynthFilter {
 auto ConvertWideToUtf8(std::wstring_view wideString) -> std::string;
 auto ConvertUtf8ToWide(std::string_view utf8String) -> std::wstring;
 auto DoubleToString(double num, int precision) -> std::wstring;
-auto JoinStrings(const std::vector<std::wstring> &input, std::wstring_view delimiter) -> std::wstring;
+auto JoinStrings(const std::vector<std::wstring> &inputs, std::wstring_view delimiter) -> std::wstring;
 auto ReplaceSubstr(std::string &str, std::string_view from, std::string_view to) -> std::string &;
 auto CoprimeIntegers(int64_t &a, int64_t &b) -> void;
 

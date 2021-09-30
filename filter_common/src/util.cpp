@@ -25,11 +25,14 @@ auto DoubleToString(double num, int precision) -> std::wstring {
     return str.substr(0, str.find(L'.') + 1 + precision);
 }
 
-auto JoinStrings(const std::vector<std::wstring> &input, std::wstring_view delimiter) -> std::wstring {
-    return std::accumulate(input.begin(), input.end(), std::wstring(),
-                           [&delimiter](std::wstring_view a, std::wstring_view b) -> std::wstring {
-                               return std::format(L"{}{}{}", a, a.empty() ? L"" : delimiter, b);
-                           });
+auto JoinStrings(const std::vector<std::wstring> &inputs, std::wstring_view delimiter) -> std::wstring {
+    std::wstring ret;
+
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        ret.append(i == 0 ? L"" : delimiter).append(inputs[i]);
+    }
+
+    return ret;
 }
 
 auto ReplaceSubstr(std::string &str, std::string_view from, std::string_view to) -> std::string & {
