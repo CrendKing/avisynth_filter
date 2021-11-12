@@ -1,8 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
-#include "format.h"
 #include "environment.h"
+#include "format.h"
 
 
 namespace SynthFilter {

@@ -9,10 +9,7 @@ namespace SynthFilter {
 
 class CSynthFilterInputPin : public CTransformInputPin {
 public:
-    CSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
-                         __inout CTransformFilter *pTransformFilter,
-                         __inout HRESULT *phr,
-                         __in_opt LPCWSTR pName);
+    CSynthFilterInputPin(__in_opt LPCTSTR pObjectName, __inout CTransformFilter *pTransformFilter, __inout HRESULT *phr, __in_opt LPCWSTR pName);
 
     DISABLE_COPYING(CSynthFilterInputPin)
 

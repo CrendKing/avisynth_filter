@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "remote_control.h"
+
 #include "constants.h"
 #include "filter.h"
 
@@ -9,8 +9,7 @@
 namespace SynthFilter {
 
 RemoteControl::RemoteControl(CSynthFilter &filter)
-    : _filter(filter) {
-}
+    : _filter(filter) {}
 
 RemoteControl::~RemoteControl() {
     if (_hWnd != nullptr) {
@@ -103,8 +102,13 @@ auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, std::strin
     }
 
     const COPYDATASTRUCT copyData { .dwData = msgId, .cbData = static_cast<DWORD>(data.size()), .lpData = const_cast<char *>(data.data()) };
-    SendMessageTimeoutA(hReceiverWindow, WM_COPYDATA, reinterpret_cast<WPARAM>(_hWnd.load()), reinterpret_cast<LPARAM>(&copyData),
-                        SMTO_NORMAL | SMTO_ABORTIFHUNG, REMOTE_CONTROL_SMTO_TIMEOUT_MS, nullptr);
+    SendMessageTimeoutA(hReceiverWindow,
+                        WM_COPYDATA,
+                        reinterpret_cast<WPARAM>(_hWnd.load()),
+                        reinterpret_cast<LPARAM>(&copyData),
+                        SMTO_NORMAL | SMTO_ABORTIFHUNG,
+                        REMOTE_CONTROL_SMTO_TIMEOUT_MS,
+                        nullptr);
 }
 
 auto RemoteControl::SendString(HWND hReceiverWindow, ULONG_PTR msgId, std::wstring_view data) const -> void {

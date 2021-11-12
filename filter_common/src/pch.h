@@ -28,7 +28,6 @@
 #define _ATL_NO_AUTOMATIC_NAMESPACE
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
 #include <atlbase.h>
-
 #include <cguid.h>
 #include <commctrl.h>
 #include <commdlg.h>
@@ -40,19 +39,18 @@
 #include <shellapi.h>
 
 // DirectShow BaseClasses
-#include <streams.h>
 #include <dvdmedia.h>
+#include <streams.h>
 
 #ifdef AVSF_AVISYNTH
-#include <avisynth.h>
+    #include <avisynth.h>
 #else
-#include <VapourSynth4.h>
-#include <VSScript4.h>
-#include <VSHelper4.h>
+    #include <VapourSynth4.h>
+    #include <VSHelper4.h>
+    #include <VSScript4.h>
 #endif
-#include <VSConstants4.h>
-
 #include <SimpleIni.h>
+#include <VSConstants4.h>
 
 #pragma warning(pop)
 
@@ -61,10 +59,10 @@
 #pragma warning(push)
 #pragma warning(disable: 26495 26812)
 
-#define DISABLE_COPYING(T)              \
-    T(const T &) = delete;              \
+#define DISABLE_COPYING(T) \
+    T(const T &) = delete; \
     T &operator=(const T &) = delete;
 
-#define CTOR_WITHOUT_COPYING(T)         \
-    T() = default;                      \
+#define CTOR_WITHOUT_COPYING(T) \
+    T() = default;              \
     DISABLE_COPYING(T)

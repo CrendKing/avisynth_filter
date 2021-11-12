@@ -1,20 +1,22 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "input_pin.h"
+
 #include "allocator.h"
 
 
 namespace SynthFilter {
 
-#define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
+#define CheckHr(expr)     \
+    {                     \
+        hr = (expr);      \
+        if (FAILED(hr)) { \
+            return hr;    \
+        }                 \
+    }
 
-CSynthFilterInputPin::CSynthFilterInputPin(__in_opt LPCTSTR pObjectName,
-                                           __inout CTransformFilter *pTransformFilter,
-                                           __inout HRESULT *phr,
-                                           __in_opt LPCWSTR pName)
-    : CTransformInputPin(pObjectName, pTransformFilter, phr, pName) {
-}
+CSynthFilterInputPin::CSynthFilterInputPin(__in_opt LPCTSTR pObjectName, __inout CTransformFilter *pTransformFilter, __inout HRESULT *phr, __in_opt LPCWSTR pName)
+    : CTransformInputPin(pObjectName, pTransformFilter, phr, pName) {}
 
 auto STDMETHODCALLTYPE CSynthFilterInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT {
     HRESULT hr;

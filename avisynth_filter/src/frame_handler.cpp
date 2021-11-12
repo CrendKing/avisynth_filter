@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "frame_handler.h"
+
 #include "constants.h"
 #include "filter.h"
 
@@ -48,8 +48,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
         if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
             inputSampleStartTime <= lastSampleStartTime) {
-            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lld last %10lld",
-                                           inputSampleStartTime, lastSampleStartTime);
+            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
             return S_FALSE;
         }
     }
@@ -122,7 +121,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     _newSourceFrameCv.notify_all();
 
     Environment::GetInstance().Log(L"Stored source frame: %6d at %10lld ~ %10lld duration(literal) %10lld max_requested %6d extra_buffer %6d",
-                                   _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _maxRequestedFrameNb.load(), _extraSourceBuffer);
+                                   _nextSourceFrameNb,
+                                   inputSampleStartTime,
+                                   inputSampleStopTime,
+                                   inputSampleStopTime - inputSampleStartTime,
+                                   _maxRequestedFrameNb.load(),
+                                   _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
 
@@ -228,7 +232,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
         _notifyChangedOutputMediaType = false;
 
         Environment::GetInstance().Log(L"New output format: name %5s, width %5ld, height %5ld",
-                                       _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
+                                       _filter._outputVideoFormat.pixelFormat->name,
+                                       _filter._outputVideoFormat.bmi.biWidth,
+                                       _filter._outputVideoFormat.bmi.biHeight);
     }
 
     if (FAILED(outSample->SetTime(&startTime, &stopTime))) {
@@ -382,7 +388,11 @@ auto FrameHandler::WorkerProc() -> void {
             }
 
             Environment::GetInstance().Log(L"Processing output frame %6d for source frame %6d at %10lld ~ %10lld duration %10lld",
-                                           _nextOutputFrameNb, processSourceFrameIters[0]->first, outputStartTime, outputStopTime, outputStopTime - outputStartTime);
+                                           _nextOutputFrameNb,
+                                           processSourceFrameIters[0]->first,
+                                           outputStartTime,
+                                           outputStopTime,
+                                           outputStopTime - outputStartTime);
 
             RefreshOutputFrameRates(_nextOutputFrameNb);
 

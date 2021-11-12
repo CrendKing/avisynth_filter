@@ -1,6 +1,5 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "constants.h"
 #include "filter.h"
 #include "prop_settings.h"
@@ -12,35 +11,37 @@
 #pragma comment(lib, "winmm")
 
 #ifdef AVSF_AVISYNTH
-#pragma comment(lib, "AviSynth")
+    #pragma comment(lib, "AviSynth")
 #else
-#pragma comment(lib, "VapourSynth")
-#pragma comment(lib, "VSScript")
+    #pragma comment(lib, "VapourSynth")
+    #pragma comment(lib, "VSScript")
 #endif
 
 namespace SynthFilter {
 
 static REGFILTERPINS REG_PINS[] {
-    { .strName = nullptr                              // pin name (obsolete)
-    , .bRendered = FALSE                              // is pin rendered?
-    , .bOutput = FALSE                                // is this output pin?
-    , .bZero = FALSE                                  // Can the filter create zero instances?
-    , .bMany = FALSE                                  // Does the filter create multiple instances?
-    , .clsConnectsToFilter = &CLSID_NULL              // filter CLSID the pin connects to (obsolete)
-    , .strConnectsToPin = nullptr                     // pin name the pin connects to (obsolete)
-    , .nMediaTypes = 0                                // pin media type count (to be filled in RegisterFilter())
-    , .lpMediaType = nullptr                          // pin media types (to be filled in RegisterFilter())
+    {
+        .strName = nullptr,                  // pin name (obsolete)
+        .bRendered = FALSE,                  // is pin rendered?
+        .bOutput = FALSE,                    // is this output pin?
+        .bZero = FALSE,                      // Can the filter create zero instances?
+        .bMany = FALSE,                      // Does the filter create multiple instances?
+        .clsConnectsToFilter = &CLSID_NULL,  // filter CLSID the pin connects to (obsolete)
+        .strConnectsToPin = nullptr,         // pin name the pin connects to (obsolete)
+        .nMediaTypes = 0,                    // pin media type count (to be filled in RegisterFilter())
+        .lpMediaType = nullptr,              // pin media types (to be filled in RegisterFilter())
     },
 
-    { .strName = nullptr
-    , .bRendered = FALSE
-    , .bOutput = TRUE
-    , .bZero = FALSE
-    , .bMany = FALSE
-    , .clsConnectsToFilter = &CLSID_NULL
-    , .strConnectsToPin = nullptr
-    , .nMediaTypes = 0
-    , .lpMediaType = nullptr
+    {
+        .strName = nullptr,
+        .bRendered = FALSE,
+        .bOutput = TRUE,
+        .bZero = FALSE,
+        .bMany = FALSE,
+        .clsConnectsToFilter = &CLSID_NULL,
+        .strConnectsToPin = nullptr,
+        .nMediaTypes = 0,
+        .lpMediaType = nullptr,
     },
 };
 
@@ -49,7 +50,7 @@ static constexpr AMOVIESETUP_FILTER REG_FILTER {
     .strName = FILTER_NAME_FULL,                      // filter name
     .dwMerit = MERIT_DO_NOT_USE + 1,                  // filter merit
     .nPins = sizeof(REG_PINS) / sizeof(REG_PINS[0]),  // pin count
-    .lpPin = REG_PINS                                 // pin information
+    .lpPin = REG_PINS,                                // pin information
 };
 
 template <typename T>
@@ -86,21 +87,24 @@ static auto RegisterFilter() -> HRESULT {
 }
 
 CFactoryTemplate g_Templates[] {
-    { .m_Name = FILTER_NAME_FULL
-    , .m_ClsID = &__uuidof(SynthFilter::CSynthFilter)
-    , .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilter>
-    , .m_lpfnInit = nullptr
-    , .m_pAMovieSetup_Filter = &SynthFilter::REG_FILTER
+    {
+        .m_Name = FILTER_NAME_FULL,
+        .m_ClsID = &__uuidof(SynthFilter::CSynthFilter),
+        .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilter>,
+        .m_lpfnInit = nullptr,
+        .m_pAMovieSetup_Filter = &SynthFilter::REG_FILTER,
     },
 
-    { .m_Name = SETTINGS_NAME_FULL
-    , .m_ClsID = &__uuidof(SynthFilter::CSynthFilterPropSettings)
-    , .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilterPropSettings>
+    {
+        .m_Name = SETTINGS_NAME_FULL,
+        .m_ClsID = &__uuidof(SynthFilter::CSynthFilterPropSettings),
+        .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilterPropSettings>,
     },
 
-    { .m_Name = STATUS_NAME_FULL
-    , .m_ClsID = &__uuidof(SynthFilter::CSynthFilterPropStatus)
-    , .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilterPropStatus>
+    {
+        .m_Name = STATUS_NAME_FULL,
+        .m_ClsID = &__uuidof(SynthFilter::CSynthFilterPropStatus),
+        .m_lpfnNew = SynthFilter::CreateInstance<SynthFilter::CSynthFilterPropStatus>,
     },
 };
 int g_cTemplates = sizeof(g_Templates) / sizeof(g_Templates[0]);

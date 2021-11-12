@@ -1,15 +1,14 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "prop_status.h"
+
 #include "constants.h"
 
 
 namespace SynthFilter {
 
 CSynthFilterPropStatus::CSynthFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(STATUS_NAME_FULL, pUnk, IDD_STATUS_PAGE, IDS_STATUS) {
-}
+    : CBasePropertyPage(STATUS_NAME_FULL, pUnk, IDD_STATUS_PAGE, IDS_STATUS) {}
 
 auto CSynthFilterPropStatus::OnConnect(IUnknown *pUnk) -> HRESULT {
     CheckPointer(pUnk, E_POINTER);

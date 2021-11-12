@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "filter.h"
+
 #include "constants.h"
 #include "input_pin.h"
 #include "prop_settings.h"
@@ -10,7 +10,13 @@
 
 namespace SynthFilter {
 
-#define CheckHr(expr) { hr = (expr); if (FAILED(hr)) { return hr; } }
+#define CheckHr(expr)     \
+    {                     \
+        hr = (expr);      \
+        if (FAILED(hr)) { \
+            return hr;    \
+        }                 \
+    }
 
 CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME_FULL, pUnk, __uuidof(CSynthFilter)) {

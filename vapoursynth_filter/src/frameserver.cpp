@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "frameserver.h"
+
 #include "api.h"
 #include "frame_handler.h"
 
@@ -9,7 +9,7 @@
 namespace SynthFilter {
 
 static constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
-static constexpr const char *VPS_VAR_NAME_DISCONNECT  = "VpsFilterDisconnect";
+static constexpr const char *VPS_VAR_NAME_DISCONNECT = "VpsFilterDisconnect";
 
 static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrame * {
     FrameHandler *frameHandler = FrameServerCommon::GetInstance().GetFrameHandler();
@@ -21,8 +21,8 @@ static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData
     return AVSF_VPS_API->addFrameRef(frameHandler->GetSourceFrame(n));
 }
 
-AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame) : frame(newFrame) {
-}
+AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame)
+    : frame(newFrame) {}
 
 AutoReleaseVSFrame::~AutoReleaseVSFrame() {
     Destroy();
@@ -126,9 +126,10 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
             AVSF_VPS_API->addNodeRef(_sourceClip);
         }
     } else {
-        const std::string errorScript = std::format(
-"from vapoursynth import core\n\
-core.text.Text({}, r'''{}''').set_output()", VPS_VAR_NAME_SOURCE_NODE, _errorString);
+        const std::string errorScript = std::format("from vapoursynth import core\n\
+core.text.Text({}, r'''{}''').set_output()",
+                                                    VPS_VAR_NAME_SOURCE_NODE,
+                                                    _errorString);
         if (AVSF_VPS_SCRIPT_API->evaluateBuffer(_vsScript, errorScript.c_str(), "VpsFilter_Error") == 0) {
             _scriptClip = AVSF_VPS_SCRIPT_API->getOutputNode(_vsScript, 0);
         } else {

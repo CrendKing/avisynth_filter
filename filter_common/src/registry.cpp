@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "registry.h"
+
 #include "constants.h"
 
 
@@ -25,8 +25,7 @@ auto Registry::ReadString(const WCHAR *valueName) const -> std::wstring {
         std::array<WCHAR, MAX_PATH> buffer;
         DWORD bufferSize = static_cast<DWORD>(buffer.size());
 
-        if (const LSTATUS registryStatus = RegGetValueW(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer.data(), &bufferSize);
-            registryStatus == ERROR_SUCCESS) {
+        if (const LSTATUS registryStatus = RegGetValueW(_registryKey, nullptr, valueName, RRF_RT_REG_SZ, nullptr, buffer.data(), &bufferSize); registryStatus == ERROR_SUCCESS) {
             ret.assign(buffer.data(), bufferSize / sizeof(WCHAR) - 1);
         }
     }
@@ -46,7 +45,12 @@ auto Registry::ReadNumber(const WCHAR *valueName, int defaultValue) const -> DWO
 }
 
 auto Registry::WriteString(const WCHAR *valueName, std::wstring_view valueString) const -> bool {
-    return _registryKey && RegSetValueExW(_registryKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE *>(valueString.data()), static_cast<DWORD>((valueString.size() + 1) * sizeof(decltype(valueString)::value_type))) == ERROR_SUCCESS;
+    return _registryKey && RegSetValueExW(_registryKey,
+                                          valueName,
+                                          0,
+                                          REG_SZ,
+                                          reinterpret_cast<const BYTE *>(valueString.data()),
+                                          static_cast<DWORD>((valueString.size() + 1) * sizeof(decltype(valueString)::value_type))) == ERROR_SUCCESS;
 }
 
 auto Registry::WriteNumber(const WCHAR *valueName, DWORD valueNumber) const -> bool {

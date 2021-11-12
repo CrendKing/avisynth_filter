@@ -2,17 +2,13 @@
 
 #pragma once
 
-#include "pch.h"
-
 
 namespace SynthFilter {
 
 template <typename T>
 class OnDemandSingleton {
 public:
-    static constexpr auto GetInstance() -> T & {
-        return *_instance;
-    }
+    static constexpr auto GetInstance() -> T & { return *_instance; }
 
     static constexpr auto Create() -> void {
         T *expected = nullptr;

@@ -1,15 +1,14 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "prop_settings.h"
+
 #include "constants.h"
 
 
 namespace SynthFilter {
 
 CSynthFilterPropSettings::CSynthFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr)
-    : CBasePropertyPage(SETTINGS_NAME_FULL, pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS) {
-}
+    : CBasePropertyPage(SETTINGS_NAME_FULL, pUnk, IDD_SETTINGS_PAGE, IDS_SETTINGS) {}
 
 auto CSynthFilterPropSettings::OnConnect(IUnknown *pUnk) -> HRESULT {
     CheckPointer(pUnk, E_POINTER);
@@ -76,8 +75,7 @@ auto CSynthFilterPropSettings::OnApplyChanges() -> HRESULT {
 
     if (_scriptFileManagedByRC) {
         // TODO: put message in string table when going multi-language
-        MessageBoxW(m_hwnd, L"The script file is currently managed by remote control. Your change if any is saved but not used.",
-                    FILTER_NAME_FULL, MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(m_hwnd, L"The script file is currently managed by remote control. Your change if any is saved but not used.", FILTER_NAME_FULL, MB_OK | MB_ICONINFORMATION);
     } else if (!_configScriptPath.empty()) {
         _filter->ReloadScript(_configScriptPath);
     }
@@ -123,8 +121,7 @@ auto CSynthFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPa
                     SetDlgItemTextW(hwnd, IDC_EDIT_SCRIPT_FILE, ofn.lpstrFile);
                     SetDirty();
                 }
-            } else if (eventTarget == IDC_ENABLE_REMOTE_CONTROL ||
-                       (eventTarget > IDC_INPUT_FORMAT_START && eventTarget < IDC_INPUT_FORMAT_END)) {
+            } else if (eventTarget == IDC_ENABLE_REMOTE_CONTROL || (eventTarget > IDC_INPUT_FORMAT_START && eventTarget < IDC_INPUT_FORMAT_END)) {
                 SetDirty();
             }
 

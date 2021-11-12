@@ -13,6 +13,7 @@
     </PreBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)src;$(SolutionDir)baseclasses\src;$(SolutionDir)dep_simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>pch.h</ForcedIncludeFiles>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>

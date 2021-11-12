@@ -9,11 +9,11 @@ namespace SynthFilter {
 
 class
 #ifdef AVSF_AVISYNTH
-__declspec(uuid("90c56868-7d47-4aa2-a42d-06406a6db35f"))
+    __declspec(uuid("90c56868-7d47-4aa2-a42d-06406a6db35f"))
 #else
-__declspec(uuid("22366882-6669-4403-a5d7-bfeb53ea88e5"))
+    __declspec(uuid("22366882-6669-4403-a5d7-bfeb53ea88e5"))
 #endif
-    CSynthFilterPropSettings : public CBasePropertyPage {
+        CSynthFilterPropSettings : public CBasePropertyPage {
 public:
     CSynthFilterPropSettings(LPUNKNOWN pUnk, HRESULT *phr);
 

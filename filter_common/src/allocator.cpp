@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "allocator.h"
+
 #include "media_sample.h"
 
 
@@ -9,8 +9,7 @@ namespace SynthFilter {
 
 CSynthFilterAllocator::CSynthFilterAllocator(HRESULT *phr, CSynthFilterInputPin &inputPin)
     : CMemAllocator(NAME("CSynthFilterAllocator"), nullptr, phr)
-    , _inputPin(inputPin) {
-}
+    , _inputPin(inputPin) {}
 
 // allocate CSynthFilterMediaSample instead of CMediaSample
 auto CSynthFilterAllocator::Alloc() -> HRESULT {
@@ -58,10 +57,7 @@ auto CSynthFilterAllocator::Alloc() -> HRESULT {
         return E_OUTOFMEMORY;
     }
 
-    m_pBuffer = static_cast<PBYTE>(VirtualAlloc(nullptr,
-                                   lToAllocate,
-                                   MEM_COMMIT,
-                                   PAGE_READWRITE));
+    m_pBuffer = static_cast<PBYTE>(VirtualAlloc(nullptr, lToAllocate, MEM_COMMIT, PAGE_READWRITE));
 
     if (m_pBuffer == nullptr) {
         return E_OUTOFMEMORY;
@@ -71,12 +67,7 @@ auto CSynthFilterAllocator::Alloc() -> HRESULT {
 
     LPBYTE pNext = m_pBuffer;
     for (CMediaSample *pSample; m_lAllocated < m_lCount; m_lAllocated++, pNext += lAlignedSize) {
-        pSample = new CSynthFilterMediaSample(
-            NAME("CSynthFilter memory media sample"),
-            this,
-            &hr,
-            pNext + m_lPrefix,
-            m_lSize);
+        pSample = new CSynthFilterMediaSample(NAME("CSynthFilter memory media sample"), this, &hr, pNext + m_lPrefix, m_lSize);
 
         ASSERT(SUCCEEDED(hr));
         if (pSample == nullptr) {

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "pch.h"
 #include "api.h"
 #include "format.h"
 #include "frame_handler.h"
@@ -14,11 +13,11 @@ namespace SynthFilter {
 
 class
 #ifdef AVSF_AVISYNTH
-__declspec(uuid("e5e2c1a6-c90f-4247-8bf5-604fb180a932"))
+    __declspec(uuid("e5e2c1a6-c90f-4247-8bf5-604fb180a932"))
 #else
-__declspec(uuid("3ab7506b-fc4a-4144-8ee3-a97fab4f9cb3"))
+    __declspec(uuid("3ab7506b-fc4a-4144-8ee3-a97fab4f9cb3"))
 #endif
-    CSynthFilter
+        CSynthFilter
     : public CVideoTransformFilter
     , public ISpecifyPropertyPages {
 
@@ -73,8 +72,8 @@ private:
         AuxFrameServer::GetInstance().ReloadScript(*mtIn, true);
         const int scriptPixelType = AuxFrameServer::GetInstance().GetScriptPixelType();
         auto ret = Format::LookupFrameServerFormatId(scriptPixelType) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
-            return AuxFrameServer::GetInstance().GenerateMediaType(pixelFormat, mtIn);
-        });
+                       return AuxFrameServer::GetInstance().GenerateMediaType(pixelFormat, mtIn);
+                   });
         if (ret.empty()) {
             Environment::GetInstance().Log(L"Unable to find any supported pixel format for script pixel type %d", scriptPixelType);
         }

@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "frame_handler.h"
+
 #include "constants.h"
 #include "filter.h"
 
@@ -119,7 +119,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     }
 
     Environment::GetInstance().Log(L"Stored source frame: %6d at %10lld ~ %10lld duration(literal) %10lld, last_used %6d, extra_buffer %6d",
-                                   _nextSourceFrameNb, inputSampleStartTime, inputSampleStopTime, inputSampleStopTime - inputSampleStartTime, _lastUsedSourceFrameNb.load(), _extraSourceBuffer);
+                                   _nextSourceFrameNb,
+                                   inputSampleStartTime,
+                                   inputSampleStopTime,
+                                   inputSampleStopTime - inputSampleStartTime,
+                                   _lastUsedSourceFrameNb.load(),
+                                   _extraSourceBuffer);
 
     _nextSourceFrameNb += 1;
 
@@ -235,9 +240,12 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
         std::shared_lock sharedOutputLock(_outputMutex);
 
         _flushOutputSampleCv.wait(sharedOutputLock, [this]() {
-            return std::ranges::all_of(_outputFrames | std::views::values, [](const VSFrame *frame) {
-                return frame != nullptr;
-            }, &AutoReleaseVSFrame::frame);
+            return std::ranges::all_of(
+                _outputFrames | std::views::values,
+                [](const VSFrame *frame) {
+                    return frame != nullptr;
+                },
+                &AutoReleaseVSFrame::frame);
         });
     }
 
@@ -340,7 +348,9 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, in
         _notifyChangedOutputMediaType = false;
 
         Environment::GetInstance().Log(L"New output format: name %s, width %5ld, height %5ld",
-                                       _filter._outputVideoFormat.pixelFormat->name, _filter._outputVideoFormat.bmi.biWidth, _filter._outputVideoFormat.bmi.biHeight);
+                                       _filter._outputVideoFormat.pixelFormat->name,
+                                       _filter._outputVideoFormat.bmi.biWidth,
+                                       _filter._outputVideoFormat.bmi.biHeight);
     }
 
     if (FAILED(outSample->SetTime(&frameStartTime, &frameStopTime))) {

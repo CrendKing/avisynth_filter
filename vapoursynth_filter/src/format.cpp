@@ -1,10 +1,10 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "format.h"
+
 #include "constants.h"
-#include "frameserver.h"
 #include "environment.h"
+#include "frameserver.h"
 
 
 namespace SynthFilter {
@@ -47,19 +47,19 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
         .hdrType = 0,
         .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType),
-        .frameServerCore = frameServerInstance->GetVsCore()
+        .frameServerCore = frameServerInstance->GetVsCore(),
     };
     ret.videoInfo = {
         .fpsNum = fpsNum,
         .fpsDen = fpsDen,
         .width = ret.bmi.biWidth,
         .height = abs(ret.bmi.biHeight),
-        .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM
+        .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM,
     };
     AVSF_VPS_API->getVideoFormatByID(&ret.videoInfo.format, ret.pixelFormat->frameServerFormatId, ret.frameServerCore);
 
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
+        const VIDEOINFOHEADER2 *vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
 
         if (vih2->dwPictAspectRatioY > 0) {
             /*
@@ -81,12 +81,16 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
 }
 
 auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame, BYTE *dstBuffer) -> void {
-    const std::array srcSlices { AVSF_VPS_API->getReadPtr(srcFrame, 0)
-                               , videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1)
-                               , videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2) };
-    const std::array srcStrides { static_cast<int>(AVSF_VPS_API->getStride(srcFrame, 0))
-                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1))
-                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2)) };
+    const std::array srcSlices {
+        AVSF_VPS_API->getReadPtr(srcFrame, 0),
+        videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1),
+        videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2),
+    };
+    const std::array srcStrides {
+        static_cast<int>(AVSF_VPS_API->getStride(srcFrame, 0)),
+        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1)),
+        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2)),
+    };
     const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
     CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, rowSize, AVSF_VPS_API->getFrameHeight(srcFrame, 0));
@@ -95,12 +99,16 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrame * {
     VSFrame *frame = AVSF_VPS_API->newVideoFrame(&videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServerCore);
 
-    const std::array dstSlices { AVSF_VPS_API->getWritePtr(frame, 0)
-                               , videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1)
-                               , videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2) };
-    const std::array dstStrides { static_cast<int>(AVSF_VPS_API->getStride(frame, 0))
-                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1))
-                                , static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2)) };
+    const std::array dstSlices {
+        AVSF_VPS_API->getWritePtr(frame, 0),
+        videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1),
+        videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2),
+    };
+    const std::array dstStrides {
+        static_cast<int>(AVSF_VPS_API->getStride(frame, 0)),
+        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1)),
+        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2)),
+    };
     const int rowSize = AVSF_VPS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
     CopyFromInput(videoFormat, srcBuffer, dstSlices, dstStrides, rowSize, AVSF_VPS_API->getFrameHeight(frame, 0));
@@ -130,7 +138,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Deinterleave<0, 0>)* DeinterleaveFunc;
+        decltype(Deinterleave<0, 0>) *DeinterleaveFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
                 DeinterleaveFunc = Deinterleave<2, 1>;
@@ -192,7 +200,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Interleave<0, 0>)* InterleaveFunc;
+        decltype(Interleave<0, 0>) *InterleaveFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
                 InterleaveFunc = Interleave<2, 1>;

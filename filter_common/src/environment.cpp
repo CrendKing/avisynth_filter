@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "environment.h"
+
 #include "constants.h"
 #include "format.h"
 
@@ -38,9 +38,12 @@ Environment::Environment()
             Log(L"Filter version: %S", FILTER_VERSION_STRING);
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
 
-            std::ranges::for_each(Format::PIXEL_FORMATS, [this](const WCHAR *name) {
-                Log(L"Configured input format %5s: %d", name, _enabledInputFormats.contains(name));
-            }, &Format::PixelFormat::name);
+            std::ranges::for_each(
+                Format::PIXEL_FORMATS,
+                [this](const WCHAR *name) {
+                    Log(L"Configured input format %5s: %d", name, _enabledInputFormats.contains(name));
+                },
+                &Format::PixelFormat::name);
 
             Log(L"Loading process: %s", processName.c_str());
         }
@@ -153,10 +156,13 @@ auto Environment::SaveSettingsToRegistry() const -> void {
     static_cast<void>(_registry.WriteString(SETTING_NAME_SCRIPT_FILE, _scriptPath.c_str()));
     static_cast<void>(_registry.WriteNumber(SETTING_NAME_REMOTE_CONTROL, _isRemoteControlEnabled));
 
-    std::ranges::for_each(Format::PIXEL_FORMATS, [this](std::wstring_view name) {
-        const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
-        static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
-    }, &Format::PixelFormat::name);
+    std::ranges::for_each(
+        Format::PIXEL_FORMATS,
+        [this](std::wstring_view name) {
+            const std::wstring settingName = std::format(L"{}{}", SETTING_NAME_INPUT_FORMAT_PREFIX, name);
+            static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
+        },
+        &Format::PixelFormat::name);
 }
 
 auto Environment::DetectCPUID() -> void {

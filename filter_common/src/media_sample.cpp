@@ -1,14 +1,12 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "media_sample.h"
 
 
 namespace SynthFilter {
 
-CSynthFilterMediaSample::CSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator* pAllocator, HRESULT* phr, LPBYTE pBuffer, LONG length)
-    : CMediaSample(pName, pAllocator, phr, pBuffer, length) {
-}
+CSynthFilterMediaSample::CSynthFilterMediaSample(LPCTSTR pName, CBaseAllocator *pAllocator, HRESULT *phr, LPBYTE pBuffer, LONG length)
+    : CMediaSample(pName, pAllocator, phr, pBuffer, length) {}
 
 auto STDMETHODCALLTYPE CSynthFilterMediaSample::QueryInterface(REFIID riid, __deref_out void **ppv) -> HRESULT {
     if (riid == __uuidof(IMediaSideData)) {

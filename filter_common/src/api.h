@@ -16,7 +16,7 @@ enum class AvsState {
     Stopped = 0,
     Running,
     Paused,
-    Error
+    Error,
 };
 
 static constexpr const int API_VERSION                           = 1;

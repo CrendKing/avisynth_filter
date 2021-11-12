@@ -1,6 +1,5 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "constants.h"
 #include "filter.h"
 
@@ -86,7 +85,9 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
 
 auto FrameHandler::ChangeOutputFormat() -> bool {
     Environment::GetInstance().Log(L"Upstream proposes to change input format: name %s, width %5ld, height %5ld",
-                                   _filter._inputVideoFormat.pixelFormat->name, _filter._inputVideoFormat.bmi.biWidth, _filter._inputVideoFormat.bmi.biHeight);
+                                   _filter._inputVideoFormat.pixelFormat->name,
+                                   _filter._inputVideoFormat.bmi.biWidth,
+                                   _filter._inputVideoFormat.bmi.biHeight);
 
     _filter.StopStreaming();
 
@@ -111,7 +112,9 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
             }
 
             const bool result = SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
-            Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %d", Format::LookupMediaSubtype(outputMediaType.subtype)->name, result);
+            Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %d",
+                                           Format::LookupMediaSubtype(outputMediaType.subtype)->name,
+                                           result);
 
             if (result) {
                 _filter.m_pOutput->SetMediaType(&outputMediaType);

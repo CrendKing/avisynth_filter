@@ -1,7 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
-#include "pch.h"
 #include "format.h"
+
 #include "constants.h"
 #include "frameserver.h"
 
@@ -48,7 +48,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
         .pixelAspectRatioDen = 1,
         .hdrType = 0,
         .hdrLuminance = 0,
-        .bmi = *GetBitmapInfo(mediaType)
+        .bmi = *GetBitmapInfo(mediaType),
     };
     ret.videoInfo = {
         .width = ret.bmi.biWidth,
@@ -60,7 +60,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     };
 
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
-        const VIDEOINFOHEADER2* vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
+        const VIDEOINFOHEADER2 *vih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(mediaType.pbFormat);
 
         if (vih2->dwPictAspectRatioY > 0) {
             /*
@@ -124,7 +124,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Deinterleave<0, 0>)* DeinterleaveFunc;
+        decltype(Deinterleave<0, 0>) *DeinterleaveFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
                 DeinterleaveFunc = Deinterleave<2, 1>;
@@ -190,7 +190,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Interleave<0, 0>)* InterleaveFunc;
+        decltype(Interleave<0, 0>) *InterleaveFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
                 InterleaveFunc = Interleave<2, 1>;
