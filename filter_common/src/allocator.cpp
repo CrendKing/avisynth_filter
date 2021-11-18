@@ -7,6 +7,8 @@
 
 namespace SynthFilter {
 
+#define FFALIGN(x, a) (((x) + (a) - 1) & ~((a) - 1))
+
 CSynthFilterAllocator::CSynthFilterAllocator(HRESULT *phr, CSynthFilterInputPin &inputPin)
     : CMemAllocator(NAME("CSynthFilterAllocator"), nullptr, phr)
     , _inputPin(inputPin) {}
@@ -35,19 +37,17 @@ auto CSynthFilterAllocator::Alloc() -> HRESULT {
     }
 
     LONG lAlignedSize = m_lSize + m_lPrefix;
-
+    //  check overflow
     if (lAlignedSize < m_lSize) {
         return E_OUTOFMEMORY;
     }
 
     if (m_lAlignment > 1) {
-        if (const LONG lRemainder = lAlignedSize % m_lAlignment; lRemainder != 0) {
-            const LONG lNewSize = lAlignedSize + m_lAlignment - lRemainder;
-            if (lNewSize < lAlignedSize) {
-                return E_OUTOFMEMORY;
-            }
-            lAlignedSize = lNewSize;
+        const LONG lNewSize = FFALIGN(lAlignedSize, m_lAlignment);
+        if (lNewSize < lAlignedSize) {
+            return E_OUTOFMEMORY;
         }
+        lAlignedSize = lNewSize;
     }
 
     ASSERT(lAlignedSize % m_lAlignment == 0);
