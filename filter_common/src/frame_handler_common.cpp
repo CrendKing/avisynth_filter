@@ -31,17 +31,18 @@ auto FrameHandler::StartWorker() -> void {
     }
 }
 
-auto FrameHandler::UpdateExtraSourceBuffer() -> void {
+auto FrameHandler::UpdateExtraSrcBuffer() -> void {
     if (const int sourceAvgFps = MainFrameServer::GetInstance().GetSourceAvgFrameRate();
         _nextSourceFrameNb % (sourceAvgFps / FRAME_RATE_SCALE_FACTOR) == 0) {
-        if (const double ratio = static_cast<double>(_currentInputFrameRate) / sourceAvgFps;
-            ratio < 1 - EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD) {
-            _extraSourceBuffer += EXTRA_SOURCE_BUFFER_INC_STEP;
-        } else if (ratio > 1 + EXTRA_SOURCE_BUFFER_CHANGE_THRESHOLD) {
-            _extraSourceBuffer -= EXTRA_SOURCE_BUFFER_DEC_STEP;
+        const double ratio = static_cast<double>(_currentInputFrameRate) / sourceAvgFps;
+        Environment::GetInstance().Log(L"Source rate ratio %5f", ratio);
+        if (ratio < 1 - EXTRA_SRC_BUFFER_CHANGE_THRESHOLD) {
+            _extraSrcBuffer += Environment::GetInstance().GetExtraSrcBufferIncStep();
+        } else if (ratio > 1 + EXTRA_SRC_BUFFER_CHANGE_THRESHOLD) {
+            _extraSrcBuffer -= Environment::GetInstance().GetExtraSrcBufferDecStep();
         }
 
-        _extraSourceBuffer = std::clamp(_extraSourceBuffer, Environment::GetInstance().GetMinExtraSourceBuffer(), Environment::GetInstance().GetMaxExtraSourceBuffer());
+        _extraSrcBuffer = std::clamp(_extraSrcBuffer, Environment::GetInstance().GetMinExtraSrcBuffer(), Environment::GetInstance().GetMaxExtraSrcBuffer());
     }
 }
 

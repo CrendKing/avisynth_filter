@@ -11,7 +11,7 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
-    UpdateExtraSourceBuffer();
+    UpdateExtraSrcBuffer();
 
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
@@ -19,7 +19,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         }
 
         // at least NUM_SRC_FRAMES_PER_PROCESSING source frames are needed in queue for stop time calculation
-        if (_sourceFrames.size() < NUM_SRC_FRAMES_PER_PROCESSING + _extraSourceBuffer) {
+        if (static_cast<int>(_sourceFrames.size()) < NUM_SRC_FRAMES_PER_PROCESSING + _extraSrcBuffer) {
             return true;
         }
 
@@ -126,7 +126,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                    inputSampleStopTime,
                                    inputSampleStopTime - inputSampleStartTime,
                                    _maxRequestedFrameNb.load(),
-                                   _extraSourceBuffer);
+                                   _extraSrcBuffer);
 
     _nextSourceFrameNb += 1;
 
@@ -204,7 +204,7 @@ auto FrameHandler::ResetInput() -> void {
     _nextSourceFrameNb = 0;
     _maxRequestedFrameNb = 0;
     _notifyChangedOutputMediaType = false;
-    _extraSourceBuffer = 0;
+    _extraSrcBuffer = 0;
 
     _frameRateCheckpointInputSampleNb = 0;
     _currentInputFrameRate = 0;

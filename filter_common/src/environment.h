@@ -26,12 +26,15 @@ public:
     auto SetRemoteControlEnabled(bool enabled) -> void;
     constexpr auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
     constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
-    constexpr auto GetMinExtraSourceBuffer() const -> unsigned int { return _minExtraSourceBuffer; }
-    constexpr auto GetMaxExtraSourceBuffer() const -> unsigned int { return _maxExtraSourceBuffer; }
+    constexpr auto GetMinExtraSrcBuffer() const -> int { return _minExtraSrcBuffer; }
+    constexpr auto GetMaxExtraSrcBuffer() const -> int { return _maxExtraSrcBuffer; }
+    constexpr auto GetExtraSrcBufferDecStep() const -> int { return _extraSrcBufferDecStep; }
+    constexpr auto GetExtraSrcBufferIncStep() const -> int { return _extraSrcBufferIncStep; }
 
 private:
     auto LoadSettingsFromIni() -> void;
     auto LoadSettingsFromRegistry() -> void;
+    auto ValidateExtraSrcBufferValues() -> void;
     auto SaveSettingsToIni() const -> void;
     auto SaveSettingsToRegistry() const -> void;
     auto DetectCPUID() -> void;
@@ -45,8 +48,10 @@ private:
     std::filesystem::path _scriptPath;
     std::unordered_set<std::wstring_view> _enabledInputFormats;
     bool _isRemoteControlEnabled = false;
-    unsigned int _minExtraSourceBuffer;
-    unsigned int _maxExtraSourceBuffer;
+    int _minExtraSrcBuffer;
+    int _maxExtraSrcBuffer;
+    int _extraSrcBufferDecStep;
+    int _extraSrcBufferIncStep;
 
     std::filesystem::path _logPath;
     FILE *_logFile = nullptr;

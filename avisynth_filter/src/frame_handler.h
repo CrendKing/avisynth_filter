@@ -44,7 +44,7 @@ private:
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;
-    auto UpdateExtraSourceBuffer() -> void;
+    auto UpdateExtraSrcBuffer() -> void;
     auto RefreshInputFrameRates(int frameNb) -> void;
     auto RefreshOutputFrameRates(int frameNb) -> void;
     auto RefreshDeliveryFrameRates(int frameNb) -> void;
@@ -65,7 +65,7 @@ private:
     int _nextOutputFrameNb;
     REFERENCE_TIME _nextOutputFrameStartTime;
     bool _notifyChangedOutputMediaType;
-    unsigned int _extraSourceBuffer;
+    int _extraSrcBuffer;
 
     std::thread _workerThread;
 
