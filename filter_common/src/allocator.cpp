@@ -83,7 +83,7 @@ auto CSynthFilterAllocator::Alloc() -> HRESULT {
 
 auto STDMETHODCALLTYPE CSynthFilterAllocator::SetProperties(__in ALLOCATOR_PROPERTIES *pRequest, __out ALLOCATOR_PROPERTIES *pActual) -> HRESULT {
     const BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(_inputPin.CurrentMediaType());
-    pRequest->cbBuffer = max(static_cast<long>(bmi->biSizeImage + Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING), pRequest->cbBuffer);
+    pRequest->cbBuffer = std::max(static_cast<long>(bmi->biSizeImage + Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING), pRequest->cbBuffer);
     return __super::SetProperties(pRequest, pActual);
 }
 

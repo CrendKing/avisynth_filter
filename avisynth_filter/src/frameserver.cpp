@@ -115,8 +115,8 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     }
 
     if (!_errorString.empty()) {
-        _errorString = ReplaceSubstr(_errorString, "\n", "\\n");
-        _errorString = ReplaceSubstr(_errorString, "\"", "'");
+        _errorString = std::regex_replace(_errorString, std::regex("\n"), "\\n");
+        _errorString = std::regex_replace(_errorString, std::regex("\""), "'");
         const std::string errorScript = std::format("Subtitle(AvsFilterSource(), \"{}\", lsp=0)", _errorString);
         invokeResult = _env->Invoke("Eval", AVSValue(errorScript.c_str()));
     }

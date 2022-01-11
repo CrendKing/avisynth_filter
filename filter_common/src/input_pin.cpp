@@ -35,7 +35,7 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::ReceiveConnection(IPin *pConnector,
             CheckHr(m_pAllocator->GetProperties(&props));
 
             const BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(*pmt);
-            props.cbBuffer = max(static_cast<long>(bmi->biSizeImage + Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING), props.cbBuffer);
+            props.cbBuffer = std::max(static_cast<long>(bmi->biSizeImage + Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING), props.cbBuffer);
 
             CheckHr(m_pAllocator->SetProperties(&props, &actual));
             CheckHr(m_pAllocator->Commit());

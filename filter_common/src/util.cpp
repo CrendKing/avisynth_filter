@@ -34,18 +34,6 @@ auto JoinStrings(const std::vector<std::wstring> &inputs, std::wstring_view deli
     return ret;
 }
 
-auto ReplaceSubstr(std::string &str, std::string_view from, std::string_view to) -> std::string & {
-    if (!from.empty()) {
-        size_t startPos = 0;
-        while ((startPos = str.find(from, startPos)) != str.npos) {
-            str.replace(startPos, from.length(), to);
-            startPos += to.length();
-        }
-    }
-
-    return str;
-}
-
 auto CoprimeIntegers(int64_t &a, int64_t &b) -> void {
     if (const int64_t gcd = std::gcd(a, b); gcd > 1) {
         a /= gcd;

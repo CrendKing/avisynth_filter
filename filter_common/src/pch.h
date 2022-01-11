@@ -4,6 +4,7 @@
 #pragma warning(push)
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS)
 
+#include <algorithm>
 #include <array>
 #include <clocale>
 #include <condition_variable>
@@ -15,6 +16,7 @@
 #include <numeric>
 #include <optional>
 #include <ranges>
+#include <regex>
 #include <shared_mutex>
 #include <string>
 #include <thread>

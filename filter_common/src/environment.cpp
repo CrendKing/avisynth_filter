@@ -157,10 +157,10 @@ auto Environment::LoadSettingsFromRegistry() -> void {
 }
 
 auto Environment::ValidateExtraSrcBufferValues() -> void {
-    _minExtraSrcBuffer = max(_minExtraSrcBuffer, 0);
-    _maxExtraSrcBuffer = max(_maxExtraSrcBuffer, _minExtraSrcBuffer);
-    _extraSrcBufferDecStep = max(_extraSrcBufferDecStep, 0);
-    _extraSrcBufferIncStep = max(_extraSrcBufferIncStep, 0);
+    _minExtraSrcBuffer = std::max(_minExtraSrcBuffer, 0);
+    _maxExtraSrcBuffer = std::max(_maxExtraSrcBuffer, _minExtraSrcBuffer);
+    _extraSrcBufferDecStep = std::max(_extraSrcBufferDecStep, 0);
+    _extraSrcBufferIncStep = std::max(_extraSrcBufferIncStep, 0);
 }
 
 auto Environment::SaveSettingsToIni() const -> void {

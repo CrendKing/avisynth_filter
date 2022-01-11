@@ -138,7 +138,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
 
     std::shared_lock sharedSourceLock(_sourceMutex);
 
-    _maxRequestedFrameNb = max(frameNb, _maxRequestedFrameNb.load());
+    _maxRequestedFrameNb = std::max(frameNb, _maxRequestedFrameNb.load());
     _addInputSampleCv.notify_all();
 
     decltype(_sourceFrames)::const_iterator iter;
@@ -364,7 +364,7 @@ auto FrameHandler::WorkerProc() -> void {
         }
 
         while (!_isFlushing) {
-            const REFERENCE_TIME outputFrameDurationBeforeEdgePortion = min(processSourceFrameIters[1]->second.startTime - _nextOutputFrameStartTime, outputFrameDurations[0]);
+            const REFERENCE_TIME outputFrameDurationBeforeEdgePortion = std::min(processSourceFrameIters[1]->second.startTime - _nextOutputFrameStartTime, outputFrameDurations[0]);
             if (outputFrameDurationBeforeEdgePortion <= 0) {
                 Environment::GetInstance().Log(L"Frame time drift: %10lld", -outputFrameDurationBeforeEdgePortion);
                 break;

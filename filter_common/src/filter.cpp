@@ -180,10 +180,10 @@ auto CSynthFilter::CheckTransform(const CMediaType *mtIn, const CMediaType *mtOu
 auto CSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT {
     HRESULT hr;
 
-    pProperties->cBuffers = max(2, pProperties->cBuffers);
+    pProperties->cBuffers = std::max(pProperties->cBuffers, 2L);
 
     BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
-    pProperties->cbBuffer = max(static_cast<long>(bmi->biSizeImage + Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING), pProperties->cbBuffer);
+    pProperties->cbBuffer = std::max(static_cast<long>(bmi->biSizeImage + Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING), pProperties->cbBuffer);
 
     ALLOCATOR_PROPERTIES actual;
     CheckHr(pAlloc->SetProperties(pProperties, &actual));
