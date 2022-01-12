@@ -16,7 +16,6 @@
       <ForcedIncludeFiles>pch.h</ForcedIncludeFiles>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>$(MSBuildThisFileDirectory)src\filter_common.def</ModuleDefinitionFile>
@@ -35,6 +34,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\hdr.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\input_pin.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\media_sample.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\min_windows.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_settings.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_status.h" />
