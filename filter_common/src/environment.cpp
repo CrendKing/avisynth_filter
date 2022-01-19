@@ -35,7 +35,7 @@ Environment::Environment()
         if (_logFile != nullptr) {
             _logStartTime = timeGetTime();
 
-            Log(L"Filter version: %S", FILTER_VERSION_STRING);
+            Log(L"Filter version: %hs", FILTER_VERSION_STRING);
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
 
             std::ranges::for_each(
@@ -64,23 +64,6 @@ auto Environment::SaveSettings() const -> void {
     } else if (_registry) {
         SaveSettingsToRegistry();
     }
-}
-
-auto Environment::Log(const WCHAR *format, ...) -> void {
-    if (_logFile == nullptr) {
-        return;
-    }
-
-    const std::wstring fmt = std::format(L"T {:6d} @ {:8d}: {}\n", GetCurrentThreadId(), timeGetTime() - _logStartTime, format);
-
-    const std::unique_lock logLock(_logMutex);
-
-    va_list args;
-    va_start(args, format);
-    vfwprintf_s(_logFile, fmt.c_str(), args);
-    va_end(args);
-
-    fflush(_logFile);
 }
 
 auto Environment::SetScriptPath(const std::filesystem::path &scriptPath) -> void {

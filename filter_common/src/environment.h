@@ -16,7 +16,20 @@ public:
     DISABLE_COPYING(Environment)
 
     auto SaveSettings() const -> void;
-    auto Log(const WCHAR *format, ...) -> void;
+
+    template <typename... Args>
+    constexpr auto Log(std::wstring_view format, Args &&...args) -> void {
+        if (_logFile == nullptr) {
+            return;
+        }
+
+        const std::wstring logTemplate = std::format(L"T {:6d} @ {:8d}: {}\n", GetCurrentThreadId(), timeGetTime() - _logStartTime, format);
+
+        const std::unique_lock logLock(_logMutex);
+
+        fwprintf_s(_logFile, logTemplate.c_str(), std::forward<Args>(args)...);
+        fflush(_logFile);
+    }
 
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;

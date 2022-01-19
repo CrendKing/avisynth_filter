@@ -27,7 +27,7 @@ FrameServerCommon::FrameServerCommon() {
     AVS_linkage = env->GetAVSLinkage();
 
     _versionString = env->Invoke("Eval", AVSValue("VersionString()")).AsString();
-    Environment::GetInstance().Log(L"AviSynth version: %S", GetVersionString().data());
+    Environment::GetInstance().Log(L"AviSynth version: %hs", GetVersionString().data());
 
     try {
         // AVS+ 3.6 is interface version 8

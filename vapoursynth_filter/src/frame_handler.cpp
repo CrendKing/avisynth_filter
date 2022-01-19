@@ -267,7 +267,7 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
 
 auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrame *f, int n, VSNode *node, const char *errorMsg) -> void {
     if (f == nullptr) {
-        Environment::GetInstance().Log(L"Failed to generate output frame %6d with message: %S", n, errorMsg);
+        Environment::GetInstance().Log(L"Failed to generate output frame %6d with message: %hs", n, errorMsg);
         return;
     }
 
