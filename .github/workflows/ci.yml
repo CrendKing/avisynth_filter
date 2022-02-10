@@ -42,7 +42,7 @@ jobs:
 
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: prepare
     strategy:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
