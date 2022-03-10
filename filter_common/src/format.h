@@ -73,8 +73,8 @@ public:
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat *;
     static auto LookupFrameServerFormatId(int frameServerFormatId) {
         return PIXEL_FORMATS | std::views::filter([frameServerFormatId](const PixelFormat &pixelFormat) -> bool {
-                   return frameServerFormatId == pixelFormat.frameServerFormatId;
-               });
+            return frameServerFormatId == pixelFormat.frameServerFormatId;
+        });
     }
 
     template <typename T, typename = std::enable_if_t<std::is_base_of_v<AM_MEDIA_TYPE, std::decay_t<T>>>>
@@ -119,7 +119,9 @@ private:
     template <int intrinsicType, int pixelComponentSize>
     static constexpr auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height) -> void {
         // Vector is the type for the memory data each SIMD intrustion works on (__m128i, __m256i, etc.)
-        using Vector = std::conditional_t<intrinsicType == 1, __m128i, std::conditional_t<intrinsicType == 2, __m256i, std::array<BYTE, pixelComponentSize * 2>>>;
+        using Vector = std::conditional_t<intrinsicType == 1, __m128i
+                     , std::conditional_t<intrinsicType == 2, __m256i
+                     , std::array<BYTE, pixelComponentSize * 2>>>;
         // Output is the type for the output of the SIMD instructions, half the size of Vector
         using Output = std::array<BYTE, sizeof(Vector) / 2>;
 
@@ -170,10 +172,9 @@ private:
 
     template <int intrinsicType, int pixelComponentSize>
     static constexpr auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
-        using Vector = std::conditional_t<intrinsicType == 1,
-                                          __m128i,
-                                          std::conditional_t<intrinsicType == 2, __m256i, void  // using illegal type here to make sure we pass correct template types
-                                                             >>;
+        using Vector = std::conditional_t<intrinsicType == 1, __m128i
+                     , std::conditional_t<intrinsicType == 2, __m256i
+                     , void>>;  // using illegal type here to make sure we pass correct template types
 
         for (int y = 0; y < height; ++y) {
             const Vector *src1Line = reinterpret_cast<const Vector *>(src1);
@@ -209,6 +210,35 @@ private:
             src1 += srcStride;
             src2 += srcStride;
             dst += dstStride;
+        }
+    }
+
+    template <int intrinsicType, int shiftSize, bool isRightShift>
+    constexpr static auto BitShiftEach16BitInt(BYTE *bytes, int stride, int rowSize, int height) -> void {
+        using Vector = std::conditional_t<intrinsicType == 1, __m128i
+                     , std::conditional_t<intrinsicType == 2, __m256i
+                     , void>>;
+
+        for (int y = 0; y < height; ++y) {
+            Vector *bytesLine = reinterpret_cast<Vector *>(bytes);
+
+            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
+                if constexpr (intrinsicType == 1) {
+                    if constexpr (isRightShift) {
+                        *bytesLine++ = _mm_srli_epi16(*bytesLine, shiftSize);
+                    } else {
+                        *bytesLine++ = _mm_slli_epi16(*bytesLine, shiftSize);
+                    }
+                } else if constexpr (intrinsicType == 2) {
+                    if constexpr (isRightShift) {
+                        *bytesLine++ = _mm256_srli_epi16(*bytesLine, shiftSize);
+                    } else {
+                        *bytesLine++ = _mm256_slli_epi16(*bytesLine, shiftSize);
+                    }
+                }
+            }
+
+            bytes += stride;
         }
     }
 };

@@ -17,16 +17,16 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     { .name = L"I420",  .mediaSubtype = MEDIASUBTYPE_I420,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_I420 },
     { .name = L"IYUV",  .mediaSubtype = MEDIASUBTYPE_IYUV,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_IYUV },
 
-    // P010 has the most significant 6 bits zero-padded, while VapourSynth expects the least significant bits padded
-    // P010 without right shifting 6 bits on every WORD is equivalent to P016, without precision loss
     { .name = L"P016",  .mediaSubtype = MEDIASUBTYPE_P016,  .frameServerFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 },
-    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
+    // P010 from DirectShow has the least significant 6 bits zero-padded, while AviSynth expects the most significant bits zeroed
+    // Therefore, there will be bit shifting whenever P010 is used
+    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P10,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
 
     // 4:2:2
     // VapourSynth does not support YUY2 format
-    // P210 has the same problem as P010
     { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 },
-    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
+    // Same note as P010
+    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P10,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
 
     // 4:4:4
     { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = pfYUV444P8,    .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 },
@@ -157,6 +157,19 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
             }
         }
         DeinterleaveFunc(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+
+        if (videoFormat.videoInfo.format.bitsPerSample == 10) {
+            decltype(BitShiftEach16BitInt<0, 0, true>) *RightShiftFunc;
+            if (Environment::GetInstance().IsSupportAVXx()) {
+                RightShiftFunc = BitShiftEach16BitInt<2, 6, true>;
+            } else {
+                RightShiftFunc = BitShiftEach16BitInt<1, 6, true>;
+            }
+
+            RightShiftFunc(dstSlices[0], dstStrides[0], rowSize, height);
+            RightShiftFunc(dstSlices[1], dstStrides[1], srcUVRowSize / 2, srcUVHeight);
+            RightShiftFunc(dstSlices[2], dstStrides[2], srcUVRowSize / 2, srcUVHeight);
+        }
     } else {
         const int srcUVStride = srcMainPlaneStride / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize / videoFormat.pixelFormat->subsampleWidthRatio;
@@ -215,6 +228,18 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
             }
         }
         InterleaveFunc(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+
+        if (videoFormat.videoInfo.format.bitsPerSample == 10) {
+            decltype(BitShiftEach16BitInt<0, 0, false>) *LeftShiftFunc;
+            if (Environment::GetInstance().IsSupportAVXx()) {
+                LeftShiftFunc = BitShiftEach16BitInt<2, 6, false>;
+            } else {
+                LeftShiftFunc = BitShiftEach16BitInt<1, 6, false>;
+            }
+
+            LeftShiftFunc(dstMainPlane, dstMainPlaneStride, rowSize, height);
+            LeftShiftFunc(dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+        }
     } else {
         const int dstUVStride = dstMainPlaneStride / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = rowSize / videoFormat.pixelFormat->subsampleWidthRatio;

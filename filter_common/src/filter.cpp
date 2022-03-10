@@ -102,7 +102,8 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
                     }
 
                     // all media types that share the same frameserver format are acceptable for output pin connection
-                    for (const Format::PixelFormat &frameServerPixelFormat : Format::LookupFrameServerFormatId(AuxFrameServer::GetInstance().GetScriptPixelType())) {
+                    const int scriptFormatId = AuxFrameServer::GetInstance().GetScriptPixelType();
+                    for (const Format::PixelFormat &frameServerPixelFormat : Format::LookupFrameServerFormatId(scriptFormatId)) {
                         const CMediaType outputMediaType = AuxFrameServer::GetInstance().GenerateMediaType(frameServerPixelFormat, nextType);
                         _compatibleMediaTypes.emplace_back(nextTypePtr, optInputPixelFormat, outputMediaType, MediaTypeToPixelFormat(&outputMediaType));
                         if (std::ranges::find(_availableOutputMediaTypes, outputMediaType) == _availableOutputMediaTypes.end()) {

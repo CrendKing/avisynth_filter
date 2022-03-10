@@ -70,12 +70,12 @@ private:
 
     static auto InputToOutputMediaType(const AM_MEDIA_TYPE *mtIn) {
         AuxFrameServer::GetInstance().ReloadScript(*mtIn, true);
-        const int scriptPixelType = AuxFrameServer::GetInstance().GetScriptPixelType();
-        auto ret = Format::LookupFrameServerFormatId(scriptPixelType) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
-                       return AuxFrameServer::GetInstance().GenerateMediaType(pixelFormat, mtIn);
-                   });
+        const int scriptFormatId = AuxFrameServer::GetInstance().GetScriptPixelType();
+        auto ret = Format::LookupFrameServerFormatId(scriptFormatId) | std::views::transform([mtIn](const Format::PixelFormat &pixelFormat) -> CMediaType {
+            return AuxFrameServer::GetInstance().GenerateMediaType(pixelFormat, mtIn);
+        });
         if (ret.empty()) {
-            Environment::GetInstance().Log(L"Unable to find any supported pixel format for script pixel type %d", scriptPixelType);
+            Environment::GetInstance().Log(L"Unable to find any supported pixel format for script pixel type %d", scriptFormatId);
         }
         return ret;
     }
