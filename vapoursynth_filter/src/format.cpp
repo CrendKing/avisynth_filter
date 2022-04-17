@@ -81,12 +81,12 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
 }
 
 auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame, BYTE *dstBuffer) -> void {
-    const std::array srcSlices {
+    const std::array<const BYTE *, 4> srcSlices {
         AVSF_VPS_API->getReadPtr(srcFrame, 0),
         videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1),
         videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2),
     };
-    const std::array srcStrides {
+    const std::array<int, 4> srcStrides {
         static_cast<int>(AVSF_VPS_API->getStride(srcFrame, 0)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2)),
@@ -99,12 +99,12 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrame * {
     VSFrame *frame = AVSF_VPS_API->newVideoFrame(&videoFormat.videoInfo.format, videoFormat.videoInfo.width, videoFormat.videoInfo.height, nullptr, videoFormat.frameServerCore);
 
-    const std::array dstSlices {
+    const std::array<BYTE *, 4> dstSlices {
         AVSF_VPS_API->getWritePtr(frame, 0),
         videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1),
         videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2),
     };
-    const std::array dstStrides {
+    const std::array<int, 4> dstStrides {
         static_cast<int>(AVSF_VPS_API->getStride(frame, 0)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2)),
@@ -156,7 +156,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
                 DeinterleaveFunc = Deinterleave<0, 2, 2>;
             }
         }
-        DeinterleaveFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, dstStrides[1], srcUVRowSize, srcUVHeight);
+        DeinterleaveFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, { dstStrides[1], dstStrides[2] }, srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
             decltype(BitShiftEach16BitInt<0, 0, true>) *RightShiftFunc;
@@ -227,7 +227,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
                 InterleaveUVFunc = InterleaveUV<1, 2>;
             }
         }
-        InterleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+        InterleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], srcStrides[2], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
             decltype(BitShiftEach16BitInt<0, 0, false>) *LeftShiftFunc;

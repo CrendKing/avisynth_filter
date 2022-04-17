@@ -121,7 +121,7 @@ private:
 
     static inline size_t _vectorSize;
 
-    static auto InterleaveY416(std::array<const BYTE *, 4> srcs, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void;
+    static auto InterleaveY416(std::array<const BYTE *, 4> srcs, const std::array<int, 4> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
 
     /*
      * intrinsicType: 1 = SSSE3, 2 = AVX
@@ -129,7 +129,7 @@ private:
      * numDsts is the number of destination buffers (2 or 4)
      */
     template <int intrinsicType, int componentSize, int numDsts>
-    static constexpr auto Deinterleave(const BYTE *src, int srcStride, std::array<BYTE *, 4> dsts, int dstStride, int rowSize, int height) -> void {
+    static constexpr auto Deinterleave(const BYTE *src, int srcStride, std::array<BYTE *, 4> dsts, const std::array<int, 4> &dstStrides, int rowSize, int height) -> void {
         /*
          * Place bytes from each plane in sequence by shuffling, then write the sequence of bytes to respective buffer.
          *
@@ -196,13 +196,13 @@ private:
 
             src += srcStride;
             for (int p = 0; p < numDsts; ++p) {
-                dsts[p] += dstStride;
+                dsts[p] += dstStrides[p];
             }
         }
     }
 
     template <int intrinsicType, int componentSize>
-    static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride1, int srcStride2, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , void>>;  // using illegal type here to make sure we pass correct template types
@@ -238,8 +238,8 @@ private:
                 }
             }
 
-            src1 += srcStride;
-            src2 += srcStride;
+            src1 += srcStride1;
+            src2 += srcStride2;
             dst += dstStride;
         }
     }

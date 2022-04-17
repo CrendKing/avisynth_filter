@@ -99,7 +99,7 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
     return frame;
 }
 
-auto Format::InterleaveY416(std::array<const BYTE *, 4> srcs, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+auto Format::InterleaveY416(std::array<const BYTE *, 4> srcs, const std::array<int, 4> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
     // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
 
     using Vector = __m128i;
@@ -123,7 +123,7 @@ auto Format::InterleaveY416(std::array<const BYTE *, 4> srcs, int srcStride, BYT
         }
 
         for (size_t p = 0; p < srcs.size(); ++p) {
-            srcs[p] += srcStride;
+            srcs[p] += srcStrides[p];
         }
         dst += dstStride;
     }
@@ -138,6 +138,9 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     const BYTE *srcMainPlane = srcBuffer;
 
     if (videoFormat.pixelFormat->frameServerFormatId == VideoInfo::CS_YUVA444P16) {
+        const std::array<BYTE *, 4> y416Slices = { dstSlices[1], dstSlices[0], dstSlices[2], dstSlices[3] };
+        const std::array<int, 4> y416Strides = { dstStrides[1], dstStrides[0], dstStrides[2], dstStrides[3] };
+
         decltype(Deinterleave<0, 0, 4>) *DeinterleaveFunc;
         if (Environment::GetInstance().IsSupportAVXx()) {
             DeinterleaveFunc = Deinterleave<2, 2, 4>;
@@ -146,7 +149,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         } else {
             DeinterleaveFunc = Deinterleave<0, 2, 4>;
         }
-        DeinterleaveFunc(srcMainPlane, srcMainPlaneStride, { dstSlices[1], dstSlices[0], dstSlices[2], dstSlices[3] }, dstStrides[0], rowSize * 4, height);
+        DeinterleaveFunc(srcMainPlane, srcMainPlaneStride, y416Slices, y416Strides, rowSize * 4, height);
         return;
     }
 
@@ -186,7 +189,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
                 DeinterleaveFunc = Deinterleave<0, 2, 2>;
             }
         }
-        DeinterleaveFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, dstStrides[1], srcUVRowSize, srcUVHeight);
+        DeinterleaveFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, { dstStrides[1], dstStrides[2] }, srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.BitsPerComponent() == 10) {
             decltype(BitShiftEach16BitInt<0, 0, true>) *RightShiftFunc;
@@ -230,7 +233,9 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
     BYTE *dstMainPlane = dstBuffer;
 
     if (videoFormat.pixelFormat->frameServerFormatId == VideoInfo::CS_YUVA444P16) {
-        InterleaveY416({ srcSlices[1], srcSlices[0], srcSlices[2], srcSlices[3] }, srcStrides[0], dstMainPlane, dstMainPlaneStride, rowSize * 4, height);
+        const std::array<const BYTE *, 4> y416Slices = { srcSlices[1], srcSlices[0], srcSlices[2], srcSlices[3] };
+        const std::array<int, 4> y416Strides = { srcStrides[1], srcStrides[0], srcStrides[2], srcStrides[3] };
+        InterleaveY416(y416Slices, y416Strides, dstMainPlane, dstMainPlaneStride, rowSize * 4, height);
         return;
     }
 
@@ -265,7 +270,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
                 InterleaveUVFunc = InterleaveUV<1, 2>;
             }
         }
-        InterleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+        InterleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], srcStrides[2], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
 
         if (videoFormat.videoInfo.BitsPerComponent() == 10) {
             decltype(BitShiftEach16BitInt<0, 0, false>) *LeftShiftFunc;
