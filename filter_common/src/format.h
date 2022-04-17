@@ -110,42 +110,66 @@ public:
     static inline size_t OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
 
 private:
-    static constexpr const int _MASK_PERMUTE_V256 = 0b11011000;
+    static inline const __m128i _SHUFFLE_MASK_UV_M128_C1 = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+    static inline const __m128i _SHUFFLE_MASK_UV_M128_C2 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static inline const __m256i _SHUFFLE_MASK_UV_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+    static inline const __m256i _SHUFFLE_MASK_UV_M256_C2 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static constexpr const int  _PERMUTE_INDEX_UV        = 0b11011000;
+    static inline const __m128i _SHUFFLE_MASK_YUVA_M128  = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m256i _SHUFFLE_MASK_YUVA_M256  = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m256i _PERMUTE_INDEX_YUVA      = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
+
     static inline size_t _vectorSize;
 
-    // intrinsicType: 1 = SSSE3, 2 = AVX
-    // PixelComponentSize is the size for each YUV pixel component (8-bit, 10-bit, 16-bit, etc.)
+    static auto InterleaveY416(std::array<const BYTE *, 4> srcs, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void;
 
-    template <int intrinsicType, int pixelComponentSize>
-    static constexpr auto DeinterleaveUV(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height) -> void {
+    /*
+     * intrinsicType: 1 = SSSE3, 2 = AVX
+     * componentSize is the size for each YUV pixel component (1 for 8-bit, 2 for 10 and 16-bit)
+     * numDsts is the number of destination buffers (2 or 4)
+     */
+    template <int intrinsicType, int componentSize, int numDsts>
+    static constexpr auto Deinterleave(const BYTE *src, int srcStride, std::array<BYTE *, 4> dsts, int dstStride, int rowSize, int height) -> void {
+        /*
+         * Place bytes from each plane in sequence by shuffling, then write the sequence of bytes to respective buffer.
+         *
+         * For AVX2, because its 256-bit shuffle instruction does not operate cross the 128-bit lane,
+         * we first prepare the two 128-bit integers just like the SSSE3 version, then permute to correct the order.
+         * Much like 0, 2, 1, 3 -> 0, 1, 2, 3.
+         */
+
         // Vector is the type for the memory data each SIMD intrustion works on (__m128i, __m256i, etc.)
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
-                     , std::array<BYTE, pixelComponentSize * 2>>>;
+                     , std::array<BYTE, componentSize * 2>>>;
         // Output is the type for the output of the SIMD instructions, half the size of Vector
-        using Output = std::array<BYTE, sizeof(Vector) / 2>;
+        using Output = std::array<BYTE, sizeof(Vector) / numDsts>;
 
-        Vector shuffleMask;
+        Vector shuffleMask {};
         if constexpr (intrinsicType == 1) {
-            if constexpr (pixelComponentSize == 1) {
-                shuffleMask = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+            if constexpr (componentSize == 1) {
+                shuffleMask = _SHUFFLE_MASK_UV_M128_C1;
+            } else if constexpr (numDsts == 2) {
+                shuffleMask = _SHUFFLE_MASK_UV_M128_C2;
             } else {
-                shuffleMask = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+                shuffleMask = _SHUFFLE_MASK_YUVA_M128;
             }
         } else if constexpr (intrinsicType == 2) {
-            if constexpr (pixelComponentSize == 1) {
-                shuffleMask = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+            if constexpr (componentSize == 1) {
+                shuffleMask = _SHUFFLE_MASK_UV_M256_C1;
+            } else if constexpr (numDsts == 2) {
+                shuffleMask = _SHUFFLE_MASK_UV_M256_C2;
             } else {
-                shuffleMask = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+                shuffleMask = _SHUFFLE_MASK_YUVA_M256;
             }
-        } else {
-            shuffleMask = {};
         }
 
         for (int y = 0; y < height; ++y) {
             const Vector *srcLine = reinterpret_cast<const Vector *>(src);
-            Output *dst1Line = reinterpret_cast<Output *>(dst1);
-            Output *dst2Line = reinterpret_cast<Output *>(dst2);
+            std::array<Output *, numDsts> dstsLine;
+            for (int p = 0; p < numDsts; ++p) {
+                dstsLine[p] = reinterpret_cast<Output *>(dsts[p]);
+            }
 
             for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
                 const Vector srcVec = *srcLine++;
@@ -155,22 +179,29 @@ private:
                     outputVec = _mm_shuffle_epi8(srcVec, shuffleMask);
                 } else if constexpr (intrinsicType == 2) {
                     const Vector srcShuffle = _mm256_shuffle_epi8(srcVec, shuffleMask);
-                    outputVec = _mm256_permute4x64_epi64(srcShuffle, _MASK_PERMUTE_V256);
+
+                    if constexpr (numDsts == 2) {
+                        outputVec = _mm256_permute4x64_epi64(srcShuffle, _PERMUTE_INDEX_UV);
+                    } else {
+                        outputVec = _mm256_permutevar8x32_epi32(srcShuffle, _PERMUTE_INDEX_YUVA);
+                    }
                 } else {
                     outputVec = srcVec;
                 }
 
-                *dst1Line++ = *reinterpret_cast<Output *>(&outputVec);
-                *dst2Line++ = *(reinterpret_cast<Output *>(&outputVec) + 1);
+                for (int p = 0; p < numDsts; ++p) {
+                    *dstsLine[p]++ = *(reinterpret_cast<const Output *>(&outputVec) + p);
+                }
             }
 
             src += srcStride;
-            dst1 += dstStride;
-            dst2 += dstStride;
+            for (int p = 0; p < numDsts; ++p) {
+                dsts[p] += dstStride;
+            }
         }
     }
 
-    template <int intrinsicType, int pixelComponentSize>
+    template <int intrinsicType, int componentSize>
     static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
@@ -186,7 +217,7 @@ private:
                 const Vector src2Vec = *src2Line++;
 
                 if constexpr (intrinsicType == 1) {
-                    if constexpr (pixelComponentSize == 1) {
+                    if constexpr (componentSize == 1) {
                         *dstLine++ = _mm_unpacklo_epi8(src1Vec, src2Vec);
                         *dstLine++ = _mm_unpackhi_epi8(src1Vec, src2Vec);
                     } else {
@@ -194,10 +225,10 @@ private:
                         *dstLine++ = _mm_unpackhi_epi16(src1Vec, src2Vec);
                     }
                 } else if constexpr (intrinsicType == 2) {
-                    const Vector src1Permute = _mm256_permute4x64_epi64(src1Vec, _MASK_PERMUTE_V256);
-                    const Vector src2Permute = _mm256_permute4x64_epi64(src2Vec, _MASK_PERMUTE_V256);
+                    const Vector src1Permute = _mm256_permute4x64_epi64(src1Vec, _PERMUTE_INDEX_UV);
+                    const Vector src2Permute = _mm256_permute4x64_epi64(src2Vec, _PERMUTE_INDEX_UV);
 
-                    if constexpr (pixelComponentSize == 1) {
+                    if constexpr (componentSize == 1) {
                         *dstLine++ = _mm256_unpacklo_epi8(src1Permute, src2Permute);
                         *dstLine++ = _mm256_unpackhi_epi8(src1Permute, src2Permute);
                     } else {

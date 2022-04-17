@@ -12,24 +12,24 @@ namespace SynthFilter {
 // for each group of formats with the same format ID, they should appear with the most preferred -> least preferred order
 const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     // 4:2:0
-    { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 },
-    { .name = L"YV12",  .mediaSubtype = MEDIASUBTYPE_YV12,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV12 },
-    { .name = L"I420",  .mediaSubtype = MEDIASUBTYPE_I420,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_I420 },
-    { .name = L"IYUV",  .mediaSubtype = MEDIASUBTYPE_IYUV,  .frameServerFormatId = pfYUV420P8,    .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_IYUV },
+    { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_NV12 },
+    { .name = L"YV12",  .mediaSubtype = MEDIASUBTYPE_YV12,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV12 },
+    { .name = L"I420",  .mediaSubtype = MEDIASUBTYPE_I420,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_I420 },
+    { .name = L"IYUV",  .mediaSubtype = MEDIASUBTYPE_IYUV,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_IYUV },
 
-    { .name = L"P016",  .mediaSubtype = MEDIASUBTYPE_P016,  .frameServerFormatId = pfYUV420P16,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 },
+    { .name = L"P016",  .mediaSubtype = MEDIASUBTYPE_P016,  .frameServerFormatId = pfYUV420P16, .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P016 },
     // P010 from DirectShow has the least significant 6 bits zero-padded, while AviSynth expects the most significant bits zeroed
     // Therefore, there will be bit shifting whenever P010 is used
-    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P10,   .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
+    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P10, .bitCount = 24, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P010 },
 
     // 4:2:2
     // VapourSynth does not support YUY2 format
-    { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .frameServerFormatId = pfYUV422P16,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 },
+    { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .frameServerFormatId = pfYUV422P16, .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P216 },
     // Same note as P010
-    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P10,   .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
+    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P10, .bitCount = 32, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = true,  .resourceId = IDC_INPUT_FORMAT_P210 },
 
     // 4:4:4
-    { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = pfYUV444P8,    .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 },
+    { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = pfYUV444P8,  .bitCount = 24, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .areUVPlanesInterleaved = false, .resourceId = IDC_INPUT_FORMAT_YV24 },
 
     // VapourSynth does not support packed RGB formats
 };
@@ -85,13 +85,11 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame
         AVSF_VPS_API->getReadPtr(srcFrame, 0),
         videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1),
         videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2),
-        videoFormat.videoInfo.format.numPlanes < 4 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 3),
     };
     const std::array srcStrides {
         static_cast<int>(AVSF_VPS_API->getStride(srcFrame, 0)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2)),
-        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 4 ? 0 : AVSF_VPS_API->getStride(srcFrame, 3)),
     };
     const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
@@ -105,13 +103,11 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
         AVSF_VPS_API->getWritePtr(frame, 0),
         videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1),
         videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2),
-        videoFormat.videoInfo.format.numPlanes < 4 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 3),
     };
     const std::array dstStrides {
         static_cast<int>(AVSF_VPS_API->getStride(frame, 0)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2)),
-        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 4 ? 0 : AVSF_VPS_API->getStride(frame, 3)),
     };
     const int rowSize = AVSF_VPS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
@@ -142,25 +138,25 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(DeinterleaveUV<0, 0>) *DeinterleaveUVFunc;
+        decltype(Deinterleave<0, 0, 2>) *DeinterleaveFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                DeinterleaveUVFunc = DeinterleaveUV<2, 1>;
+                DeinterleaveFunc = Deinterleave<2, 1, 2>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
-                DeinterleaveUVFunc = DeinterleaveUV<1, 1>;
+                DeinterleaveFunc = Deinterleave<1, 1, 2>;
             } else {
-                DeinterleaveUVFunc = DeinterleaveUV<0, 1>;
+                DeinterleaveFunc = Deinterleave<0, 1, 2>;
             }
         } else {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                DeinterleaveUVFunc = DeinterleaveUV<2, 2>;
+                DeinterleaveFunc = Deinterleave<2, 2, 2>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
-                DeinterleaveUVFunc = DeinterleaveUV<1, 2>;
+                DeinterleaveFunc = Deinterleave<1, 2, 2>;
             } else {
-                DeinterleaveUVFunc = DeinterleaveUV<0, 2>;
+                DeinterleaveFunc = Deinterleave<0, 2, 2>;
             }
         }
-        DeinterleaveUVFunc(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+        DeinterleaveFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, dstStrides[1], srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
             decltype(BitShiftEach16BitInt<0, 0, true>) *RightShiftFunc;

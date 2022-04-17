@@ -99,38 +99,13 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
     return frame;
 }
 
-static auto DeinterleaveYUVA(const BYTE *src, int srcStride, std::array<BYTE *, 4> dsts, int dstStride, int rowSize, int height) -> void {
+auto Format::InterleaveY416(std::array<const BYTE *, 4> srcs, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
+
     using Vector = __m128i;
     using Output = int32_t;
 
-    const Vector shuffleMask = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-
-    for (int y = 0; y < height; ++y) {
-        const Vector *srcLine = reinterpret_cast<const Vector *>(src);
-        std::array<Output *, dsts.size()> dstsLine;
-        for (size_t p = 0; p < dsts.size(); ++p) {
-            dstsLine[p] = reinterpret_cast<Output *>(dsts[p]);
-        }
-
-        for (int i = 0; i < DivideRoundUp(static_cast<int>(rowSize * dsts.size()), sizeof(Vector)); ++i) {
-            const Vector outputVec = _mm_shuffle_epi8(*srcLine++, shuffleMask);
-            for (size_t p = 0; p < dsts.size(); ++p) {
-                *dstsLine[p]++ = *(reinterpret_cast<const Output *>(&outputVec) + p);
-            }
-        }
-
-        src += srcStride;
-        for (size_t p = 0; p < dsts.size(); ++p) {
-            dsts[p] += dstStride;
-        }
-    }
-}
-
-static auto InterleaveYUVA(std::array<const BYTE *, 4> srcs, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
-    using Vector = __m128i;
-    using Output = int32_t;
-
-    const Vector shuffleMask = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    const Vector shuffleMask = _SHUFFLE_MASK_UV_M128_C2;
 
     for (int y = 0; y < height; ++y) {
         std::array<const Output *, srcs.size()> srcsLine;
@@ -139,7 +114,7 @@ static auto InterleaveYUVA(std::array<const BYTE *, 4> srcs, int srcStride, BYTE
         }
         Vector *dstLine = reinterpret_cast<Vector *>(dst);
 
-        for (int i = 0; i < DivideRoundUp(static_cast<int>(rowSize * srcs.size()), sizeof(Vector)); ++i) {
+        for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
             Vector outputVec = _mm_insert_epi32(_mm_setzero_si128(), *srcsLine[0]++, 0);
             outputVec = _mm_insert_epi32(outputVec, *srcsLine[1]++, 1);
             outputVec = _mm_insert_epi32(outputVec, *srcsLine[2]++, 2);
@@ -162,8 +137,16 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     const int srcMainPlaneSize = srcMainPlaneStride * height;
     const BYTE *srcMainPlane = srcBuffer;
 
-    if (videoFormat.pixelFormat->frameServerFormatId & VideoInfo::CS_YUVA) {
-        DeinterleaveYUVA(srcMainPlane, srcMainPlaneStride, { dstSlices[1], dstSlices[0], dstSlices[2], dstSlices[3] }, dstStrides[0], rowSize, height);
+    if (videoFormat.pixelFormat->frameServerFormatId == VideoInfo::CS_YUVA444P16) {
+        decltype(Deinterleave<0, 0, 4>) *DeinterleaveFunc;
+        if (Environment::GetInstance().IsSupportAVXx()) {
+            DeinterleaveFunc = Deinterleave<2, 2, 4>;
+        } else if (Environment::GetInstance().IsSupportSSSE3()) {
+            DeinterleaveFunc = Deinterleave<1, 2, 4>;
+        } else {
+            DeinterleaveFunc = Deinterleave<0, 2, 4>;
+        }
+        DeinterleaveFunc(srcMainPlane, srcMainPlaneStride, { dstSlices[1], dstSlices[0], dstSlices[2], dstSlices[3] }, dstStrides[0], rowSize * 4, height);
         return;
     }
 
@@ -185,25 +168,25 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(DeinterleaveUV<0, 0>) *DeinterleaveUVFunc;
+        decltype(Deinterleave<0, 0, 2>) *DeinterleaveFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                DeinterleaveUVFunc = DeinterleaveUV<2, 1>;
+                DeinterleaveFunc = Deinterleave<2, 1, 2>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
-                DeinterleaveUVFunc = DeinterleaveUV<1, 1>;
+                DeinterleaveFunc = Deinterleave<1, 1, 2>;
             } else {
-                DeinterleaveUVFunc = DeinterleaveUV<0, 1>;
+                DeinterleaveFunc = Deinterleave<0, 1, 2>;
             }
         } else {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                DeinterleaveUVFunc = DeinterleaveUV<2, 2>;
+                DeinterleaveFunc = Deinterleave<2, 2, 2>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
-                DeinterleaveUVFunc = DeinterleaveUV<1, 2>;
+                DeinterleaveFunc = Deinterleave<1, 2, 2>;
             } else {
-                DeinterleaveUVFunc = DeinterleaveUV<0, 2>;
+                DeinterleaveFunc = Deinterleave<0, 2, 2>;
             }
         }
-        DeinterleaveUVFunc(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+        DeinterleaveFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, dstStrides[1], srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.BitsPerComponent() == 10) {
             decltype(BitShiftEach16BitInt<0, 0, true>) *RightShiftFunc;
@@ -246,8 +229,8 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
     const int dstMainPlaneSize = dstMainPlaneStride * height;
     BYTE *dstMainPlane = dstBuffer;
 
-    if (videoFormat.pixelFormat->frameServerFormatId & VideoInfo::CS_YUVA) {
-        InterleaveYUVA({ srcSlices[1], srcSlices[0], srcSlices[2], srcSlices[3] }, srcStrides[0], dstMainPlane, dstMainPlaneStride, rowSize, height);
+    if (videoFormat.pixelFormat->frameServerFormatId == VideoInfo::CS_YUVA444P16) {
+        InterleaveY416({ srcSlices[1], srcSlices[0], srcSlices[2], srcSlices[3] }, srcStrides[0], dstMainPlane, dstMainPlaneStride, rowSize * 4, height);
         return;
     }
 
