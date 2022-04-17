@@ -37,7 +37,7 @@ auto CSynthFilterAllocator::Alloc() -> HRESULT {
     }
 
     LONG lAlignedSize = m_lSize + m_lPrefix;
-    //  check overflow
+    // check overflow
     if (lAlignedSize < m_lSize) {
         return E_OUTOFMEMORY;
     }

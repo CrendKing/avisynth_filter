@@ -85,11 +85,13 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame
         AVSF_VPS_API->getReadPtr(srcFrame, 0),
         videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 1),
         videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 2),
+        videoFormat.videoInfo.format.numPlanes < 4 ? nullptr : AVSF_VPS_API->getReadPtr(srcFrame, 3),
     };
     const std::array srcStrides {
         static_cast<int>(AVSF_VPS_API->getStride(srcFrame, 0)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(srcFrame, 1)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(srcFrame, 2)),
+        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 4 ? 0 : AVSF_VPS_API->getStride(srcFrame, 3)),
     };
     const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
@@ -103,11 +105,13 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
         AVSF_VPS_API->getWritePtr(frame, 0),
         videoFormat.videoInfo.format.numPlanes < 2 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 1),
         videoFormat.videoInfo.format.numPlanes < 3 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 2),
+        videoFormat.videoInfo.format.numPlanes < 4 ? nullptr : AVSF_VPS_API->getWritePtr(frame, 3),
     };
     const std::array dstStrides {
         static_cast<int>(AVSF_VPS_API->getStride(frame, 0)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 2 ? 0 : AVSF_VPS_API->getStride(frame, 1)),
         static_cast<int>(videoFormat.videoInfo.format.numPlanes < 3 ? 0 : AVSF_VPS_API->getStride(frame, 2)),
+        static_cast<int>(videoFormat.videoInfo.format.numPlanes < 4 ? 0 : AVSF_VPS_API->getStride(frame, 3)),
     };
     const int rowSize = AVSF_VPS_API->getFrameWidth(frame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
@@ -116,7 +120,7 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
     return frame;
 }
 
-auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
+auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 4> &dstSlices, const std::array<int, 4> &dstStrides, int rowSize, int height) -> void {
     // bmi.biWidth should be "set equal to the surface stride in pixels" according to the doc of BITMAPINFOHEADER
     int srcMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format.bytesPerSample;
     ASSERT(rowSize <= srcMainPlaneStride);
@@ -138,25 +142,25 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Deinterleave<0, 0>) *DeinterleaveFunc;
+        decltype(DeinterleaveUV<0, 0>) *DeinterleaveUVFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                DeinterleaveFunc = Deinterleave<2, 1>;
+                DeinterleaveUVFunc = DeinterleaveUV<2, 1>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
-                DeinterleaveFunc = Deinterleave<1, 1>;
+                DeinterleaveUVFunc = DeinterleaveUV<1, 1>;
             } else {
-                DeinterleaveFunc = Deinterleave<0, 1>;
+                DeinterleaveUVFunc = DeinterleaveUV<0, 1>;
             }
         } else {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                DeinterleaveFunc = Deinterleave<2, 2>;
+                DeinterleaveUVFunc = DeinterleaveUV<2, 2>;
             } else if (Environment::GetInstance().IsSupportSSSE3()) {
-                DeinterleaveFunc = Deinterleave<1, 2>;
+                DeinterleaveUVFunc = DeinterleaveUV<1, 2>;
             } else {
-                DeinterleaveFunc = Deinterleave<0, 2>;
+                DeinterleaveUVFunc = DeinterleaveUV<0, 2>;
             }
         }
-        DeinterleaveFunc(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
+        DeinterleaveUVFunc(srcUVStart, srcUVStride, dstSlices[1], dstSlices[2], dstStrides[1], srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
             decltype(BitShiftEach16BitInt<0, 0, true>) *RightShiftFunc;
@@ -193,7 +197,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     }
 }
 
-auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void {
+auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 4> &srcSlices, const std::array<int, 4> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void {
     int dstMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format.bytesPerSample;
     ASSERT(rowSize <= dstMainPlaneStride);
     ASSERT(height >= abs(videoFormat.bmi.biHeight));
@@ -213,21 +217,21 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Interleave<0, 0>) *InterleaveFunc;
+        decltype(InterleaveUV<0, 0>) *InterleaveUVFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                InterleaveFunc = Interleave<2, 1>;
+                InterleaveUVFunc = InterleaveUV<2, 1>;
             } else {
-                InterleaveFunc = Interleave<1, 1>;
+                InterleaveUVFunc = InterleaveUV<1, 1>;
             }
         } else {
             if (Environment::GetInstance().IsSupportAVXx()) {
-                InterleaveFunc = Interleave<2, 2>;
+                InterleaveUVFunc = InterleaveUV<2, 2>;
             } else {
-                InterleaveFunc = Interleave<1, 2>;
+                InterleaveUVFunc = InterleaveUV<1, 2>;
             }
         }
-        InterleaveFunc(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
+        InterleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
             decltype(BitShiftEach16BitInt<0, 0, false>) *LeftShiftFunc;

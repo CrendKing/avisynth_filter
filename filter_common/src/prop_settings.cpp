@@ -46,6 +46,7 @@ auto CSynthFilterPropSettings::OnActivate() -> HRESULT {
 
 #ifdef AVSF_VAPOURSYNTH
     EnableWindow(GetDlgItem(m_Dlg, IDC_INPUT_FORMAT_YUY2), FALSE);
+    EnableWindow(GetDlgItem(m_Dlg, IDC_INPUT_FORMAT_Y416), FALSE);
     EnableWindow(GetDlgItem(m_Dlg, IDC_INPUT_FORMAT_RGB24), FALSE);
     EnableWindow(GetDlgItem(m_Dlg, IDC_INPUT_FORMAT_RGB32), FALSE);
 #endif

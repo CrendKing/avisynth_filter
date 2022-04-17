@@ -9,6 +9,7 @@ namespace SynthFilter {
 
 static const GUID MEDIASUBTYPE_I420                                  = FOURCCMap('024I');
 static const GUID MEDIASUBTYPE_YV24                                  = FOURCCMap('42VY');
+static const GUID MEDIASUBTYPE_Y416                                  = FOURCCMap('614Y');
 
 #define SETTINGS_NAME_SUFFIX                                           " Settings"
 #define STATUS_NAME_SUFFIX                                             " Status"

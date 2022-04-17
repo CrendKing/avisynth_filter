@@ -93,8 +93,8 @@ public:
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat;
     static auto WriteSample(const VideoFormat &videoFormat, InputFrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> OutputFrameType;
-    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
-    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
+    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 4> &dstSlices, const std::array<int, 4> &dstStrides, int rowSize, int height) -> void;
+    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 4> &srcSlices, const std::array<int, 4> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
 
     static const std::vector<PixelFormat> PIXEL_FORMATS;
 
@@ -117,7 +117,7 @@ private:
     // PixelComponentSize is the size for each YUV pixel component (8-bit, 10-bit, 16-bit, etc.)
 
     template <int intrinsicType, int pixelComponentSize>
-    static constexpr auto Deinterleave(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height) -> void {
+    static constexpr auto DeinterleaveUV(const BYTE *src, int srcStride, BYTE *dst1, BYTE *dst2, int dstStride, int rowSize, int height) -> void {
         // Vector is the type for the memory data each SIMD intrustion works on (__m128i, __m256i, etc.)
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
@@ -171,7 +171,7 @@ private:
     }
 
     template <int intrinsicType, int pixelComponentSize>
-    static constexpr auto Interleave(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , void>>;  // using illegal type here to make sure we pass correct template types

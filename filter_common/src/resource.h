@@ -36,9 +36,10 @@
 #define IDC_INPUT_FORMAT_P210            1208
 #define IDC_INPUT_FORMAT_P216            1209
 #define IDC_INPUT_FORMAT_YV24            1210
-#define IDC_INPUT_FORMAT_RGB24           1211
-#define IDC_INPUT_FORMAT_RGB32           1212
-#define IDC_INPUT_FORMAT_END             1213
+#define IDC_INPUT_FORMAT_Y416            1211
+#define IDC_INPUT_FORMAT_RGB24           1212
+#define IDC_INPUT_FORMAT_RGB32           1213
+#define IDC_INPUT_FORMAT_END             1214
 
 #define IDT_TIMER_STATUS                 2000
 #define IDC_TEXT_FRAME_NUMBER            2001
