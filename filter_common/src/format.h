@@ -114,17 +114,13 @@ private:
     static inline const __m128i _SHUFFLE_MASK_UV_M128_C2 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     static inline const __m256i _SHUFFLE_MASK_UV_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
     static inline const __m256i _SHUFFLE_MASK_UV_M256_C2 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
-    static constexpr const int  _PERMUTE_INDEX_UV        = 0b11011000;
-    static inline const __m128i _SHUFFLE_MASK_YUVA_M128  = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-    static inline const __m256i _SHUFFLE_MASK_YUVA_M256  = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-    static inline const __m256i _PERMUTE_INDEX_YUVA      = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
-
-    static inline size_t _vectorSize;
-
-    static auto InterleaveY416(std::array<const BYTE *, 4> srcs, const std::array<int, 4> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
+    static constexpr const int _PERMUTE_INDEX_UV = 0b11011000;
+    static inline const __m128i _SHUFFLE_MASK_YUVA_M128 = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m256i _SHUFFLE_MASK_YUVA_M256 = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m256i _PERMUTE_INDEX_YUVA = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
 
     /*
-     * intrinsicType: 1 = SSSE3, 2 = AVX
+     * intrinsicType: 1 = SSSE3, 2 = AVX2. Anything else: non-SIMD
      * componentSize is the size for each YUV pixel component (1 for 8-bit, 2 for 10 and 16-bit)
      * numDsts is the number of destination buffers (2 or 4)
      */
@@ -141,7 +137,7 @@ private:
         // Vector is the type for the memory data each SIMD intrustion works on (__m128i, __m256i, etc.)
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
-                     , std::array<BYTE, componentSize * 2>>>;
+                     , std::array<BYTE, componentSize * numDsts>>>;
         // Output is the type for the output of the SIMD instructions, half the size of Vector
         using Output = std::array<BYTE, sizeof(Vector) / numDsts>;
 
@@ -205,7 +201,7 @@ private:
     static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride1, int srcStride2, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
-                     , void>>;  // using illegal type here to make sure we pass correct template types
+                     , std::array<BYTE, componentSize>>>;
 
         for (int y = 0; y < height; ++y) {
             const Vector *src1Line = reinterpret_cast<const Vector *>(src1);
@@ -235,6 +231,9 @@ private:
                         *dstLine++ = _mm256_unpacklo_epi16(src1Permute, src2Permute);
                         *dstLine++ = _mm256_unpackhi_epi16(src1Permute, src2Permute);
                     }
+                } else {
+                    *dstLine++ = src1Vec;
+                    *dstLine++ = src2Vec;
                 }
             }
 
@@ -248,7 +247,7 @@ private:
     constexpr static auto BitShiftEach16BitInt(BYTE *bytes, int stride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
-                     , void>>;
+                     , uint16_t>>;
 
         for (int y = 0; y < height; ++y) {
             Vector *bytesLine = reinterpret_cast<Vector *>(bytes);
@@ -266,12 +265,30 @@ private:
                     } else {
                         *bytesLine++ = _mm256_slli_epi16(*bytesLine, shiftSize);
                     }
+                } else {
+                    if constexpr (isRightShift) {
+                        *bytesLine++ >>= shiftSize;
+                    } else {
+                        *bytesLine++ <<= shiftSize;
+                    }
                 }
             }
 
             bytes += stride;
         }
     }
+
+    static auto InterleaveY416(std::array<const BYTE *, 4> srcs, const std::array<int, 4> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
+
+    static inline decltype(Deinterleave<0, 1, 2>) *_deinterleaveUVC1Func;
+    static inline decltype(Deinterleave<0, 2, 2>) *_deinterleaveUVC2Func;
+    static inline decltype(Deinterleave<0, 2, 4>) *_deinterleaveY416Func;
+    static inline decltype(InterleaveUV<0, 1>) *_interleaveUVC1Func;
+    static inline decltype(InterleaveUV<0, 2>) *_interleaveUVC2Func;
+    static inline decltype(BitShiftEach16BitInt<0, 6, true>) *_rightShiftFunc;
+    static inline decltype(BitShiftEach16BitInt<0, 6, false>) *_leftShiftFunc;
+
+    static inline size_t _vectorSize;
 };
 
 }

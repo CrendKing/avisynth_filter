@@ -70,11 +70,32 @@ auto Format::VideoFormat::ColorSpaceInfo::Update(const DXVA_ExtendedFormat &dxva
 }
 
 auto Format::Initialize() -> void {
-    if (Environment::GetInstance().IsSupportAVXx()) {
+    if (Environment::GetInstance().IsSupportAVX2()) {
+        _deinterleaveUVC1Func = Deinterleave<2, 1, 2>;
+        _deinterleaveUVC2Func = Deinterleave<2, 2, 2>;
+        _deinterleaveY416Func = Deinterleave<2, 2, 4>;
+        _interleaveUVC1Func = InterleaveUV<2, 1>;
+        _interleaveUVC2Func = InterleaveUV<2, 2>;
+        _rightShiftFunc = BitShiftEach16BitInt<2, 6, true>;
+        _leftShiftFunc = BitShiftEach16BitInt<2, 6, false>;
         _vectorSize = sizeof(__m256i);
     } else if (Environment::GetInstance().IsSupportSSSE3()) {
+        _deinterleaveUVC1Func = Deinterleave<1, 1, 2>;
+        _deinterleaveUVC2Func = Deinterleave<1, 2, 2>;
+        _deinterleaveY416Func = Deinterleave<1, 2, 4>;
+        _interleaveUVC1Func = InterleaveUV<1, 1>;
+        _interleaveUVC2Func = InterleaveUV<1, 2>;
+        _rightShiftFunc = BitShiftEach16BitInt<1, 6, true>;
+        _leftShiftFunc = BitShiftEach16BitInt<1, 6, false>;
         _vectorSize = sizeof(__m128i);
     } else {
+        _deinterleaveUVC1Func = Deinterleave<0, 1, 2>;
+        _deinterleaveUVC2Func = Deinterleave<0, 2, 2>;
+        _deinterleaveY416Func = Deinterleave<0, 2, 4>;
+        _interleaveUVC1Func = InterleaveUV<0, 1>;
+        _interleaveUVC2Func = InterleaveUV<0, 2>;
+        _rightShiftFunc = BitShiftEach16BitInt<0, 6, true>;
+        _leftShiftFunc = BitShiftEach16BitInt<0, 6, false>;
         _vectorSize = 0;
     }
 

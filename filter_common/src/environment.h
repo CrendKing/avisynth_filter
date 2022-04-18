@@ -37,7 +37,7 @@ public:
     auto SetInputFormatEnabled(std::wstring_view formatName, bool enabled) -> void;
     constexpr auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
     auto SetRemoteControlEnabled(bool enabled) -> void;
-    constexpr auto IsSupportAVXx() const -> bool { return _isSupportAVXx; }
+    constexpr auto IsSupportAVX2() const -> bool { return _isSupportAVX2; }
     constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
     constexpr auto GetMinExtraSrcBuffer() const -> int { return _minExtraSrcBuffer; }
     constexpr auto GetMaxExtraSrcBuffer() const -> int { return _maxExtraSrcBuffer; }
@@ -71,7 +71,7 @@ private:
     DWORD _logStartTime = 0;
     std::mutex _logMutex;
 
-    bool _isSupportAVXx = false;
+    bool _isSupportAVX2 = false;
     bool _isSupportSSSE3 = false;
 };
 

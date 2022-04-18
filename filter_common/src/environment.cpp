@@ -172,11 +172,11 @@ auto Environment::DetectCPUID() -> void {
     } cpuInfo;
 
     __cpuid(reinterpret_cast<int *>(&cpuInfo), 1);
-    _isSupportAVXx = cpuInfo.ecx & (1 << 28);  // AVX
+    _isSupportAVX2 = cpuInfo.ecx & (1 << 28);  // AVX
     _isSupportSSSE3 = cpuInfo.ecx & (1 << 9);
 
     __cpuid(reinterpret_cast<int *>(&cpuInfo), 7);
-    _isSupportAVXx &= static_cast<bool>(cpuInfo.ebx & (1 << 5));  // AVX2
+    _isSupportAVX2 &= static_cast<bool>(cpuInfo.ebx & (1 << 5));  // AVX2
 }
 
 }
