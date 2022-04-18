@@ -11,7 +11,7 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 * Support wide range of input formats:
     * 4:2:0: NV12, YV12, P010, P016, etc
     * 4:2:2: YUY2, P210, P216
-    * 4:4:4: YV24
+    * 4:4:4: YV24, Y416
     * RGB24, RGB32
 * High performance frame generation and delivery
 * HDR metadata passthrough

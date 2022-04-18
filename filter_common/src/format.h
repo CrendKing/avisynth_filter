@@ -26,6 +26,12 @@ class Format {
     >;
 
 public:
+    enum class PlanesLayout {
+        ALL_PLANES_INTERLEAVED,
+        MAIN_SEPARATE_SEC_INTERLEAVED,
+        ALL_PLANES_SEPARATE,
+    };
+
     struct PixelFormat {
         const WCHAR *name;
         const CLSID &mediaSubtype;
@@ -34,14 +40,14 @@ public:
         // for BITMAPINFOHEADER::biBitCount
         uint8_t bitCount;
 
-        // only needed for AviSynth
+        // for the DirectShow format
         uint8_t componentsPerPixel;
 
         // ratio between the main plane and the subsampled planes
         int subsampleWidthRatio;
         int subsampleHeightRatio;
 
-        bool areUVPlanesInterleaved;
+        PlanesLayout srcPlanesLayout;
 
         int resourceId;
     };
@@ -93,8 +99,8 @@ public:
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat;
     static auto WriteSample(const VideoFormat &videoFormat, InputFrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> OutputFrameType;
-    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 4> &dstSlices, const std::array<int, 4> &dstStrides, int rowSize, int height) -> void;
-    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 4> &srcSlices, const std::array<int, 4> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
+    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
+    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
 
     static const std::vector<PixelFormat> PIXEL_FORMATS;
 
@@ -121,11 +127,13 @@ private:
 
     /*
      * intrinsicType: 1 = SSSE3, 2 = AVX2. Anything else: non-SIMD
-     * componentSize is the size for each YUV pixel component (1 for 8-bit, 2 for 10 and 16-bit)
-     * numDsts is the number of destination buffers (2 or 4)
+     * componentSize is the size per pixel component (1 for 8-bit, 2 for 10 and 16-bit)
+     * srcNumComponents is the number of components per pixel for the source
+     * dstNumComponents is the number of components per pixel for the destination
+     * srcNumComponents should always >= dstNumComponents. They differ in case we want to discard certain components (e.g. the alpha plane of Y410/Y416)
      */
-    template <int intrinsicType, int componentSize, int numDsts>
-    static constexpr auto Deinterleave(const BYTE *src, int srcStride, std::array<BYTE *, 4> dsts, const std::array<int, 4> &dstStrides, int rowSize, int height) -> void {
+    template <int intrinsicType, int componentSize, int srcNumComponents, int dstNumComponents>
+    static constexpr auto Deinterleave(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
         /*
          * Place bytes from each plane in sequence by shuffling, then write the sequence of bytes to respective buffer.
          *
@@ -137,15 +145,15 @@ private:
         // Vector is the type for the memory data each SIMD intrustion works on (__m128i, __m256i, etc.)
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
-                     , std::array<BYTE, componentSize * numDsts>>>;
+                     , std::array<BYTE, componentSize * srcNumComponents>>>;
         // Output is the type for the output of the SIMD instructions, half the size of Vector
-        using Output = std::array<BYTE, sizeof(Vector) / numDsts>;
+        using Output = std::array<BYTE, sizeof(Vector) / srcNumComponents>;
 
         Vector shuffleMask {};
         if constexpr (intrinsicType == 1) {
             if constexpr (componentSize == 1) {
                 shuffleMask = _SHUFFLE_MASK_UV_M128_C1;
-            } else if constexpr (numDsts == 2) {
+            } else if constexpr (srcNumComponents == 2) {
                 shuffleMask = _SHUFFLE_MASK_UV_M128_C2;
             } else {
                 shuffleMask = _SHUFFLE_MASK_YUVA_M128;
@@ -153,7 +161,7 @@ private:
         } else if constexpr (intrinsicType == 2) {
             if constexpr (componentSize == 1) {
                 shuffleMask = _SHUFFLE_MASK_UV_M256_C1;
-            } else if constexpr (numDsts == 2) {
+            } else if constexpr (srcNumComponents == 2) {
                 shuffleMask = _SHUFFLE_MASK_UV_M256_C2;
             } else {
                 shuffleMask = _SHUFFLE_MASK_YUVA_M256;
@@ -162,8 +170,8 @@ private:
 
         for (int y = 0; y < height; ++y) {
             const Vector *srcLine = reinterpret_cast<const Vector *>(src);
-            std::array<Output *, numDsts> dstsLine;
-            for (int p = 0; p < numDsts; ++p) {
+            std::array<Output *, dstNumComponents> dstsLine;
+            for (int p = 0; p < dstNumComponents; ++p) {
                 dstsLine[p] = reinterpret_cast<Output *>(dsts[p]);
             }
 
@@ -176,7 +184,7 @@ private:
                 } else if constexpr (intrinsicType == 2) {
                     const Vector srcShuffle = _mm256_shuffle_epi8(srcVec, shuffleMask);
 
-                    if constexpr (numDsts == 2) {
+                    if constexpr (srcNumComponents == 2) {
                         outputVec = _mm256_permute4x64_epi64(srcShuffle, _PERMUTE_INDEX_UV);
                     } else {
                         outputVec = _mm256_permutevar8x32_epi32(srcShuffle, _PERMUTE_INDEX_YUVA);
@@ -185,13 +193,13 @@ private:
                     outputVec = srcVec;
                 }
 
-                for (int p = 0; p < numDsts; ++p) {
+                for (int p = 0; p < dstNumComponents; ++p) {
                     *dstsLine[p]++ = *(reinterpret_cast<const Output *>(&outputVec) + p);
                 }
             }
 
             src += srcStride;
-            for (int p = 0; p < numDsts; ++p) {
+            for (int p = 0; p < dstNumComponents; ++p) {
                 dsts[p] += dstStrides[p];
             }
         }
@@ -278,11 +286,11 @@ private:
         }
     }
 
-    static auto InterleaveY416(std::array<const BYTE *, 4> srcs, const std::array<int, 4> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
+    static auto InterleaveY416(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
 
-    static inline decltype(Deinterleave<0, 1, 2>) *_deinterleaveUVC1Func;
-    static inline decltype(Deinterleave<0, 2, 2>) *_deinterleaveUVC2Func;
-    static inline decltype(Deinterleave<0, 2, 4>) *_deinterleaveY416Func;
+    static inline decltype(Deinterleave<0, 1, 2, 2>) *_deinterleaveUVC1Func;
+    static inline decltype(Deinterleave<0, 2, 2, 2>) *_deinterleaveUVC2Func;
+    static inline decltype(Deinterleave<0, 2, 4, 3>) *_deinterleaveY416Func;
     static inline decltype(InterleaveUV<0, 1>) *_interleaveUVC1Func;
     static inline decltype(InterleaveUV<0, 2>) *_interleaveUVC2Func;
     static inline decltype(BitShiftEach16BitInt<0, 6, true>) *_rightShiftFunc;

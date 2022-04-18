@@ -71,27 +71,27 @@ auto Format::VideoFormat::ColorSpaceInfo::Update(const DXVA_ExtendedFormat &dxva
 
 auto Format::Initialize() -> void {
     if (Environment::GetInstance().IsSupportAVX2()) {
-        _deinterleaveUVC1Func = Deinterleave<2, 1, 2>;
-        _deinterleaveUVC2Func = Deinterleave<2, 2, 2>;
-        _deinterleaveY416Func = Deinterleave<2, 2, 4>;
+        _deinterleaveUVC1Func = Deinterleave<2, 1, 2, 2>;
+        _deinterleaveUVC2Func = Deinterleave<2, 2, 2, 2>;
+        _deinterleaveY416Func = Deinterleave<2, 2, 4, 3>;
         _interleaveUVC1Func = InterleaveUV<2, 1>;
         _interleaveUVC2Func = InterleaveUV<2, 2>;
         _rightShiftFunc = BitShiftEach16BitInt<2, 6, true>;
         _leftShiftFunc = BitShiftEach16BitInt<2, 6, false>;
         _vectorSize = sizeof(__m256i);
     } else if (Environment::GetInstance().IsSupportSSSE3()) {
-        _deinterleaveUVC1Func = Deinterleave<1, 1, 2>;
-        _deinterleaveUVC2Func = Deinterleave<1, 2, 2>;
-        _deinterleaveY416Func = Deinterleave<1, 2, 4>;
+        _deinterleaveUVC1Func = Deinterleave<1, 1, 2, 2>;
+        _deinterleaveUVC2Func = Deinterleave<1, 2, 2, 2>;
+        _deinterleaveY416Func = Deinterleave<1, 2, 4, 3>;
         _interleaveUVC1Func = InterleaveUV<1, 1>;
         _interleaveUVC2Func = InterleaveUV<1, 2>;
         _rightShiftFunc = BitShiftEach16BitInt<1, 6, true>;
         _leftShiftFunc = BitShiftEach16BitInt<1, 6, false>;
         _vectorSize = sizeof(__m128i);
     } else {
-        _deinterleaveUVC1Func = Deinterleave<0, 1, 2>;
-        _deinterleaveUVC2Func = Deinterleave<0, 2, 2>;
-        _deinterleaveY416Func = Deinterleave<0, 2, 4>;
+        _deinterleaveUVC1Func = Deinterleave<0, 1, 2, 2>;
+        _deinterleaveUVC2Func = Deinterleave<0, 2, 2, 2>;
+        _deinterleaveY416Func = Deinterleave<0, 2, 4, 3>;
         _interleaveUVC1Func = InterleaveUV<0, 1>;
         _interleaveUVC2Func = InterleaveUV<0, 2>;
         _rightShiftFunc = BitShiftEach16BitInt<0, 6, true>;
@@ -111,6 +111,35 @@ auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat 
     }
 
     return nullptr;
+}
+
+auto Format::InterleaveY416(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
+
+    using Vector = __m128i;
+    using Output = int32_t;
+
+    const Vector shuffleMask = _SHUFFLE_MASK_UV_M128_C2;
+
+    for (int y = 0; y < height; ++y) {
+        std::array<const Output *, srcs.size()> srcsLine;
+        for (size_t p = 0; p < srcs.size(); ++p) {
+            srcsLine[p] = reinterpret_cast<const Output *>(srcs[p]);
+        }
+        Vector *dstLine = reinterpret_cast<Vector *>(dst);
+
+        for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
+            Vector outputVec = _mm_insert_epi32(_mm_setzero_si128(), *srcsLine[0]++, 0);
+            outputVec = _mm_insert_epi32(outputVec, *srcsLine[1]++, 1);
+            outputVec = _mm_insert_epi32(outputVec, *srcsLine[2]++, 2);
+            *dstLine++ = _mm_shuffle_epi8(outputVec, shuffleMask);
+        }
+
+        for (size_t p = 0; p < srcs.size(); ++p) {
+            srcs[p] += srcStrides[p];
+        }
+        dst += dstStride;
+    }
 }
 
 }
