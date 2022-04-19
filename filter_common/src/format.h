@@ -116,14 +116,20 @@ public:
     static inline size_t OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
 
 private:
-    static inline const __m128i _SHUFFLE_MASK_UV_M128_C1 = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
-    static inline const __m128i _SHUFFLE_MASK_UV_M128_C2 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
-    static inline const __m256i _SHUFFLE_MASK_UV_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
-    static inline const __m256i _SHUFFLE_MASK_UV_M256_C2 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
-    static constexpr const int _PERMUTE_INDEX_UV = 0b11011000;
-    static inline const __m128i _SHUFFLE_MASK_YUVA_M128 = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-    static inline const __m256i _SHUFFLE_MASK_YUVA_M256 = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-    static inline const __m256i _PERMUTE_INDEX_YUVA = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
+    static inline const __m128i _UV_SHUFFLE_MASK_M128_C1 = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+    static inline const __m128i _UV_SHUFFLE_MASK_M128_C2 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static inline const __m256i _UV_SHUFFLE_MASK_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+    static inline const __m256i _UV_SHUFFLE_MASK_M256_C2 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static constexpr const int  _UV_PERMUTE_INDEX        = 0b11011000;
+    static inline const __m128i _Y410_AND_MASK_1         = _mm_setr_epi32(1023, 1023, 1023, 1023);
+    static inline const __m128i _Y410_AND_MASK_2         = _mm_setr_epi32(1047552, 1047552, 1047552, 1047552);
+    static inline const __m128i _Y410_AND_MASK_3         = _mm_setr_epi32(1072693248, 1072693248, 1072693248, 1072693248);
+    static inline const __m128i _Y410_SHUFFLE_MASK_1     = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0);
+    static inline const __m128i _Y410_SHUFFLE_MASK_2     = _mm_setr_epi8(1, 2, 5, 6, 9, 10, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0);
+    static inline const __m128i _Y410_SHUFFLE_MASK_3     = _mm_setr_epi8(2, 3, 6, 7, 10, 11, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0);
+    static inline const __m128i _Y416_SHUFFLE_MASK_M128  = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m256i _Y416_SHUFFLE_MASK_M256  = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m256i _Y416_PERMUTE_INDEX      = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
 
     /*
      * intrinsicType: 1 = SSSE3, 2 = AVX2. Anything else: non-SIMD
@@ -152,19 +158,19 @@ private:
         Vector shuffleMask {};
         if constexpr (intrinsicType == 1) {
             if constexpr (componentSize == 1) {
-                shuffleMask = _SHUFFLE_MASK_UV_M128_C1;
+                shuffleMask = _UV_SHUFFLE_MASK_M128_C1;
             } else if constexpr (srcNumComponents == 2) {
-                shuffleMask = _SHUFFLE_MASK_UV_M128_C2;
+                shuffleMask = _UV_SHUFFLE_MASK_M128_C2;
             } else {
-                shuffleMask = _SHUFFLE_MASK_YUVA_M128;
+                shuffleMask = _Y416_SHUFFLE_MASK_M128;
             }
         } else if constexpr (intrinsicType == 2) {
             if constexpr (componentSize == 1) {
-                shuffleMask = _SHUFFLE_MASK_UV_M256_C1;
+                shuffleMask = _UV_SHUFFLE_MASK_M256_C1;
             } else if constexpr (srcNumComponents == 2) {
-                shuffleMask = _SHUFFLE_MASK_UV_M256_C2;
+                shuffleMask = _UV_SHUFFLE_MASK_M256_C2;
             } else {
-                shuffleMask = _SHUFFLE_MASK_YUVA_M256;
+                shuffleMask = _Y416_SHUFFLE_MASK_M256;
             }
         }
 
@@ -185,9 +191,9 @@ private:
                     const Vector srcShuffle = _mm256_shuffle_epi8(srcVec, shuffleMask);
 
                     if constexpr (srcNumComponents == 2) {
-                        outputVec = _mm256_permute4x64_epi64(srcShuffle, _PERMUTE_INDEX_UV);
+                        outputVec = _mm256_permute4x64_epi64(srcShuffle, _UV_PERMUTE_INDEX);
                     } else {
-                        outputVec = _mm256_permutevar8x32_epi32(srcShuffle, _PERMUTE_INDEX_YUVA);
+                        outputVec = _mm256_permutevar8x32_epi32(srcShuffle, _Y416_PERMUTE_INDEX);
                     }
                 } else {
                     outputVec = srcVec;
@@ -229,8 +235,8 @@ private:
                         *dstLine++ = _mm_unpackhi_epi16(src1Vec, src2Vec);
                     }
                 } else if constexpr (intrinsicType == 2) {
-                    const Vector src1Permute = _mm256_permute4x64_epi64(src1Vec, _PERMUTE_INDEX_UV);
-                    const Vector src2Permute = _mm256_permute4x64_epi64(src2Vec, _PERMUTE_INDEX_UV);
+                    const Vector src1Permute = _mm256_permute4x64_epi64(src1Vec, _UV_PERMUTE_INDEX);
+                    const Vector src2Permute = _mm256_permute4x64_epi64(src2Vec, _UV_PERMUTE_INDEX);
 
                     if constexpr (componentSize == 1) {
                         *dstLine++ = _mm256_unpacklo_epi8(src1Permute, src2Permute);
@@ -286,6 +292,8 @@ private:
         }
     }
 
+    static auto DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
+    static auto InterleaveY410(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
     static auto InterleaveY416(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
 
     static inline decltype(Deinterleave<0, 1, 2, 2>) *_deinterleaveUVC1Func;

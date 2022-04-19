@@ -29,7 +29,8 @@ const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
 
     // 4:4:4
     { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = VideoInfo::CS_YV24,      .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_YV24 },
-    // Y416 from DirectShow contains alpha plane, which is used during video playback, therefore we ignore it and feed frame server YUV444
+    // Y41x from DirectShow contains alpha plane, which is used during video playback, therefore we ignore it and feed frame server YUV444
+    { .name = L"Y410",  .mediaSubtype = MEDIASUBTYPE_Y410,  .frameServerFormatId = VideoInfo::CS_YUV444P10, .bitCount = 32, .componentsPerPixel = 4, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_Y410 },
     { .name = L"Y416",  .mediaSubtype = MEDIASUBTYPE_Y416,  .frameServerFormatId = VideoInfo::CS_YUV444P16, .bitCount = 64, .componentsPerPixel = 4, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_Y416 },
 
     // RGB
@@ -122,10 +123,14 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     switch (videoFormat.pixelFormat->srcPlanesLayout) {
     case PlanesLayout::ALL_PLANES_INTERLEAVED:
         if (videoFormat.pixelFormat->frameServerFormatId & VideoInfo::CS_PLANAR) {
-            // Y416 is the only format whose source is interleaved but destination is planar
-            const std::array y416Slices = { dstSlices[1], dstSlices[0], dstSlices[2] };
-            const std::array y416Strides = { dstStrides[1], dstStrides[0], dstStrides[2] };
-            _deinterleaveY416Func(srcMainPlane, srcMainPlaneStride, y416Slices, y416Strides, rowSize * 4, height);
+            const std::array yuvaSlices = { dstSlices[1], dstSlices[0], dstSlices[2] };
+            const std::array yuvaStrides = { dstStrides[1], dstStrides[0], dstStrides[2] };
+
+            if (videoFormat.videoInfo.BitsPerComponent() == 10) {
+                DeinterleaveY410(srcMainPlane, srcMainPlaneStride / 2, yuvaSlices, yuvaStrides, rowSize * 2, height);
+            } else {
+                _deinterleaveY416Func(srcMainPlane, srcMainPlaneStride, yuvaSlices, yuvaStrides, rowSize * 4, height);
+            }
         }
         break;
 
@@ -193,9 +198,14 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
     switch (videoFormat.pixelFormat->srcPlanesLayout) {
     case PlanesLayout::ALL_PLANES_INTERLEAVED:
         if (videoFormat.pixelFormat->frameServerFormatId & VideoInfo::CS_PLANAR) {
-            const std::array y416Slices = { srcSlices[1], srcSlices[0], srcSlices[2] };
-            const std::array y416Strides = { srcStrides[1], srcStrides[0], srcStrides[2] };
-            InterleaveY416(y416Slices, y416Strides, dstMainPlane, dstMainPlaneStride, rowSize * 4, height);
+            const std::array yuvaSlices = { srcSlices[1], srcSlices[0], srcSlices[2] };
+            const std::array yuvaStrides = { srcStrides[1], srcStrides[0], srcStrides[2] };
+
+            if (videoFormat.videoInfo.BitsPerComponent() == 10) {
+                InterleaveY410(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride / 2, rowSize * 2, height);
+            } else {
+                InterleaveY416(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride, rowSize * 4, height);
+            }
         }
         break;
 

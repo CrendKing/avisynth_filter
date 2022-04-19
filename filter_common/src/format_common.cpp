@@ -113,13 +113,73 @@ auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat 
     return nullptr;
 }
 
+auto Format::DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
+    // process one plane at a time by zeroing all other planes, shuffle it from different pixels together, and fix the position by right shifting
+
+    using Vector = __m128i;
+    using Output = uint64_t;
+
+    for (int y = 0; y < height; ++y) {
+        const Vector *srcLine = reinterpret_cast<const Vector *>(src);
+        std::array<Output *, dsts.size()> dstsLine;
+        for (size_t p = 0; p < dsts.size(); ++p) {
+            dstsLine[p] = reinterpret_cast<Output *>(dsts[p]);
+        }
+
+        for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
+            const Vector srcVec = *srcLine++;
+
+            const Vector outputVec1 = _mm_shuffle_epi8(_mm_and_si128(srcVec, _Y410_AND_MASK_1), _Y410_SHUFFLE_MASK_1);
+            const Vector outputVec2 = _mm_srli_epi32(_mm_shuffle_epi8(_mm_and_si128(srcVec, _Y410_AND_MASK_2), _Y410_SHUFFLE_MASK_2), 2);
+            const Vector outputVec3 = _mm_srli_epi32(_mm_shuffle_epi8(_mm_and_si128(srcVec, _Y410_AND_MASK_3), _Y410_SHUFFLE_MASK_3), 4);
+
+            *dstsLine[0]++ = *reinterpret_cast<const Output *>(&outputVec1);
+            *dstsLine[1]++ = *reinterpret_cast<const Output *>(&outputVec2);
+            *dstsLine[2]++ = *reinterpret_cast<const Output *>(&outputVec3);
+        }
+
+        src += srcStride;
+        for (size_t p = 0; p < dsts.size(); ++p) {
+            dsts[p] += dstStrides[p];
+        }
+    }
+}
+
+auto Format::InterleaveY410(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    // expand each 16-bit integer to 32-bit, left shift to right position and OR them all
+    // due the expansion, only half the size for each source vector is used, therefore we need to cast
+
+    using Vector = __m128i;
+    using Source = uint64_t;
+
+    for (int y = 0; y < height; ++y) {
+        std::array<const Source *, srcs.size()> srcsLine;
+        for (size_t p = 0; p < srcs.size(); ++p) {
+            srcsLine[p] = reinterpret_cast<const Source *>(srcs[p]);
+        }
+        Vector *dstLine = reinterpret_cast<Vector *>(dst);
+
+        for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
+            const Vector srcVec1 = _mm_cvtepu16_epi32(*reinterpret_cast<const Vector *>(srcsLine[0]++));
+            const Vector srcVec2 = _mm_slli_epi32(_mm_cvtepu16_epi32(*reinterpret_cast<const Vector *>(srcsLine[1]++)), 10);
+            const Vector srcVec3 = _mm_slli_epi32(_mm_cvtepu16_epi32(*reinterpret_cast<const Vector *>(srcsLine[2]++)), 20);
+            *dstLine++ = _mm_or_si128(_mm_or_si128(srcVec1, srcVec2), srcVec3);
+        }
+
+        for (size_t p = 0; p < srcs.size(); ++p) {
+            srcs[p] += srcStrides[p];
+        }
+        dst += dstStride;
+    }
+}
+
 auto Format::InterleaveY416(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
     // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
 
     using Vector = __m128i;
-    using Output = int32_t;
+    using Output = uint32_t;
 
-    const Vector shuffleMask = _SHUFFLE_MASK_UV_M128_C2;
+    const Vector shuffleMask = _UV_SHUFFLE_MASK_M128_C2;
 
     for (int y = 0; y < height; ++y) {
         std::array<const Output *, srcs.size()> srcsLine;
