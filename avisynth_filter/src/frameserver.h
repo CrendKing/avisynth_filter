@@ -26,7 +26,6 @@ public:
     constexpr auto GetVersionString() const -> std::string_view { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto IsFramePropsSupported() const -> bool { return _isFramePropsSupported; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
-    constexpr auto GetSourceDummyFrame() const -> const PVideoFrame & { return _sourceDummyFrame; }
 
 private:
     auto CreateEnv() const -> IScriptEnvironment *;
@@ -36,10 +35,12 @@ private:
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     VideoInfo _sourceVideoInfo {};
     PClip _sourceClip;
-    PVideoFrame _sourceDummyFrame = nullptr;
 };
 
 class FrameServerBase {
+public:
+    constexpr auto GetSourceDummyFrame() const -> const PVideoFrame & { return _sourceDummyFrame; }
+
 protected:
     ~FrameServerBase();
 
@@ -53,6 +54,9 @@ protected:
     VideoInfo _scriptVideoInfo {};
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
+
+private:
+    PVideoFrame _sourceDummyFrame = nullptr;
 };
 
 class MainFrameServer

@@ -87,7 +87,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     const VideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
     FrameServerCommon::GetInstance()._sourceVideoInfo = sourceVideoInfo;
-    FrameServerCommon::GetInstance()._sourceDummyFrame = _env->NewVideoFrame(sourceVideoInfo);
+    _sourceDummyFrame = _env->NewVideoFrame(sourceVideoInfo);
 
     _errorString.clear();
     AVSValue invokeResult;
@@ -137,7 +137,7 @@ auto FrameServerBase::StopScript() -> void {
         _scriptClip = nullptr;
     }
 
-    FrameServerCommon::GetInstance()._sourceDummyFrame = nullptr;
+    _sourceDummyFrame = nullptr;
 }
 
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {

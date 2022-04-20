@@ -137,7 +137,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
     Environment::GetInstance().Log(L"Get source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
     if (!_filter._isReadyToReceive) {
-        return FrameServerCommon::GetInstance().GetSourceDummyFrame();
+        return MainFrameServer::GetInstance().GetSourceDummyFrame();
     }
 
     std::shared_lock sharedSourceLock(_sourceMutex);
@@ -163,7 +163,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
             Environment::GetInstance().Log(L"Bad frame %6d", frameNb);
         }
 
-        return FrameServerCommon::GetInstance().GetSourceDummyFrame();
+        return MainFrameServer::GetInstance().GetSourceDummyFrame();
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);

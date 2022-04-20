@@ -15,7 +15,7 @@ auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     if (_frameHandler == nullptr) {
-        return FrameServerCommon::GetInstance().GetSourceDummyFrame();
+        return AuxFrameServer::GetInstance().GetSourceDummyFrame();
     }
 
     return _frameHandler->GetSourceFrame(frameNb);
