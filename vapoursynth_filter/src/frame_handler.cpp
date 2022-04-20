@@ -184,6 +184,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
     Environment::GetInstance().Log(L"Waiting for source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
+    if (frameNb == 0 && !_filter._isReadyToReceive) {
+        return nullptr;
+    }
+
     std::shared_lock sharedSourceLock(_sourceMutex);
 
     decltype(_sourceFrames)::const_iterator iter;
@@ -204,7 +208,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
 
     if (_isFlushing) {
         Environment::GetInstance().Log(L"Drain for frame %6d", frameNb);
-        return MainFrameServer::GetInstance().GetSourceDrainFrame();
+        return MainFrameServer::GetInstance().GetSourceDummyFrame();
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);

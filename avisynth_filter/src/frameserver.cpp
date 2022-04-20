@@ -85,7 +85,9 @@ FrameServerBase::~FrameServerBase() {
 auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     StopScript();
 
-    FrameServerCommon::GetInstance()._sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
+    const VideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
+    FrameServerCommon::GetInstance()._sourceVideoInfo = sourceVideoInfo;
+    FrameServerCommon::GetInstance()._sourceDummyFrame = _env->NewVideoFrame(sourceVideoInfo);
 
     _errorString.clear();
     AVSValue invokeResult;
@@ -134,10 +136,8 @@ auto FrameServerBase::StopScript() -> void {
         Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
         _scriptClip = nullptr;
     }
-}
 
-MainFrameServer::~MainFrameServer() {
-    _sourceDrainFrame = nullptr;
+    FrameServerCommon::GetInstance()._sourceDummyFrame = nullptr;
 }
 
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
@@ -147,7 +147,6 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
         const VideoInfo &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
         _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo.fps_numerator, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo.fps_denominator, 0));
         _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo.fps_denominator, UNITS, sourceVideoInfo.fps_numerator, 0);
-        _sourceDrainFrame = _env->NewVideoFrame(FrameServerCommon::GetInstance()._sourceVideoInfo);
 
         return true;
     }

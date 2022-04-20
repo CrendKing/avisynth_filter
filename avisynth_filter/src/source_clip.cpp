@@ -1,6 +1,7 @@
 // License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
 
 #include "source_clip.h"
+#include "frameserver.h"
 
 
 namespace SynthFilter {
@@ -13,7 +14,10 @@ auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
-    ASSERT(_frameHandler != nullptr);
+    if (_frameHandler == nullptr) {
+        return FrameServerCommon::GetInstance().GetSourceDummyFrame();
+    }
+
     return _frameHandler->GetSourceFrame(frameNb);
 }
 

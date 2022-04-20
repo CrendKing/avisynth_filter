@@ -136,6 +136,10 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
     Environment::GetInstance().Log(L"Get source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
+    if (!_filter._isReadyToReceive) {
+        return FrameServerCommon::GetInstance().GetSourceDummyFrame();
+    }
+
     std::shared_lock sharedSourceLock(_sourceMutex);
 
     _maxRequestedFrameNb = std::max(frameNb, _maxRequestedFrameNb.load());
@@ -159,7 +163,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
             Environment::GetInstance().Log(L"Bad frame %6d", frameNb);
         }
 
-        return MainFrameServer::GetInstance().GetSourceDrainFrame();
+        return FrameServerCommon::GetInstance().GetSourceDummyFrame();
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);

@@ -26,6 +26,7 @@ public:
     constexpr auto GetVersionString() const -> std::string_view { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto IsFramePropsSupported() const -> bool { return _isFramePropsSupported; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
+    constexpr auto GetSourceDummyFrame() const -> const PVideoFrame & { return _sourceDummyFrame; }
 
 private:
     auto CreateEnv() const -> IScriptEnvironment *;
@@ -35,6 +36,7 @@ private:
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     VideoInfo _sourceVideoInfo {};
     PClip _sourceClip;
+    PVideoFrame _sourceDummyFrame = nullptr;
 };
 
 class FrameServerBase {
@@ -57,22 +59,18 @@ class MainFrameServer
     : public FrameServerBase
     , public OnDemandSingleton<MainFrameServer> {
 public:
-    ~MainFrameServer();
-
     CTOR_WITHOUT_COPYING(MainFrameServer)
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
     auto GetFrame(int frameNb) const -> PVideoFrame;
     constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
-    constexpr auto GetSourceDrainFrame() const -> const PVideoFrame & { return _sourceDrainFrame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
     constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration; }
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-    PVideoFrame _sourceDrainFrame = nullptr;
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
 };

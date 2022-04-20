@@ -18,7 +18,14 @@ static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData
         return nullptr;
     }
 
-    return AVSF_VPS_API->addFrameRef(frameHandler->GetSourceFrame(n));
+    const VSFrame *ret = frameHandler->GetSourceFrame(n);
+    if (ret == nullptr) {
+        AVSF_VPS_API->setFilterError("VapourSynth Filter: No source frame is available at the moment", frameCtx);
+    } else {
+        AVSF_VPS_API->addFrameRef(ret);
+    }
+
+    return ret;
 }
 
 AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame)
@@ -154,11 +161,9 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         const VSVideoInfo *sourceVideoInfo = AVSF_VPS_API->getVideoInfo(_sourceClip);
+        _sourceDummyFrame = AVSF_VPS_API->newVideoFrame(&sourceVideoInfo->format, sourceVideoInfo->width, sourceVideoInfo->height, nullptr, GetVsCore());
         _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo->fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo->fpsDen, 0));
         _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo->fpsDen, UNITS, sourceVideoInfo->fpsNum, 0);
-
-        _sourceDrainAutoFrame = AVSF_VPS_API->newVideoFrame(&sourceVideoInfo->format, sourceVideoInfo->width, sourceVideoInfo->height, nullptr, GetVsCore());
-
         return true;
     }
 
