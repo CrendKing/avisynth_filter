@@ -17,7 +17,7 @@ static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData
         return FrameServerCommon::GetInstance().CreateSourceDummyFrame(core);
     }
 
-    return vsapi->addFrameRef(frameHandler->GetSourceFrame(n));
+    return frameHandler->GetSourceFrame(n);
 }
 
 AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame)

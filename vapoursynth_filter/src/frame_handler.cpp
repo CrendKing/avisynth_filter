@@ -213,7 +213,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
-    return iter->second.autoFrame.frame;
+    return AVSF_VPS_API->addFrameRef(iter->second.autoFrame.frame);
 }
 
 auto FrameHandler::BeginFlush() -> void {
