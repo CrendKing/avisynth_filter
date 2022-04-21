@@ -6,6 +6,7 @@
 #include "format.h"
 #include "frame_handler.h"
 #include "singleton.h"
+#include "source_clip.h"
 
 
 namespace SynthFilter {
@@ -22,52 +23,50 @@ public:
     DISABLE_COPYING(FrameServerCommon)
 
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
-    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     constexpr auto GetVersionString() const -> std::string_view { return _versionString == nullptr ? "unknown AviSynth version" : _versionString; }
     constexpr auto IsFramePropsSupported() const -> bool { return _isFramePropsSupported; }
+    constexpr auto GetSourceVideoInfo() const -> const VideoInfo & { return _sourceVideoInfo; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
 
 private:
-    auto CreateEnv() const -> IScriptEnvironment *;
+    static auto CreateEnv() -> IScriptEnvironment *;
 
     const char *_versionString;
     bool _isFramePropsSupported = false;
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     VideoInfo _sourceVideoInfo {};
-    PClip _sourceClip;
 };
 
 class FrameServerBase {
-public:
-    constexpr auto GetSourceDummyFrame() const -> const PVideoFrame & { return _sourceDummyFrame; }
-
 protected:
-    ~FrameServerBase();
-
     CTOR_WITHOUT_COPYING(FrameServerBase)
 
+    auto CreateAndSetupEnv() -> void;
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto StopScript() -> void;
 
-    IScriptEnvironment *_env = FrameServerCommon::GetInstance().CreateEnv();
+    IScriptEnvironment *_env;
+    SourceClip *_sourceClip;
     PClip _scriptClip = nullptr;
     VideoInfo _scriptVideoInfo {};
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
-
-private:
-    PVideoFrame _sourceDummyFrame = nullptr;
 };
 
 class MainFrameServer
     : public FrameServerBase
     , public OnDemandSingleton<MainFrameServer> {
 public:
-    CTOR_WITHOUT_COPYING(MainFrameServer)
+    MainFrameServer();
+    ~MainFrameServer();
+
+    DISABLE_COPYING(MainFrameServer)
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
     auto GetFrame(int frameNb) const -> PVideoFrame;
+    auto CreateSourceDummyFrame() const -> PVideoFrame;
+    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
     constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }

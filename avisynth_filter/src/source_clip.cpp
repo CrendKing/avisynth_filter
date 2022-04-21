@@ -6,19 +6,20 @@
 
 namespace SynthFilter {
 
-SourceClip::SourceClip(const VideoInfo &videoInfo)
-    : _videoInfo(videoInfo) {}
-
 auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
     _frameHandler = frameHandler;
 }
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     if (_frameHandler == nullptr) {
-        return AuxFrameServer::GetInstance().GetSourceDummyFrame();
+        return env->NewVideoFrameP(GetVideoInfo(), nullptr);
     }
 
     return _frameHandler->GetSourceFrame(frameNb);
+}
+
+auto SourceClip::GetVideoInfo() -> const VideoInfo & {
+    return FrameServerCommon::GetInstance().GetSourceVideoInfo();
 }
 
 }

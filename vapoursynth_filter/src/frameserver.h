@@ -36,17 +36,14 @@ public:
     DISABLE_COPYING(FrameServerCommon)
 
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
-    auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
     constexpr auto GetVersionString() const -> std::string_view { return _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
-    constexpr auto GetFrameHandler() const -> FrameHandler * { return _frameHandler; }
     constexpr auto GetVsApi() const -> const VSAPI * { return _vsApi; }
     constexpr auto GetVsScriptApi() const -> const VSSCRIPTAPI * { return _vsScriptApi; }
 
 private:
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     std::string _versionString;
-    FrameHandler *_frameHandler = nullptr;
     const VSAPI *_vsApi;
     const VSSCRIPTAPI *_vsScriptApi;
 };
@@ -57,7 +54,7 @@ private:
 class FrameServerBase {
 public:
     constexpr auto GetVsScript() const -> VSScript * { return _vsScript; }
-    auto GetVsCore() const -> VSCore *;
+    constexpr auto GetVsCore() const -> VSCore * { return _vsCore; }
 
 protected:
     FrameServerBase();
@@ -69,8 +66,10 @@ protected:
     auto StopScript() -> void;
 
     VSScript *_vsScript = nullptr;
+    VSCore *_vsCore = nullptr;
     VSNode *_sourceClip = nullptr;
     VSNode *_scriptClip = nullptr;
+    FrameHandler *_frameHandler = nullptr;
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
 };
@@ -83,15 +82,15 @@ public:
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
+    auto CreateSourceDummyFrame() const -> const VSFrame *;
+    auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
     constexpr auto GetScriptClip() const -> VSNode * { return _scriptClip; }
-    constexpr auto GetSourceDummyFrame() const -> const VSFrame * { return _sourceDummyFrame.frame; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
     constexpr auto GetScriptAvgFrameDuration() const -> REFERENCE_TIME { return _scriptAvgFrameDuration; }
     auto GetErrorString() const -> std::optional<std::string>;
 
 private:
-    AutoReleaseVSFrame _sourceDummyFrame;
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
 };

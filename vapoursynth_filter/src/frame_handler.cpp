@@ -31,7 +31,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
-    if ((_filter._inputMediaTypeChanged || _filter._reloadScript) && !ChangeOutputFormat()) {
+    if ((_filter._isInputMediaTypeChanged || _filter._needReloadScript) && !ChangeOutputFormat()) {
         return S_FALSE;
     }
 
@@ -184,8 +184,9 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
     Environment::GetInstance().Log(L"Waiting for source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
-    if (frameNb == 0 && !_filter._isReadyToReceive) {
-        return nullptr;
+    if (!_filter._isReadyToReceive) {
+        Environment::GetInstance().Log(L"Frame %6d is requested before filter is ready to receive", frameNb);
+        return MainFrameServer::GetInstance().CreateSourceDummyFrame();
     }
 
     std::shared_lock sharedSourceLock(_sourceMutex);
@@ -208,11 +209,10 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
 
     if (_isFlushing) {
         Environment::GetInstance().Log(L"Drain for frame %6d", frameNb);
-        return MainFrameServer::GetInstance().GetSourceDummyFrame();
+        return MainFrameServer::GetInstance().CreateSourceDummyFrame();
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
-
     return iter->second.autoFrame.frame;
 }
 
@@ -392,7 +392,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, in
 
     Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
 
-    const decltype(_sourceFrames)::const_iterator iter = _sourceFrames.find(sourceFrameNb);
+    const auto iter = _sourceFrames.find(sourceFrameNb);
     ASSERT(iter != _sourceFrames.end());
 
     if (const ATL::CComQIPtr<IMediaSideData> sideData(outSample); sideData != nullptr) {

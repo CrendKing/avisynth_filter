@@ -89,7 +89,7 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const PVideoFrame &srcF
 }
 
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> PVideoFrame {
-    PVideoFrame newFrame = AVSF_AVS_API->NewVideoFrame(videoFormat.videoInfo, static_cast<int>(_vectorSize));
+    PVideoFrame newFrame = AVSF_AVS_API->NewVideoFrameP(videoFormat.videoInfo, nullptr, static_cast<int>(_vectorSize));
 
     const std::array dstSlices { newFrame->GetWritePtr(PLANAR_Y), newFrame->GetWritePtr(PLANAR_U), newFrame->GetWritePtr(PLANAR_V) };
     const std::array dstStrides { newFrame->GetPitch(PLANAR_Y), newFrame->GetPitch(PLANAR_U), newFrame->GetPitch(PLANAR_V) };

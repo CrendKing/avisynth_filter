@@ -31,7 +31,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         return S_FALSE;
     }
 
-    if ((_filter._inputMediaTypeChanged || _filter._reloadScript) && !ChangeOutputFormat()) {
+    if ((_filter._isInputMediaTypeChanged || _filter._needReloadScript) && !ChangeOutputFormat()) {
         return S_FALSE;
     }
 
@@ -137,7 +137,8 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
     Environment::GetInstance().Log(L"Get source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
 
     if (!_filter._isReadyToReceive) {
-        return MainFrameServer::GetInstance().GetSourceDummyFrame();
+        Environment::GetInstance().Log(L"Frame %6d is requested before filter is ready to receive", frameNb);
+        return MainFrameServer::GetInstance().CreateSourceDummyFrame();
     }
 
     std::shared_lock sharedSourceLock(_sourceMutex);
@@ -163,11 +164,10 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> PVideoFrame {
             Environment::GetInstance().Log(L"Bad frame %6d", frameNb);
         }
 
-        return MainFrameServer::GetInstance().GetSourceDummyFrame();
+        return MainFrameServer::GetInstance().CreateSourceDummyFrame();
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
-
     return iter->second.frame;
 }
 

@@ -75,7 +75,7 @@ auto FrameHandler::GarbageCollect(int srcFrameNb) -> void {
     // search for all previous frames in case of some source frames are never used
     // this could happen by plugins that decrease frame rate
     const auto sourceEnd = _sourceFrames.end();
-    for (decltype(_sourceFrames)::const_iterator iter = _sourceFrames.begin(); iter != sourceEnd && iter->first <= srcFrameNb; iter = _sourceFrames.begin()) {
+    for (auto iter = _sourceFrames.begin(); iter != sourceEnd && iter->first <= srcFrameNb; iter = _sourceFrames.begin()) {
         _sourceFrames.erase(iter);
     }
 
@@ -97,8 +97,8 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
         MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     });
 
-    _filter._inputMediaTypeChanged = false;
-    _filter._reloadScript = false;
+    _filter._isInputMediaTypeChanged = false;
+    _filter._needReloadScript = false;
 
     auto potentialOutputMediaTypes = _filter.InputToOutputMediaType(&_filter.m_pInput->CurrentMediaType());
     if (const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes, [this](const CMediaType &outputMediaType) -> bool {

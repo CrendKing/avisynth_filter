@@ -245,7 +245,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
 
                     TraverseFiltersInGraph();
 
-                    FrameServerCommon::GetInstance().LinkFrameHandler(frameHandler.get());
+                    MainFrameServer::GetInstance().LinkFrameHandler(frameHandler.get());
                     frameHandler->StartWorker();
 
                     break;
@@ -289,7 +289,7 @@ auto CSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         _inputVideoFormat = Format::GetVideoFormat(*pmt, &MainFrameServer::GetInstance());
         DeleteMediaType(pmt);
 
-        _inputMediaTypeChanged = true;
+        _isInputMediaTypeChanged = true;
     }
 
     if (ShouldSkipFrame(pSample)) {
@@ -373,7 +373,7 @@ auto STDMETHODCALLTYPE CSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> HRES
 
 auto CSynthFilter::ReloadScript(const std::filesystem::path &scriptPath) -> void {
     FrameServerCommon::GetInstance().SetScriptPath(scriptPath);
-    _reloadScript = true;
+    _needReloadScript = true;
 }
 
 auto CSynthFilter::GetFrameServerState() const -> AvsState {

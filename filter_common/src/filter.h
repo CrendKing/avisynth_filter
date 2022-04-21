@@ -99,8 +99,8 @@ private:
     Format::VideoFormat _inputVideoFormat;
     Format::VideoFormat _outputVideoFormat;
 
-    bool _inputMediaTypeChanged = false;
-    bool _reloadScript = false;
+    bool _isInputMediaTypeChanged = false;
+    bool _needReloadScript = false;
     std::atomic<bool> _isReadyToReceive = false;
 
     std::filesystem::path _videoSourcePath;

@@ -4,7 +4,6 @@
 
 #include "api.h"
 #include "constants.h"
-#include "source_clip.h"
 
 
 const AVS_Linkage *AVS_linkage = nullptr;
@@ -38,22 +37,15 @@ FrameServerCommon::FrameServerCommon() {
     }
 
     env->DeleteScriptEnvironment();
-
-    _sourceClip = new SourceClip(_sourceVideoInfo);
 }
 
 FrameServerCommon::~FrameServerCommon() {
     Environment::GetInstance().Log(L"~FrameServerCommon()");
 
-    _sourceClip = nullptr;
     AVS_linkage = nullptr;
 }
 
-auto FrameServerCommon::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
-    reinterpret_cast<SourceClip *>(_sourceClip.operator->())->SetFrameHandler(frameHandler);
-}
-
-auto FrameServerCommon::CreateEnv() const -> IScriptEnvironment * {
+auto FrameServerCommon::CreateEnv() -> IScriptEnvironment * {
     /*
     use CreateScriptEnvironment() instead of CreateScriptEnvironment2().
     CreateScriptEnvironment() is exported from their .def file, which guarantees a stable exported name.
@@ -68,15 +60,14 @@ auto FrameServerCommon::CreateEnv() const -> IScriptEnvironment * {
         throw;
     }
 
-    env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
-    env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
-
     return env;
 }
 
-FrameServerBase::~FrameServerBase() {
-    StopScript();
-    _env->DeleteScriptEnvironment();
+auto FrameServerBase::CreateAndSetupEnv() -> void {
+    _sourceClip = new SourceClip();
+    _env = FrameServerCommon::CreateEnv();
+    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
+    _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
 }
 
 /**
@@ -87,7 +78,6 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     const VideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
     FrameServerCommon::GetInstance()._sourceVideoInfo = sourceVideoInfo;
-    _sourceDummyFrame = _env->NewVideoFrame(sourceVideoInfo);
 
     _errorString.clear();
     AVSValue invokeResult;
@@ -110,7 +100,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
                 return false;
             }
 
-            invokeResult = FrameServerCommon::GetInstance()._sourceClip;
+            invokeResult = _sourceClip;
         } else if (!invokeResult.IsClip()) {
             _errorString = "Error: Script does not return a clip.";
         }
@@ -136,8 +126,15 @@ auto FrameServerBase::StopScript() -> void {
         Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
         _scriptClip = nullptr;
     }
+}
 
-    _sourceDummyFrame = nullptr;
+MainFrameServer::MainFrameServer() {
+    CreateAndSetupEnv();
+}
+
+MainFrameServer::~MainFrameServer() {
+    StopScript();
+    _env->DeleteScriptEnvironment();
 }
 
 auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
@@ -158,8 +155,18 @@ auto MainFrameServer::GetFrame(int frameNb) const -> PVideoFrame {
     return _scriptClip->GetFrame(frameNb, _env);
 }
 
+auto MainFrameServer::CreateSourceDummyFrame() const -> PVideoFrame {
+    return _env->NewVideoFrameP(FrameServerCommon::GetInstance().GetSourceVideoInfo(), nullptr);
+}
+
+auto MainFrameServer::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
+    _sourceClip->SetFrameHandler(frameHandler);
+}
+
 auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     Environment::GetInstance().Log(L"ReloadScript from auxiliary frameserver");
+
+    CreateAndSetupEnv();
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
         StopScript();
@@ -167,7 +174,6 @@ auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDis
         // AviSynth+ prefetchers are only destroyed when the environment is deleted
         // just stopping the script clip is not enough
         _env->DeleteScriptEnvironment();
-        _env = FrameServerCommon::GetInstance().CreateEnv();
 
         return true;
     }
