@@ -35,6 +35,7 @@ public:
 
     DISABLE_COPYING(FrameServerCommon)
 
+    auto CreateSourceDummyFrame(VSCore *core) const -> const VSFrame *;
     auto SetScriptPath(const std::filesystem::path &scriptPath) -> void;
     constexpr auto GetVersionString() const -> std::string_view { return _versionString; }
     constexpr auto GetScriptPath() const -> const std::filesystem::path & { return _scriptPath; }
@@ -46,6 +47,7 @@ private:
     std::string _versionString;
     const VSAPI *_vsApi;
     const VSSCRIPTAPI *_vsScriptApi;
+    VSVideoInfo _sourceVideoInfo {};
 };
 
 #define AVSF_VPS_API        FrameServerCommon::GetInstance().GetVsApi()
@@ -53,7 +55,6 @@ private:
 
 class FrameServerBase {
 public:
-    constexpr auto GetVsScript() const -> VSScript * { return _vsScript; }
     constexpr auto GetVsCore() const -> VSCore * { return _vsCore; }
 
 protected:
@@ -82,7 +83,6 @@ public:
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
-    auto CreateSourceDummyFrame() const -> const VSFrame *;
     auto LinkFrameHandler(FrameHandler *frameHandler) -> void;
     constexpr auto GetScriptClip() const -> VSNode * { return _scriptClip; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }

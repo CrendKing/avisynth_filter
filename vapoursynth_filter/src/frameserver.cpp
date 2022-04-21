@@ -14,11 +14,10 @@ static constexpr const char *VPS_VAR_NAME_DISCONNECT = "VpsFilterDisconnect";
 static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrame * {
     FrameHandler *frameHandler = reinterpret_cast<FrameHandler *>(instanceData);
     if (frameHandler == nullptr) {
-        AVSF_VPS_API->setFilterError("VapourSynth Filter: Source frame is requested before the frame handler is ready", frameCtx);
-        return nullptr;
+        return FrameServerCommon::GetInstance().CreateSourceDummyFrame(core);
     }
 
-    return AVSF_VPS_API->addFrameRef(frameHandler->GetSourceFrame(n));
+    return vsapi->addFrameRef(frameHandler->GetSourceFrame(n));
 }
 
 AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame)
@@ -57,6 +56,10 @@ FrameServerCommon::FrameServerCommon() {
     Environment::GetInstance().Log(L"VapourSynth version: %hs", GetVersionString().data());
 }
 
+auto FrameServerCommon::CreateSourceDummyFrame(VSCore *core) const -> const VSFrame * {
+    return _vsApi->newVideoFrame(&_sourceVideoInfo.format, _sourceVideoInfo.width, _sourceVideoInfo.height, nullptr, core);
+}
+
 auto FrameServerBase::StopScript() -> void {
     if (_scriptClip != nullptr) {
         Environment::GetInstance().Log(L"Release script clip: %p", _scriptClip);
@@ -84,6 +87,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     AVSF_VPS_API->freeNode(_sourceClip);
 
     const VSVideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
+    FrameServerCommon::GetInstance()._sourceVideoInfo = sourceVideoInfo;
     _sourceClip = AVSF_VPS_API->createVideoFilter2("VpsFilter_Source", &sourceVideoInfo, SourceGetFrame, nullptr, fmParallelRequests, nullptr, 0, _frameHandler, GetVsCore());
     AVSF_VPS_API->setCacheMode(_sourceClip, 0);
 
@@ -146,27 +150,9 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     Environment::GetInstance().Log(L"ReloadScript from main frameserver");
 
     if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
-        const VSVideoInfo *sourceVideoInfo = AVSF_VPS_API->getVideoInfo(_sourceClip);
-        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo->fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo->fpsDen, 0));
-        _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo->fpsDen, UNITS, sourceVideoInfo->fpsNum, 0);
-        return true;
-    }
-
-    return false;
-}
-
-auto MainFrameServer::CreateSourceDummyFrame() const -> const VSFrame * {
-    const VSVideoInfo *sourceVideoInfo = AVSF_VPS_API->getVideoInfo(_sourceClip);
-    return AVSF_VPS_API->newVideoFrame(&sourceVideoInfo->format, sourceVideoInfo->width, sourceVideoInfo->height, nullptr, GetVsCore());
-}
-
-auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
-    Environment::GetInstance().Log(L"ReloadScript from auxiliary frameserver");
-
-    if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
-        _scriptVideoInfo = *AVSF_VPS_API->getVideoInfo(_scriptClip);
-        StopScript();
-
+        const VSVideoInfo &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
+        _sourceAvgFrameRate = static_cast<int>(llMulDiv(sourceVideoInfo.fpsNum, FRAME_RATE_SCALE_FACTOR, sourceVideoInfo.fpsDen, 0));
+        _sourceAvgFrameDuration = llMulDiv(sourceVideoInfo.fpsDen, UNITS, sourceVideoInfo.fpsNum, 0);
         return true;
     }
 
@@ -175,6 +161,18 @@ auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDis
 
 auto MainFrameServer::LinkFrameHandler(FrameHandler *frameHandler) -> void {
     _frameHandler = frameHandler;
+}
+
+auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
+    Environment::GetInstance().Log(L"ReloadScript from auxiliary frameserver");
+
+    if (__super::ReloadScript(mediaType, ignoreDisconnect)) {
+        _scriptVideoInfo = *AVSF_VPS_API->getVideoInfo(_scriptClip);
+        StopScript();
+        return true;
+    }
+
+    return false;
 }
 
 auto AuxFrameServer::GetScriptPixelType() const -> uint32_t {

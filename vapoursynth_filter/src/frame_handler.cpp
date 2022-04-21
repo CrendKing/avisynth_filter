@@ -186,7 +186,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
 
     if (!_filter._isReadyToReceive) {
         Environment::GetInstance().Log(L"Frame %6d is requested before filter is ready to receive", frameNb);
-        return MainFrameServer::GetInstance().CreateSourceDummyFrame();
+        return FrameServerCommon::GetInstance().CreateSourceDummyFrame(MainFrameServer::GetInstance().GetVsCore());
     }
 
     std::shared_lock sharedSourceLock(_sourceMutex);
@@ -209,7 +209,7 @@ auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
 
     if (_isFlushing) {
         Environment::GetInstance().Log(L"Drain for frame %6d", frameNb);
-        return MainFrameServer::GetInstance().CreateSourceDummyFrame();
+        return FrameServerCommon::GetInstance().CreateSourceDummyFrame(MainFrameServer::GetInstance().GetVsCore());
     }
 
     Environment::GetInstance().Log(L"Return source frame %6d", frameNb);
