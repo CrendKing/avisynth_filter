@@ -12,6 +12,7 @@ auto SourceClip::SetFrameHandler(FrameHandler *frameHandler) -> void {
 
 auto SourceClip::GetFrame(int frameNb, IScriptEnvironment *env) -> PVideoFrame {
     if (_frameHandler == nullptr) {
+        Environment::GetInstance().Log(L"Source frame %6d is requested without the frame handler being linked", frameNb);
         return env->NewVideoFrameP(GetVideoInfo(), nullptr);
     }
 

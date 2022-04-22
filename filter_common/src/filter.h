@@ -101,7 +101,6 @@ private:
 
     bool _isInputMediaTypeChanged = false;
     bool _needReloadScript = false;
-    std::atomic<bool> _isReadyToReceive = false;
 
     std::filesystem::path _videoSourcePath;
     std::vector<std::wstring> _videoFilterNames;

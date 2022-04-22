@@ -84,13 +84,12 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
-    _filter._isReadyToReceive = true;
-
+    MainFrameServer::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
     return S_OK;
 }
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
-    _filter._isReadyToReceive = false;
+    MainFrameServer::GetInstance().LinkFrameHandler(nullptr);
 
     _filter.frameHandler->BeginFlush();
     _filter.frameHandler->EndFlush([this]() -> void {

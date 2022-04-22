@@ -160,7 +160,7 @@ auto MainFrameServer::CreateSourceDummyFrame() const -> PVideoFrame {
 }
 
 auto MainFrameServer::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
-    reinterpret_cast<SourceClip *>((void *) _sourceClip)->SetFrameHandler(frameHandler);
+    reinterpret_cast<SourceClip *>(static_cast<void *>(_sourceClip))->SetFrameHandler(frameHandler);
 }
 
 auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {

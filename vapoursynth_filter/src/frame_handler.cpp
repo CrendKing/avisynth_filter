@@ -105,11 +105,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         }
     }
 
-    if (!_filter._isReadyToReceive) {
-        Environment::GetInstance().Log(L"Discarding obsolete input sample due to filter state change");
-        return S_FALSE;
-    }
-
     {
         const std::unique_lock uniqueSourceLock(_sourceMutex);
 
@@ -183,11 +178,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
 
 auto FrameHandler::GetSourceFrame(int frameNb) -> const VSFrame * {
     Environment::GetInstance().Log(L"Waiting for source frame: frameNb %6d input queue size %2zd", frameNb, _sourceFrames.size());
-
-    if (!_filter._isReadyToReceive) {
-        Environment::GetInstance().Log(L"Frame %6d is requested before filter is ready to receive", frameNb);
-        return FrameServerCommon::GetInstance().CreateSourceDummyFrame(MainFrameServer::GetInstance().GetVsCore());
-    }
 
     std::shared_lock sharedSourceLock(_sourceMutex);
 

@@ -12,8 +12,9 @@ static constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
 static constexpr const char *VPS_VAR_NAME_DISCONNECT = "VpsFilterDisconnect";
 
 static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrame * {
-    FrameHandler *frameHandler = reinterpret_cast<FrameHandler *>(instanceData);
+    FrameHandler *frameHandler = *reinterpret_cast<FrameHandler **>(instanceData);
     if (frameHandler == nullptr) {
+        Environment::GetInstance().Log(L"Source frame %6d is requested without the frame handler being linked", n);
         return FrameServerCommon::GetInstance().CreateSourceDummyFrame(core);
     }
 
@@ -88,7 +89,7 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     const VSVideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
     FrameServerCommon::GetInstance()._sourceVideoInfo = sourceVideoInfo;
-    _sourceClip = AVSF_VPS_API->createVideoFilter2("VpsFilter_Source", &sourceVideoInfo, SourceGetFrame, nullptr, fmParallelRequests, nullptr, 0, _frameHandler, GetVsCore());
+    _sourceClip = AVSF_VPS_API->createVideoFilter2("VpsFilter_Source", &sourceVideoInfo, SourceGetFrame, nullptr, fmParallelRequests, nullptr, 0, &_frameHandler, GetVsCore());
     AVSF_VPS_API->setCacheMode(_sourceClip, 0);
 
     VSMap *sourceInputs = AVSF_VPS_API->createMap();

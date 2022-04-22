@@ -243,7 +243,6 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                     Environment::GetInstance().Log(L"Pin connections are settled");
                     isMediaTypesCompatible = true;
                     TraverseFiltersInGraph();
-                    MainFrameServer::GetInstance().LinkFrameHandler(frameHandler.get());
                     frameHandler->StartWorker();
                     break;
                 }
