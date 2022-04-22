@@ -159,10 +159,6 @@ auto MainFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
     return false;
 }
 
-auto MainFrameServer::LinkFrameHandler(FrameHandler *frameHandler) -> void {
-    _frameHandler = frameHandler;
-}
-
 auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {
     Environment::GetInstance().Log(L"ReloadScript from auxiliary frameserver");
 

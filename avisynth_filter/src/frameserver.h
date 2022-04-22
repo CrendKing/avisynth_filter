@@ -31,7 +31,7 @@ public:
 private:
     static auto CreateEnv() -> IScriptEnvironment *;
 
-    const char *_versionString;
+    const char *_versionString = nullptr;
     bool _isFramePropsSupported = false;
     std::filesystem::path _scriptPath = Environment::GetInstance().GetScriptPath();
     VideoInfo _sourceVideoInfo {};
@@ -45,8 +45,8 @@ protected:
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     auto StopScript() -> void;
 
-    IScriptEnvironment *_env;
-    SourceClip *_sourceClip;
+    IScriptEnvironment *_env = nullptr;
+    PClip _sourceClip = nullptr;
     PClip _scriptClip = nullptr;
     VideoInfo _scriptVideoInfo {};
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
