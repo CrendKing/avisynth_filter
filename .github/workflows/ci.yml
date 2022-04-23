@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - debug
+      - test
   workflow_dispatch:
 
 jobs:
