@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "regsvr32",
+            "args": ["${workspaceFolder}/debug/avisynth_filter_64.ax"],
+            "cwd": "${workspaceFolder}",
+            "sourceFileMap": {
+                "d:/a/avisynth_filter/avisynth_filter": "${workspaceFolder}"
+            },
+        }
+    ]
+}
