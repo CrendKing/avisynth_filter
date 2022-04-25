@@ -116,8 +116,6 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                               std::forward_as_tuple(_nextSourceFrameNb),
                               std::forward_as_tuple(frame, inputSampleStartTime, _filter.m_pInput->SampleProps()->dwTypeSpecificFlags, std::move(hdrSideData)));
     }
-    _newSourceFrameCv.notify_all();
-
     Environment::GetInstance().Log(L"Stored source frame: %6d at %10lld ~ %10lld duration(literal) %10lld max_requested %6d extra_buffer %6d",
                                    _nextSourceFrameNb,
                                    inputSampleStartTime,
@@ -125,13 +123,14 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                    inputSampleStopTime - inputSampleStartTime,
                                    _maxRequestedFrameNb.load(),
                                    _extraSrcBuffer);
-
     _nextSourceFrameNb += 1;
 
     // delay activating the main frameserver until we have enough pre-buffered frames in store
     if (_nextSourceFrameNb == NUM_SRC_FRAMES_PRE_BUFFER) {
         MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     }
+
+    _newSourceFrameCv.notify_all();
 
     return S_OK;
 }

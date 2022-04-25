@@ -244,12 +244,9 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
         std::shared_lock sharedOutputLock(_outputMutex);
 
         _flushOutputSampleCv.wait(sharedOutputLock, [this]() {
-            return std::ranges::all_of(
-                _outputFrames | std::views::values,
-                [](const VSFrame *frame) {
-                    return frame != nullptr;
-                },
-                &AutoReleaseVSFrame::frame);
+            return std::ranges::all_of(_outputFrames | std::views::values, [](const VSFrame *frame) {
+                return frame != nullptr;
+            }, &AutoReleaseVSFrame::frame);
         });
     }
 
@@ -445,10 +442,6 @@ auto FrameHandler::WorkerProc() -> void {
             _deliverSampleCv.wait(sharedOutputLock, [this, &iter]() -> bool {
                 if (_isFlushing) {
                     return true;
-                }
-
-                if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
-                    return false;
                 }
 
                 iter = _outputFrames.find(_nextDeliveryFrameNb);

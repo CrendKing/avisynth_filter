@@ -88,7 +88,7 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
     _filter.frameHandler->BeginFlush();
-    _filter.frameHandler->EndFlush([this]() -> void {
+    _filter.frameHandler->EndFlush([]() -> void {
         MainFrameServer::GetInstance().StopScript();
     });
 
