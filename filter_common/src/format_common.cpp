@@ -71,32 +71,37 @@ auto Format::VideoFormat::ColorSpaceInfo::Update(const DXVA_ExtendedFormat &dxva
 
 auto Format::Initialize() -> void {
     if (Environment::GetInstance().IsSupportAVX2()) {
+        _UV_SHUFFLE_MASK_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+        _UV_SHUFFLE_MASK_M256_C2 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+        _Y416_SHUFFLE_MASK_M256  = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+        _Y416_PERMUTE_INDEX      = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
+
         _deinterleaveUVC1Func = Deinterleave<2, 1, 2, 2>;
         _deinterleaveUVC2Func = Deinterleave<2, 2, 2, 2>;
         _deinterleaveY416Func = Deinterleave<2, 2, 4, 3>;
-        _interleaveUVC1Func = InterleaveUV<2, 1>;
-        _interleaveUVC2Func = InterleaveUV<2, 2>;
-        _rightShiftFunc = BitShiftEach16BitInt<2, 6, true>;
-        _leftShiftFunc = BitShiftEach16BitInt<2, 6, false>;
-        _vectorSize = sizeof(__m256i);
+        _interleaveUVC1Func   = InterleaveUV<2, 1>;
+        _interleaveUVC2Func   = InterleaveUV<2, 2>;
+        _rightShiftFunc       = BitShiftEach16BitInt<2, 6, true>;
+        _leftShiftFunc        = BitShiftEach16BitInt<2, 6, false>;
+        _vectorSize           = sizeof(__m256i);
     } else if (Environment::GetInstance().IsSupportSSSE3()) {
         _deinterleaveUVC1Func = Deinterleave<1, 1, 2, 2>;
         _deinterleaveUVC2Func = Deinterleave<1, 2, 2, 2>;
         _deinterleaveY416Func = Deinterleave<1, 2, 4, 3>;
-        _interleaveUVC1Func = InterleaveUV<1, 1>;
-        _interleaveUVC2Func = InterleaveUV<1, 2>;
-        _rightShiftFunc = BitShiftEach16BitInt<1, 6, true>;
-        _leftShiftFunc = BitShiftEach16BitInt<1, 6, false>;
-        _vectorSize = sizeof(__m128i);
+        _interleaveUVC1Func   = InterleaveUV<1, 1>;
+        _interleaveUVC2Func   = InterleaveUV<1, 2>;
+        _rightShiftFunc       = BitShiftEach16BitInt<1, 6, true>;
+        _leftShiftFunc        = BitShiftEach16BitInt<1, 6, false>;
+        _vectorSize           = sizeof(__m128i);
     } else {
         _deinterleaveUVC1Func = Deinterleave<0, 1, 2, 2>;
         _deinterleaveUVC2Func = Deinterleave<0, 2, 2, 2>;
         _deinterleaveY416Func = Deinterleave<0, 2, 4, 3>;
-        _interleaveUVC1Func = InterleaveUV<0, 1>;
-        _interleaveUVC2Func = InterleaveUV<0, 2>;
-        _rightShiftFunc = BitShiftEach16BitInt<0, 6, true>;
-        _leftShiftFunc = BitShiftEach16BitInt<0, 6, false>;
-        _vectorSize = 0;
+        _interleaveUVC1Func   = InterleaveUV<0, 1>;
+        _interleaveUVC2Func   = InterleaveUV<0, 2>;
+        _rightShiftFunc       = BitShiftEach16BitInt<0, 6, true>;
+        _leftShiftFunc        = BitShiftEach16BitInt<0, 6, false>;
+        _vectorSize           = 0;
     }
 
     INPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 0 ? 0 : _vectorSize;

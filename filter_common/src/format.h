@@ -118,8 +118,8 @@ public:
 private:
     static inline const __m128i _UV_SHUFFLE_MASK_M128_C1 = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
     static inline const __m128i _UV_SHUFFLE_MASK_M128_C2 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
-    static inline const __m256i _UV_SHUFFLE_MASK_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
-    static inline const __m256i _UV_SHUFFLE_MASK_M256_C2 = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static inline       __m256i _UV_SHUFFLE_MASK_M256_C1;
+    static inline       __m256i _UV_SHUFFLE_MASK_M256_C2;
     static constexpr const int  _UV_PERMUTE_INDEX        = 0b11011000;
     static inline const __m128i _Y410_AND_MASK_1         = _mm_setr_epi32(1023, 1023, 1023, 1023);
     static inline const __m128i _Y410_AND_MASK_2         = _mm_setr_epi32(1047552, 1047552, 1047552, 1047552);
@@ -128,8 +128,8 @@ private:
     static inline const __m128i _Y410_SHUFFLE_MASK_2     = _mm_setr_epi8(1, 2, 5, 6, 9, 10, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0);
     static inline const __m128i _Y410_SHUFFLE_MASK_3     = _mm_setr_epi8(2, 3, 6, 7, 10, 11, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0);
     static inline const __m128i _Y416_SHUFFLE_MASK_M128  = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-    static inline const __m256i _Y416_SHUFFLE_MASK_M256  = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15, 0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
-    static inline const __m256i _Y416_PERMUTE_INDEX      = _mm256_setr_epi8(0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 6, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0);
+    static inline       __m256i _Y416_SHUFFLE_MASK_M256;
+    static inline       __m256i _Y416_PERMUTE_INDEX;
 
     /*
      * intrinsicType: 1 = SSSE3, 2 = AVX2. Anything else: non-SIMD
