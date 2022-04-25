@@ -23,7 +23,7 @@ CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     if (_numFilterInstances == 0) {
         Environment::Create();
         FrameServerCommon::Create();
-        MainFrameServer::Create();
+        MainFrameServer::Create()->LinkFrameHandler(frameHandler.get());
         AuxFrameServer::Create();
         Format::Initialize();
     }
@@ -340,8 +340,8 @@ auto CSynthFilter::BeginFlush() -> HRESULT {
 
 auto CSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
-        frameHandler->EndFlush([this]() -> void {
-            MainFrameServer::GetInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
+        frameHandler->EndFlush([]() -> void {
+            MainFrameServer::GetInstance().StopScript();
         });
     }
 

@@ -94,7 +94,7 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
 
     BeginFlush();
     EndFlush([this]() -> void {
-        MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+        AuxFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     });
 
     _filter._isInputMediaTypeChanged = false;
@@ -119,7 +119,7 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
 
             if (result) {
                 _filter.m_pOutput->SetMediaType(&outputMediaType);
-                _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &MainFrameServer::GetInstance());
+                _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &AuxFrameServer::GetInstance());
                 _notifyChangedOutputMediaType = true;
             }
 

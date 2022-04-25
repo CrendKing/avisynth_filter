@@ -7,12 +7,12 @@
 
 namespace SynthFilter {
 
-#define CheckHr(expr)     \
-    {                     \
-        hr = (expr);      \
-        if (FAILED(hr)) { \
-            return hr;    \
-        }                 \
+#define CheckHr(expr)      \
+    {                      \
+        hr = (expr);       \
+        if (FAILED(hr)) {  \
+            return hr;     \
+        }                  \
     }
 
 CSynthFilterInputPin::CSynthFilterInputPin(__in_opt LPCTSTR pObjectName, __inout CTransformFilter *pTransformFilter, __inout HRESULT *phr, __in_opt LPCWSTR pName)
@@ -75,22 +75,18 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::GetAllocator(__deref_out IMemAlloca
 }
 
 auto CSynthFilterInputPin::Active() -> HRESULT {
-    MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-
-    _filter._inputVideoFormat = Format::GetVideoFormat(_filter.m_pInput->CurrentMediaType(), &MainFrameServer::GetInstance());
-    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &MainFrameServer::GetInstance());
+    AuxFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    _filter._inputVideoFormat = Format::GetVideoFormat(_filter.m_pInput->CurrentMediaType(), &AuxFrameServer::GetInstance());
+    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &AuxFrameServer::GetInstance());
 
     if (Environment::GetInstance().IsRemoteControlEnabled()) {
         _filter._remoteControl->Start();
     }
 
-    MainFrameServer::GetInstance().LinkFrameHandler(_filter.frameHandler.get());
     return S_OK;
 }
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
-    MainFrameServer::GetInstance().LinkFrameHandler(nullptr);
-
     _filter.frameHandler->BeginFlush();
     _filter.frameHandler->EndFlush([this]() -> void {
         MainFrameServer::GetInstance().StopScript();

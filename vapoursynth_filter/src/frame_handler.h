@@ -51,6 +51,7 @@ private:
     auto RefreshDeliveryFrameRates(int frameNb) -> void;
 
     static constexpr const int NUM_SRC_FRAMES_PER_PROCESSING = 2;
+    static constexpr const int NUM_SRC_FRAMES_PRE_BUFFER = 3;
 
     CSynthFilter &_filter;
 

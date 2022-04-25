@@ -11,20 +11,23 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
-    UpdateExtraSrcBuffer();
-
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
             return true;
         }
+
+        if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+            return true;
+        }
+
+        UpdateExtraSrcBuffer();
 
         // at least NUM_SRC_FRAMES_PER_PROCESSING source frames are needed in queue for stop time calculation
         if (static_cast<int>(_sourceFrames.size()) < NUM_SRC_FRAMES_PER_PROCESSING + _extraSrcBuffer) {
             return true;
         }
 
-        // add headroom to avoid blocking and context switch
-        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + NUM_SRC_FRAMES_PER_PROCESSING + 1;
+        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + NUM_SRC_FRAMES_PRE_BUFFER + NUM_SRC_FRAMES_PER_PROCESSING;
     });
 
     if (_isFlushing || _isStopping) {
@@ -154,6 +157,13 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     AVSF_VPS_API->mapSetInt(frameProps, FRAME_PROP_NAME_DURATION_NUM, frameDurationNum, maReplace);
     AVSF_VPS_API->mapSetInt(frameProps, FRAME_PROP_NAME_DURATION_DEN, frameDurationDen, maReplace);
     _newSourceFrameCv.notify_all();
+
+    // delay activating the main frameserver until we have enough pre-buffered frames in store
+    if (_nextSourceFrameNb < NUM_SRC_FRAMES_PRE_BUFFER) {
+        return S_OK;
+    } else if (_nextSourceFrameNb == NUM_SRC_FRAMES_PRE_BUFFER) {
+        MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    }
 
     const int maxRequestOutputFrameNb = static_cast<int>(llMulDiv(processSourceFrameIters[0]->first,
                                                                   MainFrameServer::GetInstance().GetSourceAvgFrameDuration(),
@@ -435,6 +445,10 @@ auto FrameHandler::WorkerProc() -> void {
             _deliverSampleCv.wait(sharedOutputLock, [this, &iter]() -> bool {
                 if (_isFlushing) {
                     return true;
+                }
+
+                if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+                    return false;
                 }
 
                 iter = _outputFrames.find(_nextDeliveryFrameNb);

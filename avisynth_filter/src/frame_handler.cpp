@@ -11,19 +11,22 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
-    UpdateExtraSrcBuffer();
-
     _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
         if (_isFlushing) {
             return true;
         }
+
+        if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+            return true;
+        }
+
+        UpdateExtraSrcBuffer();
 
         // at least NUM_SRC_FRAMES_PER_PROCESSING source frames are needed in queue for stop time calculation
         if (static_cast<int>(_sourceFrames.size()) < NUM_SRC_FRAMES_PER_PROCESSING + _extraSrcBuffer) {
             return true;
         }
 
-        // add headroom to avoid blocking and context switch
         return _nextSourceFrameNb <= _maxRequestedFrameNb;
     });
 
@@ -124,6 +127,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                                    _extraSrcBuffer);
 
     _nextSourceFrameNb += 1;
+
+    // delay activating the main frameserver until we have enough pre-buffered frames in store
+    if (_nextSourceFrameNb == NUM_SRC_FRAMES_PRE_BUFFER) {
+        MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
+    }
 
     return S_OK;
 }
@@ -331,6 +339,10 @@ auto FrameHandler::WorkerProc() -> void {
             _newSourceFrameCv.wait(sharedSourceLock, [&]() -> bool {
                 if (_isFlushing) {
                     return true;
+                }
+
+                if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+                    return false;
                 }
 
                 return _sourceFrames.size() >= NUM_SRC_FRAMES_PER_PROCESSING;
