@@ -6,16 +6,17 @@
 #include "input_pin.h"
 #include "prop_settings.h"
 #include "prop_status.h"
+#include "util.h"
 
 
 namespace SynthFilter {
 
-#define CheckHr(expr)     \
-    {                     \
-        hr = (expr);      \
-        if (FAILED(hr)) { \
-            return hr;    \
-        }                 \
+#define CheckHr(expr)      \
+    {                      \
+        hr = (expr);       \
+        if (FAILED(hr)) {  \
+            return hr;     \
+        }                  \
     }
 
 CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
@@ -183,8 +184,8 @@ auto CSynthFilter::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES 
 
     pProperties->cBuffers = std::max(pProperties->cBuffers, 2L);
 
-    BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(m_pOutput->CurrentMediaType());
-    pProperties->cbBuffer = std::max(static_cast<long>(bmi->biSizeImage + Format::OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING), pProperties->cbBuffer);
+    const long newMediaSampleSize = Format::GetStrideAlignedMediaSampleSize(m_pOutput->CurrentMediaType(), Format::OUTPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT);
+    pProperties->cbBuffer = std::max(newMediaSampleSize, pProperties->cbBuffer);
 
     ALLOCATOR_PROPERTIES actual;
     CheckHr(pAlloc->SetProperties(pProperties, &actual));
@@ -224,47 +225,75 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
 
     HRESULT hr;
 
-    if (m_pInput->IsConnected() && m_pOutput->IsConnected()) {
-        const Format::PixelFormat *optConnectionInputPixelFormat = MediaTypeToPixelFormat(&m_pInput->CurrentMediaType());
-        const Format::PixelFormat *optConnectionOutputPixelFormat = MediaTypeToPixelFormat(&m_pOutput->CurrentMediaType());
-        if (!optConnectionInputPixelFormat || !optConnectionOutputPixelFormat) {
-            Environment::GetInstance().Log(L"Unexpected input or output format");
-            return E_UNEXPECTED;
-        }
-        Environment::GetInstance().Log(L"Pins are connected with media types: %5s -> %5s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
+    if (m_pInput->IsConnected()) {
+        if (!m_pOutput->IsConnected()) {
+            /*
+             * Before output pin is connected, we have a chance to check if input pin's current media type is correctly stride aligned.
+             * If not, reconnect with an aligned media type.
+             * By doing this, we can save the verbose negotiation via media sample's media type.
+             */
 
-        bool isMediaTypesCompatible = false;
-        int mediaTypeReconnectionIndex = 0;
-        const CMediaType *reconnectInputMediaType = nullptr;
+            const int strideAlignment = std::max(MEDIA_SAMPLE_STRIDE_ALGINMENT, Format::INPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT);
 
-        for (const auto &[inputMediaType, inputPixelFormat, outputMediaType, outputPixelFormat] : _compatibleMediaTypes) {
-            if (optConnectionOutputPixelFormat == outputPixelFormat) {
-                if (optConnectionInputPixelFormat == inputPixelFormat) {
-                    Environment::GetInstance().Log(L"Pin connections are settled");
-                    isMediaTypesCompatible = true;
-                    TraverseFiltersInGraph();
-                    frameHandler->StartWorker();
-                    break;
+            BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(m_pInput->CurrentMediaType());
+            const int alignedStride = FFALIGN(bmi->biWidth, strideAlignment);
+            if (bmi->biWidth != alignedStride) {
+                AM_MEDIA_TYPE alignedMediaType;
+                CheckHr(m_pInput->GetConnected()->ConnectionMediaType(&alignedMediaType));
+
+                bmi = Format::GetBitmapInfo(alignedMediaType);
+                bmi->biWidth = alignedStride;
+                bmi->biSizeImage = GetBitmapSize(bmi);
+
+                if (m_pInput->QueryAccept(&alignedMediaType) == S_OK) {
+                    hr = reinterpret_cast<IFilterGraph2 *>(m_pGraph)->ReconnectEx(m_pInput->GetConnected(), &alignedMediaType);
                 }
 
-                if (mediaTypeReconnectionIndex >= _mediaTypeReconnectionWatermark) {
-                    reconnectInputMediaType = static_cast<const CMediaType *>(inputMediaType.get());
-                    _mediaTypeReconnectionWatermark += 1;
-                    break;
-                }
-
-                mediaTypeReconnectionIndex += 1;
+                FreeMediaType(alignedMediaType);
+                CheckHr(hr);
             }
-        }
-
-        if (!isMediaTypesCompatible) {
-            if (reconnectInputMediaType == nullptr) {
-                Environment::GetInstance().Log(L"Failed to reconnect with any of the %d candidate input media types", _mediaTypeReconnectionWatermark);
+        } else {
+            const Format::PixelFormat *optConnectionInputPixelFormat = MediaTypeToPixelFormat(&m_pInput->CurrentMediaType());
+            const Format::PixelFormat *optConnectionOutputPixelFormat = MediaTypeToPixelFormat(&m_pOutput->CurrentMediaType());
+            if (!optConnectionInputPixelFormat || !optConnectionOutputPixelFormat) {
+                Environment::GetInstance().Log(L"Unexpected input or output format");
                 return E_UNEXPECTED;
             }
+            Environment::GetInstance().Log(L"Pins are connected with media types: %5s -> %5s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
 
-            Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %5s", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
-            CheckHr(ReconnectPin(m_pInput, reconnectInputMediaType));
+            bool isMediaTypesCompatible = false;
+            int mediaTypeReconnectionIndex = 0;
+            const CMediaType *reconnectInputMediaType = nullptr;
+
+            for (const auto &[inputMediaType, inputPixelFormat, outputMediaType, outputPixelFormat] : _compatibleMediaTypes) {
+                if (optConnectionOutputPixelFormat == outputPixelFormat) {
+                    if (optConnectionInputPixelFormat == inputPixelFormat) {
+                        Environment::GetInstance().Log(L"Pin connections are settled");
+                        isMediaTypesCompatible = true;
+                        TraverseFiltersInGraph();
+                        frameHandler->StartWorker();
+                        break;
+                    }
+
+                    if (mediaTypeReconnectionIndex >= _mediaTypeReconnectionWatermark) {
+                        reconnectInputMediaType = static_cast<const CMediaType *>(inputMediaType.get());
+                        _mediaTypeReconnectionWatermark += 1;
+                        break;
+                    }
+
+                    mediaTypeReconnectionIndex += 1;
+                }
+            }
+
+            if (!isMediaTypesCompatible) {
+                if (reconnectInputMediaType == nullptr) {
+                    Environment::GetInstance().Log(L"Failed to reconnect with any of the %d candidate input media types", _mediaTypeReconnectionWatermark);
+                    return E_UNEXPECTED;
+                }
+
+                Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %5s", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
+                CheckHr(ReconnectPin(m_pInput, reconnectInputMediaType));
+            }
         }
     }
 
@@ -284,7 +313,6 @@ auto CSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
         m_pInput->CurrentMediaType() = *pmt;
         _inputVideoFormat = Format::GetVideoFormat(*pmt, &MainFrameServer::GetInstance());
         DeleteMediaType(pmt);
-
         _isInputMediaTypeChanged = true;
     }
 

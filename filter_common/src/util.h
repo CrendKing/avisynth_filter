@@ -5,6 +5,8 @@
 
 namespace SynthFilter {
 
+#define FFALIGN(x, alignment) (((x) + (alignment) -1) & ~((alignment) -1))
+
 auto ConvertWideToUtf8(std::wstring_view wideString) -> std::string;
 auto ConvertUtf8ToWide(std::string_view utf8String) -> std::wstring;
 auto DoubleToString(double num, int precision) -> std::wstring;

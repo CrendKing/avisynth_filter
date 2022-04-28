@@ -7,11 +7,8 @@
 
 namespace SynthFilter {
 
-#define FFALIGN(x, a) (((x) + (a) - 1) & ~((a) - 1))
-
-CSynthFilterAllocator::CSynthFilterAllocator(HRESULT *phr, CSynthFilterInputPin &inputPin)
-    : CMemAllocator(NAME("CSynthFilterAllocator"), nullptr, phr)
-    , _inputPin(inputPin) {}
+CSynthFilterAllocator::CSynthFilterAllocator(HRESULT *phr)
+    : CMemAllocator(NAME("CSynthFilterAllocator"), nullptr, phr) {}
 
 // allocate CSynthFilterMediaSample instead of CMediaSample
 auto CSynthFilterAllocator::Alloc() -> HRESULT {
@@ -79,12 +76,6 @@ auto CSynthFilterAllocator::Alloc() -> HRESULT {
 
     m_bChanged = FALSE;
     return NOERROR;
-}
-
-auto STDMETHODCALLTYPE CSynthFilterAllocator::SetProperties(__in ALLOCATOR_PROPERTIES *pRequest, __out ALLOCATOR_PROPERTIES *pActual) -> HRESULT {
-    const BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(_inputPin.CurrentMediaType());
-    pRequest->cbBuffer = std::max(static_cast<long>(bmi->biSizeImage + Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING), pRequest->cbBuffer);
-    return __super::SetProperties(pRequest, pActual);
 }
 
 }

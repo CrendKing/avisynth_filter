@@ -2,6 +2,7 @@
 
 #include "environment.h"
 #include "format.h"
+#include "util.h"
 
 
 namespace SynthFilter {
@@ -69,6 +70,10 @@ auto Format::VideoFormat::ColorSpaceInfo::Update(const DXVA_ExtendedFormat &dxva
     }
 }
 
+auto Format::VideoFormat::GetCodecFourCC() const -> DWORD {
+    return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC();
+}
+
 auto Format::Initialize() -> void {
     if (Environment::GetInstance().IsSupportAVX2()) {
         _UV_SHUFFLE_MASK_M256_C1 = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15, 0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
@@ -104,8 +109,8 @@ auto Format::Initialize() -> void {
         _vectorSize           = 0;
     }
 
-    INPUT_MEDIA_SAMPLE_BUFFER_PADDING = _vectorSize == 0 ? 0 : _vectorSize;
-    OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING = (_vectorSize == 0 ? sizeof(__m128i) : _vectorSize) * 2;
+    INPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT = _vectorSize == 0 ? 8 : _vectorSize;
+    OUTPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT = (_vectorSize == 0 ? 2 : _vectorSize) * 2;
 }
 
 auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat * {
@@ -116,6 +121,12 @@ auto Format::LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat 
     }
 
     return nullptr;
+}
+
+auto Format::GetStrideAlignedMediaSampleSize(const AM_MEDIA_TYPE &mediaType, int strideAlignment) -> long {
+    BITMAPINFOHEADER bmi = *GetBitmapInfo(mediaType);
+    bmi.biWidth = FFALIGN(bmi.biWidth, strideAlignment);
+    return GetBitmapSize(&bmi);
 }
 
 auto Format::DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {

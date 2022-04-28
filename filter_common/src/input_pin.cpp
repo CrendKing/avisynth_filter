@@ -3,6 +3,8 @@
 #include "input_pin.h"
 
 #include "allocator.h"
+#include "constants.h"
+#include "format.h"
 
 
 namespace SynthFilter {
@@ -22,7 +24,6 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::ReceiveConnection(IPin *pConnector,
     HRESULT hr;
 
     const HRESULT receiveConnectionHr = __super::ReceiveConnection(pConnector, pmt);
-
     if (receiveConnectionHr == VFW_E_ALREADY_CONNECTED) {
         ASSERT(m_pAllocator != nullptr);
 
@@ -30,18 +31,22 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::ReceiveConnection(IPin *pConnector,
             const std::unique_lock lock(*m_pLock);
 
             ALLOCATOR_PROPERTIES props, actual;
-
-            CheckHr(m_pAllocator->Decommit());
             CheckHr(m_pAllocator->GetProperties(&props));
 
-            const BITMAPINFOHEADER *bmi = Format::GetBitmapInfo(*pmt);
-            props.cbBuffer = std::max(static_cast<long>(bmi->biSizeImage + Format::INPUT_MEDIA_SAMPLE_BUFFER_PADDING), props.cbBuffer);
+            const int strideAlignment = std::max(MEDIA_SAMPLE_STRIDE_ALGINMENT, Format::INPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT);
+            const long newMediaSampleSize = Format::GetStrideAlignedMediaSampleSize(*pmt, strideAlignment);
 
-            CheckHr(m_pAllocator->SetProperties(&props, &actual));
-            CheckHr(m_pAllocator->Commit());
+            // if the new media sample size is larger than current, we need to re-allocate buffers with larger sample size
+            if (props.cbBuffer < newMediaSampleSize) {
+                props.cbBuffer = newMediaSampleSize;
 
-            if (props.cBuffers > actual.cBuffers || props.cbBuffer > actual.cbBuffer) {
-                return E_FAIL;
+                CheckHr(m_pAllocator->Decommit());
+                CheckHr(m_pAllocator->SetProperties(&props, &actual));
+                CheckHr(m_pAllocator->Commit());
+
+                if (props.cBuffers > actual.cBuffers || props.cbBuffer > actual.cbBuffer) {
+                    return E_FAIL;
+                }
             }
         }
     }
@@ -60,7 +65,7 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::GetAllocator(__deref_out IMemAlloca
 
     if (m_pAllocator == nullptr) {
         HRESULT hr = S_OK;
-        m_pAllocator = new CSynthFilterAllocator(&hr, *this);
+        m_pAllocator = new CSynthFilterAllocator(&hr);
         if (FAILED(hr)) {
             return hr;
         }
@@ -75,8 +80,8 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::GetAllocator(__deref_out IMemAlloca
 }
 
 auto CSynthFilterInputPin::Active() -> HRESULT {
-    AuxFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-    _filter._inputVideoFormat = Format::GetVideoFormat(_filter.m_pInput->CurrentMediaType(), &AuxFrameServer::GetInstance());
+    AuxFrameServer::GetInstance().ReloadScript(CurrentMediaType(), true);
+    _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType(), &AuxFrameServer::GetInstance());
     _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &AuxFrameServer::GetInstance());
 
     if (Environment::GetInstance().IsRemoteControlEnabled()) {

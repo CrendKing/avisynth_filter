@@ -54,6 +54,12 @@ static constexpr const WCHAR *UNAVAILABLE_SOURCE_PATH                = L"N/A";
 static constexpr const int NUM_FRAMES_FOR_INFINITE_STREAM            = 10810800;
 
 /*
+ * align stride of input media type to this number so that LAV Filters can enable its "direct" mode
+ * for better performance.
+ */
+static constexpr const int MEDIA_SAMPLE_STRIDE_ALGINMENT             = 32;
+
+/*
  * AviSynth+ and VapourSynth frame property names
  * The ones prefixed with "AVSF_" are specific private properties of this filter, both variants
  */

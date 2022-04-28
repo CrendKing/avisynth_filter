@@ -72,7 +72,7 @@ public:
         BITMAPINFOHEADER bmi;
         FrameServerCore frameServerCore;
 
-        auto GetCodecFourCC() const -> DWORD { return FOURCCMap(&pixelFormat->mediaSubtype).GetFOURCC(); }
+        auto GetCodecFourCC() const -> DWORD;
     };
 
     static auto Initialize() -> void;
@@ -96,6 +96,7 @@ public:
         return nullptr;
     }
 
+    static auto GetStrideAlignedMediaSampleSize(const AM_MEDIA_TYPE &mediaType, int strideAlignment) -> long;
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat;
     static auto WriteSample(const VideoFormat &videoFormat, InputFrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> OutputFrameType;
@@ -112,8 +113,8 @@ public:
      * However, if we allocate the buffer size with the headroom of one intrinsic size, we can keep using
      * the same logic with intrinsics, simplifying the code. The junk data in the padding will be harmless.
      */
-    static inline size_t INPUT_MEDIA_SAMPLE_BUFFER_PADDING;
-    static inline size_t OUTPUT_MEDIA_SAMPLE_BUFFER_PADDING;
+    static inline int INPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT;
+    static inline int OUTPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT;
 
 private:
     static inline const __m128i _UV_SHUFFLE_MASK_M128_C1 = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
@@ -304,7 +305,7 @@ private:
     static inline decltype(BitShiftEach16BitInt<0, 6, true>) *_rightShiftFunc;
     static inline decltype(BitShiftEach16BitInt<0, 6, false>) *_leftShiftFunc;
 
-    static inline size_t _vectorSize;
+    static inline int _vectorSize;
 };
 
 }
