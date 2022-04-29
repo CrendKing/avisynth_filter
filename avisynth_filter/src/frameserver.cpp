@@ -156,7 +156,7 @@ auto MainFrameServer::GetFrame(int frameNb) const -> PVideoFrame {
 }
 
 auto MainFrameServer::CreateSourceDummyFrame() const -> PVideoFrame {
-    return _env->NewVideoFrameP(FrameServerCommon::GetInstance().GetSourceVideoInfo(), nullptr);
+    return _env->NewVideoFrame(FrameServerCommon::GetInstance().GetSourceVideoInfo());
 }
 
 auto MainFrameServer::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
