@@ -4,20 +4,12 @@
 
 #include "constants.h"
 #include "input_pin.h"
+#include "macros.h"
 #include "prop_settings.h"
 #include "prop_status.h"
-#include "util.h"
 
 
 namespace SynthFilter {
-
-#define CheckHr(expr)      \
-    {                      \
-        hr = (expr);       \
-        if (FAILED(hr)) {  \
-            return hr;     \
-        }                  \
-    }
 
 CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     : CVideoTransformFilter(FILTER_NAME_FULL, pUnk, __uuidof(CSynthFilter)) {

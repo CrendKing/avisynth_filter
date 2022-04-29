@@ -5,17 +5,10 @@
 #include "allocator.h"
 #include "constants.h"
 #include "format.h"
+#include "macros.h"
 
 
 namespace SynthFilter {
-
-#define CheckHr(expr)      \
-    {                      \
-        hr = (expr);       \
-        if (FAILED(hr)) {  \
-            return hr;     \
-        }                  \
-    }
 
 CSynthFilterInputPin::CSynthFilterInputPin(__in_opt LPCTSTR pObjectName, __inout CTransformFilter *pTransformFilter, __inout HRESULT *phr, __in_opt LPCWSTR pName)
     : CTransformInputPin(pObjectName, pTransformFilter, phr, pName) {}

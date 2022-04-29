@@ -33,6 +33,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\format.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\hdr.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\input_pin.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\macros.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\media_sample.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\min_windows.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\pch.h" />

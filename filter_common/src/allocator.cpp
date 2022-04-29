@@ -2,6 +2,7 @@
 
 #include "allocator.h"
 
+#include "macros.h"
 #include "media_sample.h"
 
 
