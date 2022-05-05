@@ -13,27 +13,27 @@ namespace SynthFilter {
 // VapourSynth does not support any interleaved format such as YUY2 or RGB
 const std::vector<Format::PixelFormat> Format::PIXEL_FORMATS {
     // 4:2:0
-    { .name = L"NV12", .mediaSubtype = MEDIASUBTYPE_NV12, .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_NV12 },
-    { .name = L"YV12", .mediaSubtype = MEDIASUBTYPE_YV12, .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_YV12 },
-    { .name = L"I420", .mediaSubtype = MEDIASUBTYPE_I420, .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_I420 },
-    { .name = L"IYUV", .mediaSubtype = MEDIASUBTYPE_IYUV, .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_IYUV },
+    { .name = L"NV12",  .mediaSubtype = MEDIASUBTYPE_NV12,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 2,  .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_NV12 },
+    { .name = L"YV12",  .mediaSubtype = MEDIASUBTYPE_YV12,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 2,  .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_YV12 },
+    { .name = L"I420",  .mediaSubtype = MEDIASUBTYPE_I420,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 2,  .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_I420 },
+    { .name = L"IYUV",  .mediaSubtype = MEDIASUBTYPE_IYUV,  .frameServerFormatId = pfYUV420P8,  .bitCount = 12, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 2,  .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_IYUV },
 
     // P010 from DirectShow has the least significant 6 bits zero-padded, while AviSynth expects the most significant bits zeroed
     // Therefore, there will be bit shifting whenever P010 is used
-    { .name = L"P010", .mediaSubtype = MEDIASUBTYPE_P010, .frameServerFormatId = pfYUV420P10, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P010 },
-    { .name = L"P016", .mediaSubtype = MEDIASUBTYPE_P016, .frameServerFormatId = pfYUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 2, .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P016 },
+    { .name = L"P010",  .mediaSubtype = MEDIASUBTYPE_P010,  .frameServerFormatId = pfYUV420P10, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 2,  .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P010 },
+    { .name = L"P016",  .mediaSubtype = MEDIASUBTYPE_P016,  .frameServerFormatId = pfYUV420P16, .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 2,  .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P016 },
 
     // 4:2:2
-    { .name = L"P210", .mediaSubtype = MEDIASUBTYPE_P210, .frameServerFormatId = pfYUV422P10, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P210 },
-    { .name = L"P216", .mediaSubtype = MEDIASUBTYPE_P216, .frameServerFormatId = pfYUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P216 },
+    { .name = L"P210",  .mediaSubtype = MEDIASUBTYPE_P210,  .frameServerFormatId = pfYUV422P10, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 1,  .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P210 },
+    { .name = L"P216",  .mediaSubtype = MEDIASUBTYPE_P216,  .frameServerFormatId = pfYUV422P16, .bitCount = 32, .componentsPerPixel = 1, .subsampleWidthRatio = 2,  .subsampleHeightRatio = 1,  .srcPlanesLayout = PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED, .resourceId = IDC_INPUT_FORMAT_P216 },
 
     // 4:4:4
-    { .name = L"YV24", .mediaSubtype = MEDIASUBTYPE_YV24, .frameServerFormatId = pfYUV444P8,  .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_YV24 },
+    { .name = L"YV24",  .mediaSubtype = MEDIASUBTYPE_YV24,  .frameServerFormatId = pfYUV444P8,  .bitCount = 24, .componentsPerPixel = 1, .subsampleWidthRatio = 1,  .subsampleHeightRatio = 1,  .srcPlanesLayout = PlanesLayout::ALL_PLANES_SEPARATE,           .resourceId = IDC_INPUT_FORMAT_YV24 },
     // Y41x from DirectShow contains alpha plane, which is used during video playback, therefore we ignore it and feed frame server YUV444
-    { .name = L"Y410", .mediaSubtype = MEDIASUBTYPE_Y410, .frameServerFormatId = pfYUV444P10, .bitCount = 32, .componentsPerPixel = 4, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_Y410 },
-    { .name = L"Y416", .mediaSubtype = MEDIASUBTYPE_Y416, .frameServerFormatId = pfYUV444P16, .bitCount = 64, .componentsPerPixel = 4, .subsampleWidthRatio = 1, .subsampleHeightRatio = 1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_Y416 },
+    { .name = L"Y410",  .mediaSubtype = MEDIASUBTYPE_Y410,  .frameServerFormatId = pfYUV444P10, .bitCount = 32, .componentsPerPixel = 4, .subsampleWidthRatio = 1,  .subsampleHeightRatio = 1,  .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_Y410 },
+    { .name = L"Y416",  .mediaSubtype = MEDIASUBTYPE_Y416,  .frameServerFormatId = pfYUV444P16, .bitCount = 64, .componentsPerPixel = 4, .subsampleWidthRatio = 1,  .subsampleHeightRatio = 1,  .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_Y416 },
 
-    // VapourSynth does not support packed RGB formats
+    { .name = L"RGB32", .mediaSubtype = MEDIASUBTYPE_RGB32, .frameServerFormatId = pfRGB24,     .bitCount = 32, .componentsPerPixel = 4, .subsampleWidthRatio = -1, .subsampleHeightRatio = -1, .srcPlanesLayout = PlanesLayout::ALL_PLANES_INTERLEAVED,        .resourceId = IDC_INPUT_FORMAT_RGB32 },
 };
 
 auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat {
@@ -89,9 +89,8 @@ auto Format::WriteSample(const VideoFormat &videoFormat, const VSFrame *srcFrame
         srcSlices[i] = AVSF_VPS_API->getReadPtr(srcFrame, i);
         srcStrides[i] = static_cast<int>(AVSF_VPS_API->getStride(srcFrame, i));
     }
-    const int rowSize = AVSF_VPS_API->getFrameWidth(srcFrame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
-    CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, rowSize, AVSF_VPS_API->getFrameHeight(srcFrame, 0));
+    CopyToOutput(videoFormat, srcSlices, srcStrides, dstBuffer, AVSF_VPS_API->getFrameWidth(srcFrame, 0), AVSF_VPS_API->getFrameHeight(srcFrame, 0));
 }
 
 auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> VSFrame * {
@@ -103,51 +102,59 @@ auto Format::CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) 
         dstSlices[i] = AVSF_VPS_API->getWritePtr(newFrame, i);
         dstStrides[i] = static_cast<int>(AVSF_VPS_API->getStride(newFrame, i));
     }
-    const int rowSize = AVSF_VPS_API->getFrameWidth(newFrame, 0) * videoFormat.videoInfo.format.bytesPerSample;
 
-    CopyFromInput(videoFormat, srcBuffer, dstSlices, dstStrides, rowSize, AVSF_VPS_API->getFrameHeight(newFrame, 0));
+    CopyFromInput(videoFormat, srcBuffer, dstSlices, dstStrides, AVSF_VPS_API->getFrameWidth(newFrame, 0), AVSF_VPS_API->getFrameHeight(newFrame, 0));
 
     return newFrame;
 }
 
-auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
+auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int frameWidth, int height) -> void {
+    int srcMainPlaneRowSize = frameWidth * videoFormat.videoInfo.format.bytesPerSample;
+    if (videoFormat.pixelFormat->srcPlanesLayout == PlanesLayout::ALL_PLANES_INTERLEAVED) {
+        srcMainPlaneRowSize *= videoFormat.pixelFormat->componentsPerPixel;
+    }
+
     // bmi.biWidth should be "set equal to the surface stride in pixels" according to the doc of BITMAPINFOHEADER
     int srcMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format.bytesPerSample * videoFormat.pixelFormat->componentsPerPixel;
-    ASSERT(rowSize <= srcMainPlaneStride);
+    ASSERT(srcMainPlaneRowSize <= srcMainPlaneStride);
     ASSERT(height == abs(videoFormat.bmi.biHeight));
     const int srcMainPlaneSize = srcMainPlaneStride * height;
     const BYTE *srcMainPlane = srcBuffer;
     const int srcUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio;
 
     // for RGB DIB in Windows (biCompression == BI_RGB), positive biHeight is bottom-up, negative is top-down
-    // AviSynth+'s convert functions always assume the input DIB is bottom-up, so we invert the DIB if it's top-down
-    if (videoFormat.bmi.biCompression == BI_RGB && videoFormat.bmi.biHeight < 0) {
-        srcMainPlane += static_cast<size_t>(srcMainPlaneSize) - srcMainPlaneStride;
+    // VapourSynth's zimg assumes the input DIB being top-down, so we invert the DIB if needed
+    if (videoFormat.bmi.biCompression == BI_RGB && videoFormat.bmi.biHeight > 0) {
+        srcMainPlane += srcMainPlaneSize - srcMainPlaneStride;
         srcMainPlaneStride = -srcMainPlaneStride;
     }
 
     if (videoFormat.pixelFormat->srcPlanesLayout != PlanesLayout::ALL_PLANES_INTERLEAVED) {
-        vsh::bitblt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, rowSize, height);
+        vsh::bitblt(dstSlices[0], dstStrides[0], srcMainPlane, srcMainPlaneStride, srcMainPlaneRowSize, height);
     }
 
     switch (videoFormat.pixelFormat->srcPlanesLayout) {
-    case PlanesLayout::ALL_PLANES_INTERLEAVED: {
-        const std::array yuvaSlices = { dstSlices[1], dstSlices[0], dstSlices[2] };
-        const std::array yuvaStrides = { dstStrides[1], dstStrides[0], dstStrides[2] };
+    case PlanesLayout::ALL_PLANES_INTERLEAVED:
+        if (videoFormat.videoInfo.format.colorFamily == cfYUV) {
+            const std::array yuvaSlices = { dstSlices[1], dstSlices[0], dstSlices[2] };
+            const std::array yuvaStrides = { dstStrides[1], dstStrides[0], dstStrides[2] };
 
-        if (videoFormat.videoInfo.format.bitsPerSample == 10) {
-            DeinterleaveY410(srcMainPlane, srcMainPlaneStride / 2, yuvaSlices, yuvaStrides, rowSize * 2, height);
+            if (videoFormat.videoInfo.format.bitsPerSample == 10) {
+                DeinterleaveY410(srcMainPlane, srcMainPlaneStride / 2, yuvaSlices, yuvaStrides, srcMainPlaneRowSize / 2, height);
+            } else {
+                _deinterleaveY416Func(srcMainPlane, srcMainPlaneStride, yuvaSlices, yuvaStrides, srcMainPlaneRowSize, height);
+            }
         } else {
-            _deinterleaveY416Func(srcMainPlane, srcMainPlaneStride, yuvaSlices, yuvaStrides, rowSize * 4, height);
+            _deinterleaveRGBC1Func(srcMainPlane, srcMainPlaneStride, dstSlices, dstStrides, srcMainPlaneRowSize, height);
         }
-    } break;
+        break;
 
     case PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED: {
         const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
-        const int srcUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
+        const int srcUVRowSize = srcMainPlaneRowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Deinterleave<0, 0, 2, 2>) *deinterleaveUVFunc;
+        decltype(Deinterleave) *deinterleaveUVFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             deinterleaveUVFunc = _deinterleaveUVC1Func;
         } else {
@@ -156,7 +163,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         deinterleaveUVFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, { dstStrides[1], dstStrides[2] }, srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
-            _rightShiftFunc(dstSlices[0], dstStrides[0], rowSize, height);
+            _rightShiftFunc(dstSlices[0], dstStrides[0], srcMainPlaneRowSize, height);
             _rightShiftFunc(dstSlices[1], dstStrides[1], srcUVRowSize / 2, srcUVHeight);
             _rightShiftFunc(dstSlices[2], dstStrides[2], srcUVRowSize / 2, srcUVHeight);
         }
@@ -164,7 +171,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
 
     case PlanesLayout::ALL_PLANES_SEPARATE: {
         const int srcUVStride = srcMainPlaneStride / videoFormat.pixelFormat->subsampleWidthRatio;
-        const int srcUVRowSize = rowSize / videoFormat.pixelFormat->subsampleWidthRatio;
+        const int srcUVRowSize = srcMainPlaneRowSize / videoFormat.pixelFormat->subsampleWidthRatio;
         const BYTE *srcUVPlane1 = srcBuffer + srcMainPlaneSize;
         const BYTE *srcUVPlane2 = srcUVPlane1 + srcMainPlaneSize / (videoFormat.pixelFormat->subsampleWidthRatio * videoFormat.pixelFormat->subsampleHeightRatio);
 
@@ -185,42 +192,50 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     }
 }
 
-auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void {
+auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int frameWidth, int height) -> void {
+    int dstMainPlaneRowSize = frameWidth * videoFormat.videoInfo.format.bytesPerSample;
+    if (videoFormat.pixelFormat->srcPlanesLayout == PlanesLayout::ALL_PLANES_INTERLEAVED) {
+        dstMainPlaneRowSize *= videoFormat.pixelFormat->componentsPerPixel;
+    }
+
     int dstMainPlaneStride = videoFormat.bmi.biWidth * videoFormat.videoInfo.format.bytesPerSample * videoFormat.pixelFormat->componentsPerPixel;
-    ASSERT(rowSize <= dstMainPlaneStride);
+    ASSERT(dstMainPlaneRowSize <= dstMainPlaneStride);
     ASSERT(height >= abs(videoFormat.bmi.biHeight));
     const int dstMainPlaneSize = dstMainPlaneStride * height;
     BYTE *dstMainPlane = dstBuffer;
     const int dstUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio;
 
-    // AviSynth+'s convert functions always produce bottom-up DIB, so we invert the DIB if downstream needs top-down
-    if (videoFormat.bmi.biCompression == BI_RGB && videoFormat.bmi.biHeight < 0) {
-        dstMainPlane += static_cast<size_t>(dstMainPlaneSize) - dstMainPlaneStride;
+    if (videoFormat.bmi.biCompression == BI_RGB && videoFormat.bmi.biHeight > 0) {
+        dstMainPlane += dstMainPlaneSize - dstMainPlaneStride;
         dstMainPlaneStride = -dstMainPlaneStride;
     }
 
     if (videoFormat.pixelFormat->srcPlanesLayout != PlanesLayout::ALL_PLANES_INTERLEAVED) {
-        vsh::bitblt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], rowSize, height);
+        vsh::bitblt(dstMainPlane, dstMainPlaneStride, srcSlices[0], srcStrides[0], dstMainPlaneRowSize, height);
     }
 
     switch (videoFormat.pixelFormat->srcPlanesLayout) {
-    case PlanesLayout::ALL_PLANES_INTERLEAVED: {
-        const std::array yuvaSlices = { srcSlices[1], srcSlices[0], srcSlices[2] };
-        const std::array yuvaStrides = { srcStrides[1], srcStrides[0], srcStrides[2] };
+    case PlanesLayout::ALL_PLANES_INTERLEAVED:
+        if (videoFormat.videoInfo.format.colorFamily == cfYUV) {
+            const std::array yuvaSlices = { srcSlices[1], srcSlices[0], srcSlices[2] };
+            const std::array yuvaStrides = { srcStrides[1], srcStrides[0], srcStrides[2] };
 
-        if (videoFormat.videoInfo.format.bitsPerSample == 10) {
-            InterleaveY410(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride / 2, rowSize * 2, height);
+            if (videoFormat.videoInfo.format.bitsPerSample == 10) {
+                InterleaveY410(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride / 2, dstMainPlaneRowSize / 2, height);
+            } else {
+                _interleaveY416Func(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride, dstMainPlaneRowSize, height);
+            }
         } else {
-            InterleaveY416(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride, rowSize * 4, height);
+            _interleaveRGBC1Func(srcSlices, srcStrides, dstMainPlane, dstMainPlaneStride, dstMainPlaneRowSize, height);
         }
-    } break;
+        break;
 
     case PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED: {
         BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
-        const int dstUVRowSize = rowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
+        const int dstUVRowSize = dstMainPlaneRowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(InterleaveUV<0, 0>) *interleaveUVFunc;
+        decltype(InterleaveUV) *interleaveUVFunc;
         if (videoFormat.videoInfo.format.bytesPerSample == 1) {
             interleaveUVFunc = _interleaveUVC1Func;
         } else {
@@ -229,13 +244,13 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         interleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], srcStrides[2], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
-            _leftShiftFunc(dstBuffer, dstMainPlaneStride, rowSize, height + dstUVHeight);
+            _leftShiftFunc(dstBuffer, dstMainPlaneStride, dstMainPlaneRowSize, height + dstUVHeight);
         }
     } break;
 
     case PlanesLayout::ALL_PLANES_SEPARATE: {
         const int dstUVStride = dstMainPlaneStride / videoFormat.pixelFormat->subsampleWidthRatio;
-        const int dstUVRowSize = rowSize / videoFormat.pixelFormat->subsampleWidthRatio;
+        const int dstUVRowSize = dstMainPlaneRowSize / videoFormat.pixelFormat->subsampleWidthRatio;
         BYTE *dstUVPlane1 = dstBuffer + dstMainPlaneSize;
         BYTE *dstUVPlane2 = dstUVPlane1 + dstMainPlaneSize / (videoFormat.pixelFormat->subsampleWidthRatio * videoFormat.pixelFormat->subsampleHeightRatio);
 

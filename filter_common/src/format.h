@@ -100,8 +100,8 @@ public:
     static auto GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBase *frameServerInstance) -> VideoFormat;
     static auto WriteSample(const VideoFormat &videoFormat, InputFrameType srcFrame, BYTE *dstBuffer) -> void;
     static auto CreateFrame(const VideoFormat &videoFormat, const BYTE *srcBuffer) -> OutputFrameType;
-    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
-    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int rowSize, int height) -> void;
+    static auto CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer, const std::array<BYTE *, 3> &dstSlices, const std::array<int, 3> &dstStrides, int frameWidth, int height) -> void;
+    static auto CopyToOutput(const VideoFormat &videoFormat, const std::array<const BYTE *, 3> &srcSlices, const std::array<int, 3> &srcStrides, BYTE *dstBuffer, int frameWidth, int height) -> void;
 
     static const std::vector<PixelFormat> PIXEL_FORMATS;
 
@@ -117,20 +117,22 @@ public:
     static inline int OUTPUT_MEDIA_SAMPLE_STRIDE_ALIGNMENT;
 
 private:
-    static inline const __m128i _UV_SHUFFLE_MASK_M128_C1 = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
-    static inline const __m128i _UV_SHUFFLE_MASK_M128_C2 = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static inline const __m128i _UV_SHUFFLE_MASK_M128_C1  = _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+    static inline const __m128i _UV_SHUFFLE_MASK_M128_C2  = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     static inline       __m256i _UV_SHUFFLE_MASK_M256_C1;
     static inline       __m256i _UV_SHUFFLE_MASK_M256_C2;
-    static constexpr const int  _UV_PERMUTE_INDEX        = 0b11011000;
-    static inline const __m128i _Y410_AND_MASK_1         = _mm_setr_epi32(1023, 1023, 1023, 1023);
-    static inline const __m128i _Y410_AND_MASK_2         = _mm_setr_epi32(1047552, 1047552, 1047552, 1047552);
-    static inline const __m128i _Y410_AND_MASK_3         = _mm_setr_epi32(1072693248, 1072693248, 1072693248, 1072693248);
-    static inline const __m128i _Y410_SHUFFLE_MASK_1     = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0);
-    static inline const __m128i _Y410_SHUFFLE_MASK_2     = _mm_setr_epi8(1, 2, 5, 6, 9, 10, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0);
-    static inline const __m128i _Y410_SHUFFLE_MASK_3     = _mm_setr_epi8(2, 3, 6, 7, 10, 11, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0);
-    static inline const __m128i _Y416_SHUFFLE_MASK_M128  = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
+    static inline const __m128i _Y410_AND_MASK_1          = _mm_setr_epi32(1023, 1023, 1023, 1023);
+    static inline const __m128i _Y410_AND_MASK_2          = _mm_setr_epi32(1047552, 1047552, 1047552, 1047552);
+    static inline const __m128i _Y410_AND_MASK_3          = _mm_setr_epi32(1072693248, 1072693248, 1072693248, 1072693248);
+    static inline const __m128i _Y410_SHUFFLE_MASK_1      = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0);
+    static inline const __m128i _Y410_SHUFFLE_MASK_2      = _mm_setr_epi8(1, 2, 5, 6, 9, 10, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0);
+    static inline const __m128i _Y410_SHUFFLE_MASK_3      = _mm_setr_epi8(2, 3, 6, 7, 10, 11, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0);
+    static inline const __m128i _Y416_SHUFFLE_MASK_M128   = _mm_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
     static inline       __m256i _Y416_SHUFFLE_MASK_M256;
-    static inline       __m256i _Y416_PERMUTE_INDEX;
+    static inline const __m128i _RGB_SHUFFLE_MASK_M128_C1 = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+    static inline       __m256i _RGB_SHUFFLE_MASK_M256_C1;
+    static constexpr const int  _UV_PERMUTE_INDEX         = 0b11011000;
+    static inline       __m256i _FOUR_PERMUTE_INDEX;
 
     /*
      * intrinsicType: 1 = SSSE3, 2 = AVX2. Anything else: non-SIMD
@@ -138,8 +140,9 @@ private:
      * srcNumComponents is the number of components per pixel for the source
      * dstNumComponents is the number of components per pixel for the destination
      * srcNumComponents should always >= dstNumComponents. They differ in case we want to discard certain components (e.g. the alpha plane of Y410/Y416)
+     * colorFamily: 1 = YUV, 2 = RGB
      */
-    template <int intrinsicType, int componentSize, int srcNumComponents, int dstNumComponents>
+    template <int intrinsicType, int componentSize, int srcNumComponents, int dstNumComponents, int colorFamily>
     static constexpr auto Deinterleave(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
         /*
          * Place bytes from each plane in sequence by shuffling, then write the sequence of bytes to respective buffer.
@@ -149,59 +152,67 @@ private:
          * Much like 0, 2, 1, 3 -> 0, 1, 2, 3.
          */
 
-        // Vector is the type for the memory data each SIMD intrustion works on (__m128i, __m256i, etc.)
-        using Vector = std::conditional_t<intrinsicType == 1, __m128i
-                     , std::conditional_t<intrinsicType == 2, __m256i
-                     , std::array<BYTE, componentSize * srcNumComponents>>>;
-        // Output is the type for the output of the SIMD instructions, half the size of Vector
-        using Output = std::array<BYTE, sizeof(Vector) / srcNumComponents>;
+        // Input is the type for the input data each SIMD intrustion works on (__m128i, __m256i, etc.)
+        using Input = std::conditional_t<intrinsicType == 1, __m128i
+                    , std::conditional_t<intrinsicType == 2, __m256i
+                    , std::array<BYTE, componentSize * srcNumComponents>>>;
+        // Output is the type for the output of the SIMD instructions, half the size of Input
+        using Output = std::array<BYTE, sizeof(Input) / srcNumComponents>;
 
-        Vector shuffleMask {};
+        Input shuffleMask;
         if constexpr (intrinsicType == 1) {
             if constexpr (componentSize == 1) {
-                shuffleMask = _UV_SHUFFLE_MASK_M128_C1;
+                if constexpr (colorFamily == 1) {
+                    shuffleMask = _UV_SHUFFLE_MASK_M128_C1;
+                } else {
+                    shuffleMask = _RGB_SHUFFLE_MASK_M128_C1;
+                }
             } else if constexpr (srcNumComponents == 2) {
                 shuffleMask = _UV_SHUFFLE_MASK_M128_C2;
-            } else {
+            } else if constexpr (srcNumComponents == 4) {
                 shuffleMask = _Y416_SHUFFLE_MASK_M128;
             }
         } else if constexpr (intrinsicType == 2) {
             if constexpr (componentSize == 1) {
-                shuffleMask = _UV_SHUFFLE_MASK_M256_C1;
+                if constexpr (colorFamily == 1) {
+                    shuffleMask = _UV_SHUFFLE_MASK_M256_C1;
+                } else {
+                    shuffleMask = _RGB_SHUFFLE_MASK_M256_C1;
+                }
             } else if constexpr (srcNumComponents == 2) {
                 shuffleMask = _UV_SHUFFLE_MASK_M256_C2;
-            } else {
+            } else if constexpr (srcNumComponents == 4) {
                 shuffleMask = _Y416_SHUFFLE_MASK_M256;
             }
         }
 
         for (int y = 0; y < height; ++y) {
-            const Vector *srcLine = reinterpret_cast<const Vector *>(src);
+            const Input *srcLine = reinterpret_cast<const Input *>(src);
             std::array<Output *, dstNumComponents> dstsLine;
             for (int p = 0; p < dstNumComponents; ++p) {
                 dstsLine[p] = reinterpret_cast<Output *>(dsts[p]);
             }
 
-            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
-                const Vector srcVec = *srcLine++;
-                Vector outputVec;
+            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Input)); ++i) {
+                const Input srcVec = *srcLine++;
+                Input dataVec;
 
                 if constexpr (intrinsicType == 1) {
-                    outputVec = _mm_shuffle_epi8(srcVec, shuffleMask);
+                    dataVec = _mm_shuffle_epi8(srcVec, shuffleMask);
                 } else if constexpr (intrinsicType == 2) {
-                    const Vector srcShuffle = _mm256_shuffle_epi8(srcVec, shuffleMask);
+                    const Input srcShuffle = _mm256_shuffle_epi8(srcVec, shuffleMask);
 
                     if constexpr (srcNumComponents == 2) {
-                        outputVec = _mm256_permute4x64_epi64(srcShuffle, _UV_PERMUTE_INDEX);
-                    } else {
-                        outputVec = _mm256_permutevar8x32_epi32(srcShuffle, _Y416_PERMUTE_INDEX);
+                        dataVec = _mm256_permute4x64_epi64(srcShuffle, _UV_PERMUTE_INDEX);
+                    } if constexpr (srcNumComponents == 4) {
+                        dataVec = _mm256_permutevar8x32_epi32(srcShuffle, _FOUR_PERMUTE_INDEX);
                     }
                 } else {
-                    outputVec = srcVec;
+                    dataVec = srcVec;
                 }
 
                 for (int p = 0; p < dstNumComponents; ++p) {
-                    *dstsLine[p]++ = *(reinterpret_cast<const Output *>(&outputVec) + p);
+                    *dstsLine[p]++ = *(reinterpret_cast<const Output *>(&dataVec) + p);
                 }
             }
 
@@ -258,6 +269,42 @@ private:
         }
     }
 
+    template <int colorFamily>
+    constexpr static auto InterleaveThree(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+        // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
+
+        using Input = uint32_t;
+        using Output = __m128i;
+
+        Output shuffleMask;
+        if constexpr (colorFamily == 1) {
+            shuffleMask = _UV_SHUFFLE_MASK_M128_C2;
+        } else if constexpr (colorFamily == 2) {
+            shuffleMask = _RGB_SHUFFLE_MASK_M128_C1;
+        }
+        const Output initial = _mm_set1_epi8(-1);
+
+        for (int y = 0; y < height; ++y) {
+            std::array<const Input *, srcs.size()> srcsLine;
+            for (size_t p = 0; p < srcs.size(); ++p) {
+                srcsLine[p] = reinterpret_cast<const Input *>(srcs[p]);
+            }
+            Output *dstLine = reinterpret_cast<Output *>(dst);
+
+            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Output)); ++i) {
+                Output vec = _mm_insert_epi32(initial, *srcsLine[0]++, 0);
+                vec = _mm_insert_epi32(vec, *srcsLine[1]++, 1);
+                vec = _mm_insert_epi32(vec, *srcsLine[2]++, 2);
+                *dstLine++ = _mm_shuffle_epi8(vec, shuffleMask);
+            }
+
+            for (size_t p = 0; p < srcs.size(); ++p) {
+                srcs[p] += srcStrides[p];
+            }
+            dst += dstStride;
+        }
+    }
+
     template <int intrinsicType, int shiftSize, bool isRightShift>
     constexpr static auto BitShiftEach16BitInt(BYTE *bytes, int stride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
@@ -295,15 +342,17 @@ private:
 
     static auto DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
     static auto InterleaveY410(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
-    static auto InterleaveY416(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
 
-    static inline decltype(Deinterleave<0, 1, 2, 2>) *_deinterleaveUVC1Func;
-    static inline decltype(Deinterleave<0, 2, 2, 2>) *_deinterleaveUVC2Func;
-    static inline decltype(Deinterleave<0, 2, 4, 3>) *_deinterleaveY416Func;
-    static inline decltype(InterleaveUV<0, 1>) *_interleaveUVC1Func;
-    static inline decltype(InterleaveUV<0, 2>) *_interleaveUVC2Func;
-    static inline decltype(BitShiftEach16BitInt<0, 6, true>) *_rightShiftFunc;
-    static inline decltype(BitShiftEach16BitInt<0, 6, false>) *_leftShiftFunc;
+    static inline decltype(Deinterleave) *_deinterleaveUVC1Func;
+    static inline decltype(Deinterleave) *_deinterleaveUVC2Func;
+    static inline decltype(Deinterleave) *_deinterleaveY416Func;
+    static inline decltype(Deinterleave) *_deinterleaveRGBC1Func;
+    static inline decltype(InterleaveUV) *_interleaveUVC1Func;
+    static inline decltype(InterleaveUV) *_interleaveUVC2Func;
+    static inline decltype(InterleaveThree) *_interleaveY416Func;
+    static inline decltype(InterleaveThree) *_interleaveRGBC1Func;
+    static inline decltype(BitShiftEach16BitInt) *_rightShiftFunc;
+    static inline decltype(BitShiftEach16BitInt) *_leftShiftFunc;
 
     static inline int _vectorSize;
 };
