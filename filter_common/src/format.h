@@ -121,9 +121,9 @@ private:
     static inline const __m128i _UV_SHUFFLE_MASK_M128_C2  = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     static inline       __m256i _UV_SHUFFLE_MASK_M256_C1;
     static inline       __m256i _UV_SHUFFLE_MASK_M256_C2;
-    static inline const __m128i _Y410_AND_MASK_1          = _mm_setr_epi32(1023, 1023, 1023, 1023);
-    static inline const __m128i _Y410_AND_MASK_2          = _mm_setr_epi32(1047552, 1047552, 1047552, 1047552);
-    static inline const __m128i _Y410_AND_MASK_3          = _mm_setr_epi32(1072693248, 1072693248, 1072693248, 1072693248);
+    static inline const __m128i _Y410_AND_MASK_1          = _mm_setr_epi32(1023, 1023, 1023, 1023);  // 10 bits of 1s at the least significant side
+    static inline const __m128i _Y410_AND_MASK_2          = _mm_setr_epi32(1047552, 1047552, 1047552, 1047552);  // 10 bits of 1s in the middle
+    static inline const __m128i _Y410_AND_MASK_3          = _mm_setr_epi32(1072693248, 1072693248, 1072693248, 1072693248);  // 10 bits of 1s at the most significant side
     static inline const __m128i _Y410_SHUFFLE_MASK_1      = _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0);
     static inline const __m128i _Y410_SHUFFLE_MASK_2      = _mm_setr_epi8(1, 2, 5, 6, 9, 10, 13, 14, 0, 0, 0, 0, 0, 0, 0, 0);
     static inline const __m128i _Y410_SHUFFLE_MASK_3      = _mm_setr_epi8(2, 3, 6, 7, 10, 11, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -164,7 +164,7 @@ private:
             if constexpr (componentSize == 1) {
                 if constexpr (colorFamily == 1) {
                     shuffleMask = _UV_SHUFFLE_MASK_M128_C1;
-                } else {
+                } else if constexpr (colorFamily == 2) {
                     shuffleMask = _RGB_SHUFFLE_MASK_M128_C1;
                 }
             } else if constexpr (srcNumComponents == 2) {
@@ -176,7 +176,7 @@ private:
             if constexpr (componentSize == 1) {
                 if constexpr (colorFamily == 1) {
                     shuffleMask = _UV_SHUFFLE_MASK_M256_C1;
-                } else {
+                } else if constexpr (colorFamily == 2) {
                     shuffleMask = _RGB_SHUFFLE_MASK_M256_C1;
                 }
             } else if constexpr (srcNumComponents == 2) {
@@ -242,7 +242,7 @@ private:
                     if constexpr (componentSize == 1) {
                         *dstLine++ = _mm_unpacklo_epi8(src1Vec, src2Vec);
                         *dstLine++ = _mm_unpackhi_epi8(src1Vec, src2Vec);
-                    } else {
+                    } else if constexpr (componentSize == 2) {
                         *dstLine++ = _mm_unpacklo_epi16(src1Vec, src2Vec);
                         *dstLine++ = _mm_unpackhi_epi16(src1Vec, src2Vec);
                     }
@@ -253,7 +253,7 @@ private:
                     if constexpr (componentSize == 1) {
                         *dstLine++ = _mm256_unpacklo_epi8(src1Permute, src2Permute);
                         *dstLine++ = _mm256_unpackhi_epi8(src1Permute, src2Permute);
-                    } else {
+                    } else if constexpr (componentSize == 2) {
                         *dstLine++ = _mm256_unpacklo_epi16(src1Permute, src2Permute);
                         *dstLine++ = _mm256_unpackhi_epi16(src1Permute, src2Permute);
                     }

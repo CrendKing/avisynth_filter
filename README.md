@@ -23,7 +23,7 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 * CPU with SSE2 instruction set.
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above, or
 * [VapourSynth](https://github.com/vapoursynth/vapoursynth) R55 (API version 4) and above.
-    * For VapourSynth between R43 (API version 3.5) and R55, use [v1.2.1](https://github.com/CrendKing/avisynth_filter/releases/tag/v1.2.1).
+    * In case you have to stay at VapourSynth version R43 (API version 3.5) through R55, use [v1.2.1](https://github.com/CrendKing/avisynth_filter/releases/tag/v1.2.1).
 
 ## Install
 
@@ -46,7 +46,7 @@ Examples of 10/16-bit capable video renderers: [madVR](http://madvr.com/), [MPC 
 
 Examples of video renderers having issues: [Enhanced Video Renderer](https://docs.microsoft.com/en-us/windows/win32/medfound/enhanced-video-renderer) ([related issue](https://github.com/clsid2/mpc-hc/issues/767#issuecomment-735239261)), [PotPlayer "Built-in" video renderers](http://potplayer.daum.net/) ([related issue](https://github.com/CrendKing/avisynth_filter/issues/37#issuecomment-858152467)).
 
-The following [Reserved Frame Properties](http://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties) are supported (AviSynth+ v3.6.0 and above, VapourSynth):
+The following [Reserved Frame Properties](http://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties) are generated (AviSynth+ v3.6.0 and above, VapourSynth):
 
 * `_Primaries`
 * `_Matrix`
