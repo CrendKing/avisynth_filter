@@ -39,6 +39,7 @@ public:
     auto SetRemoteControlEnabled(bool enabled) -> void;
     constexpr auto IsSupportAVX2() const -> bool { return _isSupportAVX2; }
     constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
+    constexpr auto GetInitialSrcBuffer() const -> int { return _initialSrcBuffer; }
     constexpr auto GetMinExtraSrcBuffer() const -> int { return _minExtraSrcBuffer; }
     constexpr auto GetMaxExtraSrcBuffer() const -> int { return _maxExtraSrcBuffer; }
     constexpr auto GetExtraSrcBufferDecStep() const -> int { return _extraSrcBufferDecStep; }
@@ -61,6 +62,7 @@ private:
     std::filesystem::path _scriptPath;
     std::unordered_set<std::wstring_view> _enabledInputFormats;
     bool _isRemoteControlEnabled = false;
+    int _initialSrcBuffer;
     int _minExtraSrcBuffer;
     int _maxExtraSrcBuffer;
     int _extraSrcBufferDecStep;

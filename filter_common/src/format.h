@@ -160,6 +160,8 @@ private:
         using Output = std::array<BYTE, sizeof(Input) / srcNumComponents>;
 
         Input shuffleMask;
+        (void) shuffleMask;
+
         if constexpr (intrinsicType == 1) {
             if constexpr (componentSize == 1) {
                 if constexpr (colorFamily == 1) {

@@ -16,7 +16,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
             return true;
         }
 
-        if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+        if (_nextSourceFrameNb <= Environment::GetInstance().GetInitialSrcBuffer()) {
             return true;
         }
 
@@ -27,7 +27,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
             return true;
         }
 
-        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + NUM_SRC_FRAMES_PRE_BUFFER + NUM_SRC_FRAMES_PER_PROCESSING;
+        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + Environment::GetInstance().GetInitialSrcBuffer() + NUM_SRC_FRAMES_PER_PROCESSING;
     });
 
     if (_isFlushing || _isStopping) {
@@ -159,9 +159,9 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     _newSourceFrameCv.notify_all();
 
     // delay activating the main frameserver until we have enough pre-buffered frames in store
-    if (_nextSourceFrameNb < NUM_SRC_FRAMES_PRE_BUFFER) {
+    if (_nextSourceFrameNb < Environment::GetInstance().GetInitialSrcBuffer()) {
         return S_OK;
-    } else if (_nextSourceFrameNb == NUM_SRC_FRAMES_PRE_BUFFER) {
+    } else if (_nextSourceFrameNb == Environment::GetInstance().GetInitialSrcBuffer()) {
         MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     }
 

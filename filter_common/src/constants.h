@@ -24,6 +24,7 @@ static constexpr const int MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION   = 7;
 static constexpr const DWORD SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE        = offsetof(AM_SAMPLE2_PROPERTIES, dwSampleFlags);
 
 static constexpr const double EXTRA_SRC_BUFFER_CHANGE_THRESHOLD      = 0.1;
+static constexpr const int INITIAL_SRC_BUFFER                        = 2;
 static constexpr const int MIN_EXTRA_SRC_BUFFER                      = 0;
 static constexpr const int EXTRA_SRC_BUFFER_DEC_STEP                 = 1;
 static constexpr const int MAX_EXTRA_SRC_BUFFER                      = 15;
@@ -75,6 +76,7 @@ static constexpr const WCHAR *SETTING_NAME_SCRIPT_FILE               = L"ScriptF
 static constexpr const WCHAR *SETTING_NAME_LOG_FILE                  = L"LogFile";
 static constexpr const WCHAR *SETTING_NAME_INPUT_FORMAT_PREFIX       = L"InputFormat_";
 static constexpr const WCHAR *SETTING_NAME_REMOTE_CONTROL            = L"RemoteControl";
+static constexpr const WCHAR *SETTING_NAME_INITIAL_SRC_BUFFER        = L"InitialSrcBuffer";
 static constexpr const WCHAR *SETTING_NAME_MIN_EXTRA_SRC_BUFFER      = L"MinExtraSrcBuffer";
 static constexpr const WCHAR *SETTING_NAME_MAX_EXTRA_SRC_BUFFER      = L"MaxExtraSrcBuffer";
 static constexpr const WCHAR *SETTING_NAME_EXTRA_SRC_BUFFER_DEC_STEP = L"ExtraSrcBufferDecStep";

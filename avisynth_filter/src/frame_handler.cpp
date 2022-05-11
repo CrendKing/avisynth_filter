@@ -16,7 +16,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
             return true;
         }
 
-        if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+        if (_nextSourceFrameNb <= Environment::GetInstance().GetInitialSrcBuffer()) {
             return true;
         }
 
@@ -126,7 +126,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     _nextSourceFrameNb += 1;
 
     // delay activating the main frameserver until we have enough pre-buffered frames in store
-    if (_nextSourceFrameNb == NUM_SRC_FRAMES_PRE_BUFFER) {
+    if (_nextSourceFrameNb == Environment::GetInstance().GetInitialSrcBuffer()) {
         MainFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     }
 
@@ -340,7 +340,7 @@ auto FrameHandler::WorkerProc() -> void {
                     return true;
                 }
 
-                if (_nextSourceFrameNb <= NUM_SRC_FRAMES_PRE_BUFFER) {
+                if (_nextSourceFrameNb <= Environment::GetInstance().GetInitialSrcBuffer()) {
                     return false;
                 }
 
