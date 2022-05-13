@@ -54,8 +54,8 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
     ret.videoInfo = {
         .fpsNum = fpsNum,
         .fpsDen = fpsDen,
-        .width = ret.bmi.biWidth,
-        .height = abs(ret.bmi.biHeight),
+        .width = vih->rcSource.right - vih->rcSource.left,
+        .height = vih->rcSource.bottom - vih->rcSource.top,
         .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM,
     };
     AVSF_VPS_API->getVideoFormatByID(&ret.videoInfo.format, ret.pixelFormat->frameServerFormatId, ret.frameServerCore);

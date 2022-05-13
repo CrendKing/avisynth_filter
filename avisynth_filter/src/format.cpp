@@ -52,8 +52,8 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
         .bmi = *GetBitmapInfo(mediaType),
     };
     ret.videoInfo = {
-        .width = ret.bmi.biWidth,
-        .height = abs(ret.bmi.biHeight),
+        .width = vih->rcSource.right - vih->rcSource.left,
+        .height = vih->rcSource.bottom - vih->rcSource.top,
         .fps_numerator = UNITS,
         .fps_denominator = static_cast<unsigned int>(frameDuration),
         .num_frames = NUM_FRAMES_FOR_INFINITE_STREAM,
