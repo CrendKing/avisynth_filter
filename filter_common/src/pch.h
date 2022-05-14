@@ -59,11 +59,3 @@
 
 #pragma warning(push)
 #pragma warning(disable: 26495 26812)
-
-#define DISABLE_COPYING(T) \
-    T(const T &) = delete; \
-    T &operator=(const T &) = delete;
-
-#define CTOR_WITHOUT_COPYING(T) \
-    T() = default;              \
-    DISABLE_COPYING(T)

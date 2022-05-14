@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "macros.h"
+
 
 namespace SynthFilter {
 

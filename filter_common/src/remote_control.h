@@ -3,6 +3,7 @@
 #pragma once
 
 #include "api.h"
+#include "macros.h"
 #include "util.h"
 
 

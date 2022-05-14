@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "macros.h"
 #include "side_data.h"
 
 
