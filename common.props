@@ -52,7 +52,7 @@
       <EnableParallelCodeGeneration Condition="'$(Configuration)' == 'Release'">true</EnableParallelCodeGeneration>
       <FunctionLevelLinking Condition="'$(Configuration)' == 'Release'">true</FunctionLevelLinking>
       <IntrinsicFunctions Condition="'$(Configuration)' == 'Release'">true</IntrinsicFunctions>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization Condition="'$(Configuration)' == 'Debug'">Disabled</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Debug|Win32'">WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
