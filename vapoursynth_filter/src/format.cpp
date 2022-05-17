@@ -44,19 +44,19 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
 
     VideoFormat ret {
         .pixelFormat = LookupMediaSubtype(mediaType.subtype),
+        .videoInfo = {
+            .fpsNum = fpsNum,
+            .fpsDen = fpsDen,
+            .width = vih->rcSource.right - vih->rcSource.left,
+            .height = vih->rcSource.bottom - vih->rcSource.top,
+            .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM,
+        },
         .pixelAspectRatioNum = 1,
         .pixelAspectRatioDen = 1,
         .hdrType = 0,
         .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType),
         .frameServerCore = frameServerInstance->GetVsCore(),
-    };
-    ret.videoInfo = {
-        .fpsNum = fpsNum,
-        .fpsDen = fpsDen,
-        .width = vih->rcSource.right - vih->rcSource.left,
-        .height = vih->rcSource.bottom - vih->rcSource.top,
-        .numFrames = NUM_FRAMES_FOR_INFINITE_STREAM,
     };
     AVSF_VPS_API->getVideoFormatByID(&ret.videoInfo.format, ret.pixelFormat->frameServerFormatId, ret.frameServerCore);
 
@@ -136,8 +136,8 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     switch (videoFormat.pixelFormat->srcPlanesLayout) {
     case PlanesLayout::ALL_PLANES_INTERLEAVED:
         if (videoFormat.videoInfo.format.colorFamily == cfYUV) {
-            const std::array yuvaSlices = { dstSlices[1], dstSlices[0], dstSlices[2] };
-            const std::array yuvaStrides = { dstStrides[1], dstStrides[0], dstStrides[2] };
+            const std::array yuvaSlices { dstSlices[1], dstSlices[0], dstSlices[2] };
+            const std::array yuvaStrides { dstStrides[1], dstStrides[0], dstStrides[2] };
 
             if (videoFormat.videoInfo.format.bitsPerSample == 10) {
                 DeinterleaveY410(srcMainPlane, srcMainPlaneStride / 2, yuvaSlices, yuvaStrides, srcMainPlaneRowSize / 2, height);
@@ -217,8 +217,8 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
     switch (videoFormat.pixelFormat->srcPlanesLayout) {
     case PlanesLayout::ALL_PLANES_INTERLEAVED:
         if (videoFormat.videoInfo.format.colorFamily == cfYUV) {
-            const std::array yuvaSlices = { srcSlices[1], srcSlices[0], srcSlices[2] };
-            const std::array yuvaStrides = { srcStrides[1], srcStrides[0], srcStrides[2] };
+            const std::array yuvaSlices { srcSlices[1], srcSlices[0], srcSlices[2] };
+            const std::array yuvaStrides { srcStrides[1], srcStrides[0], srcStrides[2] };
 
             if (videoFormat.videoInfo.format.bitsPerSample == 10) {
                 InterleaveY410(yuvaSlices, yuvaStrides, dstMainPlane, dstMainPlaneStride / 2, dstMainPlaneRowSize / 2, height);
