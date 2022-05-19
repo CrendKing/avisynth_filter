@@ -37,8 +37,8 @@ public:
     auto SetInputFormatEnabled(std::wstring_view formatName, bool enabled) -> void;
     constexpr auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
     auto SetRemoteControlEnabled(bool enabled) -> void;
-    constexpr auto IsSupportAVX2() const -> bool { return _isSupportAVX2; }
-    constexpr auto IsSupportSSSE3() const -> bool { return _isSupportSSSE3; }
+    constexpr auto IsSupportAVX2() const -> bool { return std::__isa_available >= __ISA_AVAILABLE_AVX2; }
+    constexpr auto IsSupportSSSE3() const -> bool { return std::__isa_available >= __ISA_AVAILABLE_SSE42; }
     constexpr auto GetInitialSrcBuffer() const -> int { return _initialSrcBuffer; }
     constexpr auto GetMinExtraSrcBuffer() const -> int { return _minExtraSrcBuffer; }
     constexpr auto GetMaxExtraSrcBuffer() const -> int { return _maxExtraSrcBuffer; }
@@ -51,7 +51,6 @@ private:
     auto ValidateExtraSrcBufferValues() -> void;
     auto SaveSettingsToIni() const -> void;
     auto SaveSettingsToRegistry() const -> void;
-    auto DetectCPUID() -> void;
 
     bool _useIni = false;
     CSimpleIniW _ini;
@@ -72,9 +71,6 @@ private:
     FILE *_logFile = nullptr;
     DWORD _logStartTime = 0;
     std::mutex _logMutex;
-
-    bool _isSupportAVX2 = false;
-    bool _isSupportSSSE3 = false;
 };
 
 }

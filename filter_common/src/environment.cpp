@@ -48,8 +48,6 @@ Environment::Environment()
             Log(L"Loading process: %s", processName.c_str());
         }
     }
-
-    DetectCPUID();
 }
 
 Environment::~Environment() {
@@ -164,22 +162,6 @@ auto Environment::SaveSettingsToRegistry() const -> void {
             static_cast<void>(_registry.WriteNumber(settingName.c_str(), IsInputFormatEnabled(name)));
         },
         &Format::PixelFormat::name);
-}
-
-auto Environment::DetectCPUID() -> void {
-    struct CpuInfo {
-        int eax;
-        int ebx;
-        int ecx;
-        int edx;
-    } cpuInfo;
-
-    __cpuid(reinterpret_cast<int *>(&cpuInfo), 1);
-    _isSupportAVX2 = cpuInfo.ecx & (1 << 28);  // AVX
-    _isSupportSSSE3 = cpuInfo.ecx & (1 << 9);
-
-    __cpuid(reinterpret_cast<int *>(&cpuInfo), 7);
-    _isSupportAVX2 &= static_cast<bool>(cpuInfo.ebx & (1 << 5));  // AVX2
 }
 
 }
