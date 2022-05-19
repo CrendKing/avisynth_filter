@@ -21,6 +21,7 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 ## Requirement
 
 * CPU with SSE2 instruction set.
+* Windows 7 and above.
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above, or
 * [VapourSynth](https://github.com/vapoursynth/vapoursynth) R55 (API version 4) and above.
     * In case you have to stay at VapourSynth version R43 (API version 3.5) through R55, use [v1.2.1](https://github.com/CrendKing/avisynth_filter/releases/tag/v1.2.1).
@@ -35,6 +36,17 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 ## Uninstall
 
 Run uninstall.cmd to unregister the filters and clean up user data.
+
+## 安装
+
+* 首先安装 AviSynth+ 或者 VapourSynth。确保它们动态链接库置于播放器的目录下，系统目录下，或者 `PATH` 环境变量中。
+* 解开下载的压缩包。
+* 运行 install.cmd 注册过滤器。
+* 在播放器中启用 `AviSynth Filter` 或者 `VapourSynth Filter` 过滤器。
+
+## 卸载
+
+运行 uninstall.cmd 删除注册信息和用户信息。
 
 ## Usage
 
