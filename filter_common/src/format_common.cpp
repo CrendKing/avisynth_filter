@@ -91,7 +91,7 @@ auto Format::Initialize() -> void {
         _rightShiftFunc        = BitShiftEach16BitInt<2, 6, true>;
         _leftShiftFunc         = BitShiftEach16BitInt<2, 6, false>;
         _vectorSize            = sizeof(__m256i);
-    } else if (Environment::GetInstance().IsSupportSSSE3()) {
+    } else if (Environment::GetInstance().IsSupportSSE4()) {
         _deinterleaveUVC1Func  = Deinterleave<1, 1, 2, 2, 1>;
         _deinterleaveUVC2Func  = Deinterleave<1, 2, 2, 2, 1>;
         _deinterleaveY416Func  = Deinterleave<1, 2, 4, 3, 1>;

@@ -150,7 +150,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         break;
 
     case PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED: {
-        const BYTE *srcUVStart = srcBuffer + srcMainPlaneSize;
+        const BYTE *srcUVStart = srcMainPlane + srcMainPlaneSize;
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = srcMainPlaneRowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
@@ -172,7 +172,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
     case PlanesLayout::ALL_PLANES_SEPARATE: {
         const int srcUVStride = srcMainPlaneStride / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = srcMainPlaneRowSize / videoFormat.pixelFormat->subsampleWidthRatio;
-        const BYTE *srcUVPlane1 = srcBuffer + srcMainPlaneSize;
+        const BYTE *srcUVPlane1 = srcMainPlane + srcMainPlaneSize;
         const BYTE *srcUVPlane2 = srcUVPlane1 + srcMainPlaneSize / (videoFormat.pixelFormat->subsampleWidthRatio * videoFormat.pixelFormat->subsampleHeightRatio);
 
         const BYTE *srcU;
@@ -202,8 +202,16 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
     ASSERT(dstMainPlaneRowSize <= dstMainPlaneStride);
     ASSERT(height >= abs(videoFormat.bmi.biHeight));
     const int dstMainPlaneSize = dstMainPlaneStride * height;
-    BYTE *dstMainPlane = dstBuffer;
     const int dstUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio;
+    BYTE *dstMainPlane = dstBuffer;
+
+    if (videoFormat.pixelFormat->srcPlanesLayout == PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED && videoFormat.videoInfo.format.bitsPerSample == 10) {
+        MEMORY_BASIC_INFORMATION dstBufferInfo;
+        VirtualQuery(dstBuffer, &dstBufferInfo, sizeof(dstBufferInfo));
+        if (dstBufferInfo.Protect & PAGE_WRITECOMBINE) {
+            dstMainPlane = reinterpret_cast<BYTE *>(CoTaskMemAlloc(videoFormat.bmi.biSizeImage));
+        }
+    }
 
     if (videoFormat.bmi.biCompression == BI_RGB && videoFormat.bmi.biHeight > 0) {
         dstMainPlane += dstMainPlaneSize - dstMainPlaneStride;
@@ -231,7 +239,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         break;
 
     case PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED: {
-        BYTE *dstUVStart = dstBuffer + dstMainPlaneSize;
+        BYTE *dstUVStart = dstMainPlane + dstMainPlaneSize;
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = dstMainPlaneRowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
@@ -244,14 +252,14 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         interleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], srcStrides[2], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
 
         if (videoFormat.videoInfo.format.bitsPerSample == 10) {
-            _leftShiftFunc(dstBuffer, dstMainPlaneStride, dstMainPlaneRowSize, height + dstUVHeight);
+            _leftShiftFunc(dstMainPlane, dstMainPlaneStride, dstMainPlaneRowSize, height + dstUVHeight);
         }
     } break;
 
     case PlanesLayout::ALL_PLANES_SEPARATE: {
         const int dstUVStride = dstMainPlaneStride / videoFormat.pixelFormat->subsampleWidthRatio;
         const int dstUVRowSize = dstMainPlaneRowSize / videoFormat.pixelFormat->subsampleWidthRatio;
-        BYTE *dstUVPlane1 = dstBuffer + dstMainPlaneSize;
+        BYTE *dstUVPlane1 = dstMainPlane + dstMainPlaneSize;
         BYTE *dstUVPlane2 = dstUVPlane1 + dstMainPlaneSize / (videoFormat.pixelFormat->subsampleWidthRatio * videoFormat.pixelFormat->subsampleHeightRatio);
 
         BYTE *dstU;
@@ -267,6 +275,11 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         vsh::bitblt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
         vsh::bitblt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
     } break;
+    }
+
+    if (dstMainPlane != dstBuffer) {
+        CopyMemory(dstBuffer, dstMainPlane, videoFormat.bmi.biSizeImage);
+        CoTaskMemFree(dstMainPlane);
     }
 }
 

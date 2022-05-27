@@ -38,7 +38,7 @@ public:
     constexpr auto IsRemoteControlEnabled() const -> bool { return _isRemoteControlEnabled; }
     auto SetRemoteControlEnabled(bool enabled) -> void;
     constexpr auto IsSupportAVX2() const -> bool { return std::__isa_available >= __ISA_AVAILABLE_AVX2; }
-    constexpr auto IsSupportSSSE3() const -> bool { return std::__isa_available >= __ISA_AVAILABLE_SSE42; }
+    constexpr auto IsSupportSSE4() const -> bool { return std::__isa_available >= __ISA_AVAILABLE_SSE42; }
     constexpr auto GetInitialSrcBuffer() const -> int { return _initialSrcBuffer; }
     constexpr auto GetMinExtraSrcBuffer() const -> int { return _minExtraSrcBuffer; }
     constexpr auto GetMaxExtraSrcBuffer() const -> int { return _maxExtraSrcBuffer; }

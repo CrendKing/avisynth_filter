@@ -135,7 +135,7 @@ private:
     static inline       __m256i _FOUR_PERMUTE_INDEX;
 
     /*
-     * intrinsicType: 1 = SSSE3, 2 = AVX2. Anything else: non-SIMD
+     * intrinsicType: 1 = SSE4, 2 = AVX2. Anything else: non-SIMD
      * componentSize is the size per pixel component (1 for 8-bit, 2 for 10 and 16-bit)
      * srcNumComponents is the number of components per pixel for the source
      * dstNumComponents is the number of components per pixel for the destination
@@ -188,6 +188,8 @@ private:
             }
         }
 
+        const int cycles = DivideRoundUp(rowSize, sizeof(Input));
+
         for (int y = 0; y < height; ++y) {
             const Input *srcLine = reinterpret_cast<const Input *>(src);
             std::array<Output *, dstNumComponents> dstsLine;
@@ -195,7 +197,7 @@ private:
                 dstsLine[p] = reinterpret_cast<Output *>(dsts[p]);
             }
 
-            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Input)); ++i) {
+            for (int i = 0; i < cycles; ++i) {
                 const Input srcVec = *srcLine++;
                 Input dataVec;
 
@@ -231,12 +233,14 @@ private:
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , std::array<BYTE, componentSize>>>;
 
+        const int cycles = DivideRoundUp(rowSize, sizeof(Vector) * 2);
+
         for (int y = 0; y < height; ++y) {
             const Vector *src1Line = reinterpret_cast<const Vector *>(src1);
             const Vector *src2Line = reinterpret_cast<const Vector *>(src2);
             Vector *dstLine = reinterpret_cast<Vector *>(dst);
 
-            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector) * 2); ++i) {
+            for (int i = 0; i < cycles; ++i) {
                 const Vector src1Vec = *src1Line++;
                 const Vector src2Vec = *src2Line++;
 
@@ -286,6 +290,8 @@ private:
         }
         const Output initial = _mm_set1_epi8(-1);
 
+        const int cycles = DivideRoundUp(rowSize, sizeof(Output));
+
         for (int y = 0; y < height; ++y) {
             std::array<const Input *, srcs.size()> srcsLine;
             for (size_t p = 0; p < srcs.size(); ++p) {
@@ -293,7 +299,7 @@ private:
             }
             Output *dstLine = reinterpret_cast<Output *>(dst);
 
-            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Output)); ++i) {
+            for (int i = 0; i < cycles; ++i) {
                 Output vec = _mm_insert_epi32(initial, *srcsLine[0]++, 0);
                 vec = _mm_insert_epi32(vec, *srcsLine[1]++, 1);
                 vec = _mm_insert_epi32(vec, *srcsLine[2]++, 2);
@@ -313,10 +319,12 @@ private:
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , uint16_t>>;
 
+        const int cycles = DivideRoundUp(rowSize, sizeof(Vector));
+
         for (int y = 0; y < height; ++y) {
             Vector *bytesLine = reinterpret_cast<Vector *>(bytes);
 
-            for (int i = 0; i < DivideRoundUp(rowSize, sizeof(Vector)); ++i) {
+            for (int i = 0; i < cycles; ++i) {
                 if constexpr (intrinsicType == 1) {
                     if constexpr (isRightShift) {
                         *bytesLine++ = _mm_srli_epi16(*bytesLine, shiftSize);
