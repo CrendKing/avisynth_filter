@@ -53,11 +53,8 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
             .num_frames = NUM_FRAMES_FOR_INFINITE_STREAM,
             .pixel_type = ret.pixelFormat->frameServerFormatId,
         },
-        .pixelAspectRatioNum = 1,
-        .pixelAspectRatioDen = 1,
-        .hdrType = 0,
-        .hdrLuminance = 0,
         .bmi = *GetBitmapInfo(mediaType),
+        .outputBufferTemporalFlags = ret.pixelFormat->srcPlanesLayout == PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED && ret.videoInfo.BitsPerComponent() == 10,
     };
 
     if (SUCCEEDED(CheckVideoInfo2Type(&mediaType))) {
@@ -149,9 +146,9 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         deinterleaveUVFunc(srcUVStart, srcUVStride, { dstSlices[1], dstSlices[2] }, { dstStrides[1], dstStrides[2] }, srcUVRowSize, srcUVHeight);
 
         if (videoFormat.videoInfo.BitsPerComponent() == 10) {
-            _rightShiftFunc(dstSlices[0], dstStrides[0], srcMainPlaneRowSize, height);
-            _rightShiftFunc(dstSlices[1], dstStrides[1], srcUVRowSize / 2, srcUVHeight);
-            _rightShiftFunc(dstSlices[2], dstStrides[2], srcUVRowSize / 2, srcUVHeight);
+            _rightShiftFunc(dstSlices[0], dstSlices[0], dstStrides[0], srcMainPlaneRowSize, height);
+            _rightShiftFunc(dstSlices[1], dstSlices[1], dstStrides[1], srcUVRowSize / 2, srcUVHeight);
+            _rightShiftFunc(dstSlices[2], dstSlices[2], dstStrides[2], srcUVRowSize / 2, srcUVHeight);
         }
     } break;
 
@@ -184,15 +181,12 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
     ASSERT(height >= abs(videoFormat.bmi.biHeight));
     const int dstMainPlaneSize = dstMainPlaneStride * height;
     const int dstUVHeight = height / videoFormat.pixelFormat->subsampleHeightRatio;
-    BYTE *dstMainPlane = dstBuffer;
 
-    if (videoFormat.pixelFormat->srcPlanesLayout == PlanesLayout::MAIN_SEPARATE_SEC_INTERLEAVED && videoFormat.videoInfo.BitsPerComponent() == 10) {
-        MEMORY_BASIC_INFORMATION dstBufferInfo;
-        VirtualQuery(dstBuffer, &dstBufferInfo, sizeof(dstBufferInfo));
-        if (dstBufferInfo.Protect & PAGE_WRITECOMBINE) {
-            dstMainPlane = reinterpret_cast<BYTE *>(CoTaskMemAlloc(videoFormat.bmi.biSizeImage));
-        }
+    BYTE *intermediateDstBufferBase = dstBuffer;
+    if (videoFormat.outputBufferTemporalFlags == 0b111) {
+        intermediateDstBufferBase = reinterpret_cast<BYTE *>(CoTaskMemAlloc(videoFormat.bmi.biSizeImage));
     }
+    BYTE *dstMainPlane = intermediateDstBufferBase;
 
     if (videoFormat.bmi.biCompression == BI_RGB && videoFormat.bmi.biHeight < 0) {
         dstMainPlane += static_cast<size_t>(dstMainPlaneSize) - dstMainPlaneStride;
@@ -232,7 +226,10 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         interleaveUVFunc(srcSlices[1], srcSlices[2], srcStrides[1], srcStrides[2], dstUVStart, dstUVStride, dstUVRowSize, dstUVHeight);
 
         if (videoFormat.videoInfo.BitsPerComponent() == 10) {
-            _leftShiftFunc(dstMainPlane, dstMainPlaneStride, dstMainPlaneRowSize, height + dstUVHeight);
+            _leftShiftFunc(dstMainPlane, dstBuffer, dstMainPlaneStride, dstMainPlaneRowSize, height + dstUVHeight);
+            if (videoFormat.outputBufferTemporalFlags == 0b111) {
+                CoTaskMemFree(intermediateDstBufferBase);
+            }
         }
     } break;
 
@@ -255,11 +252,6 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         AVSF_AVS_API->BitBlt(dstU, dstUVStride, srcSlices[1], srcStrides[1], dstUVRowSize, dstUVHeight);
         AVSF_AVS_API->BitBlt(dstV, dstUVStride, srcSlices[2], srcStrides[2], dstUVRowSize, dstUVHeight);
     } break;
-    }
-
-    if (dstMainPlane != dstBuffer) {
-        CopyMemory(dstBuffer, dstMainPlane, videoFormat.bmi.biSizeImage);
-        CoTaskMemFree(dstMainPlane);
     }
 }
 

@@ -367,6 +367,12 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, in
         return false;
     }
 
+    if ((_filter._outputVideoFormat.outputBufferTemporalFlags & 0b11) == 0b01) {
+        MEMORY_BASIC_INFORMATION dstBufferInfo;
+        VirtualQuery(outputBuffer, &dstBufferInfo, sizeof(dstBufferInfo));
+        _filter._outputVideoFormat.outputBufferTemporalFlags |= (((dstBufferInfo.Protect & PAGE_WRITECOMBINE) != 0) << 2) + 0b10;
+    }
+
     if (const ATL::CComQIPtr<IMediaSample2> outSample2(outSample); outSample2 != nullptr) {
         if (AM_SAMPLE2_PROPERTIES sampleProps; SUCCEEDED(outSample2->GetProperties(SAMPLE2_TYPE_SPECIFIC_FLAGS_SIZE, reinterpret_cast<BYTE *>(&sampleProps)))) {
             if (const int64_t rfpFieldBased = AVSF_VPS_API->mapGetInt(frameProps, FRAME_PROP_NAME_FIELD_BASED, 0, &propGetError);

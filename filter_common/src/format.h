@@ -64,13 +64,21 @@ public:
 
         const PixelFormat *pixelFormat;
         VideoInfoType videoInfo;
-        int64_t pixelAspectRatioNum;
-        int64_t pixelAspectRatioDen;
+        int64_t pixelAspectRatioNum = 1;
+        int64_t pixelAspectRatioDen = 1;
         ColorSpaceInfo colorSpaceInfo;
-        int hdrType;
-        int hdrLuminance;
+        int hdrType = 0;
+        int hdrLuminance = 0;
         BITMAPINFOHEADER bmi;
         FrameServerCore frameServerCore;
+
+        /*
+         * bit 1 is set if the format requires bit shifting
+         * bit 2 is set if the protection of the destination sample buffer has been queried
+         * bit 3 is set if the protection of the destination sample buffer has PAGE_WRITECOMBINE
+         * when all bits are set, CopyToOutput() utilize an intermediate destination buffer
+         */
+        int outputBufferTemporalFlags = 0;
 
         auto GetCodecFourCC() const -> DWORD;
     };
@@ -314,7 +322,7 @@ private:
     }
 
     template <int intrinsicType, int shiftSize, bool isRightShift>
-    constexpr static auto BitShiftEach16BitInt(BYTE *bytes, int stride, int rowSize, int height) -> void {
+    constexpr static auto BitShiftEach16BitInt(BYTE *src, BYTE *dst, int stride, int rowSize, int height) -> void {
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , uint16_t>>;
@@ -322,31 +330,33 @@ private:
         const int cycles = DivideRoundUp(rowSize, sizeof(Vector));
 
         for (int y = 0; y < height; ++y) {
-            Vector *bytesLine = reinterpret_cast<Vector *>(bytes);
+            Vector *srcLine = reinterpret_cast<Vector *>(src);
+            Vector *dstLine = reinterpret_cast<Vector *>(dst);
 
             for (int i = 0; i < cycles; ++i) {
                 if constexpr (intrinsicType == 1) {
                     if constexpr (isRightShift) {
-                        *bytesLine++ = _mm_srli_epi16(*bytesLine, shiftSize);
+                        *dstLine++ = _mm_srli_epi16(*srcLine++, shiftSize);
                     } else {
-                        *bytesLine++ = _mm_slli_epi16(*bytesLine, shiftSize);
+                        *dstLine++ = _mm_slli_epi16(*srcLine++, shiftSize);
                     }
                 } else if constexpr (intrinsicType == 2) {
                     if constexpr (isRightShift) {
-                        *bytesLine++ = _mm256_srli_epi16(*bytesLine, shiftSize);
+                        *dstLine++ = _mm256_srli_epi16(*srcLine++, shiftSize);
                     } else {
-                        *bytesLine++ = _mm256_slli_epi16(*bytesLine, shiftSize);
+                        *dstLine++ = _mm256_slli_epi16(*srcLine++, shiftSize);
                     }
                 } else {
                     if constexpr (isRightShift) {
-                        *bytesLine++ >>= shiftSize;
+                        *dstLine++ = *srcLine++ >> shiftSize;
                     } else {
-                        *bytesLine++ <<= shiftSize;
+                        *dstLine++ = *srcLine++ << shiftSize;
                     }
                 }
             }
 
-            bytes += stride;
+            src += stride;
+            dst += stride;
         }
     }
 

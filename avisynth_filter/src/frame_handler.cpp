@@ -250,6 +250,12 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
         return false;
     } else {
         try {
+            if ((_filter._outputVideoFormat.outputBufferTemporalFlags & 0b11) == 0b01) {
+                MEMORY_BASIC_INFORMATION dstBufferInfo;
+                VirtualQuery(outputBuffer, &dstBufferInfo, sizeof(dstBufferInfo));
+                _filter._outputVideoFormat.outputBufferTemporalFlags |= (((dstBufferInfo.Protect & PAGE_WRITECOMBINE) != 0) << 2) + 0b10;
+            }
+
             // some AviSynth internal filter (e.g. Subtitle) can't tolerate multi-thread access
             const PVideoFrame outputFrame = MainFrameServer::GetInstance().GetFrame(_nextOutputFrameNb);
 
