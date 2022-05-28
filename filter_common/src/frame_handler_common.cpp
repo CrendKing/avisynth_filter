@@ -52,12 +52,12 @@ auto FrameHandler::GetInputBufferSize() const -> int {
     return static_cast<int>(_sourceFrames.size());
 }
 
-auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointTime, int &currentFrameRate) -> void {
-    const DWORD currentTime = timeGetTime();
-    bool reachCheckpoint = checkpointTime == 0;
+auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, std::chrono::steady_clock::time_point &checkpointTime, int &currentFrameRate) -> void {
+    const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+    bool reachCheckpoint = checkpointTime.time_since_epoch().count() == 0;
 
-    if (const REFERENCE_TIME elapsedRefTime = currentTime - checkpointTime; elapsedRefTime >= STATUS_PAGE_TIMER_INTERVAL_MS) {
-        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, MILLISECONDS, elapsedRefTime, 0));
+    if (const std::chrono::steady_clock::duration elapsed = currentTime - checkpointTime; elapsed >= STATUS_PAGE_TIMER_INTERVAL) {
+        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, NANOSECONDS, std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count(), 0));
         reachCheckpoint = true;
     }
 

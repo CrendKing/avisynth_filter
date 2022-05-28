@@ -33,7 +33,7 @@ Environment::Environment()
     if (!_logPath.empty()) {
         _logFile = _wfsopen(_logPath.c_str(), L"w", _SH_DENYNO);
         if (_logFile != nullptr) {
-            _logStartTime = timeGetTime();
+            _logStartTime = std::chrono::steady_clock::now();
 
             Log(L"Filter version: %hs", FILTER_VERSION_STRING);
             Log(L"Configured script file: %s", _scriptPath.filename().c_str());
@@ -48,6 +48,8 @@ Environment::Environment()
             Log(L"Loading process: %s", processName.c_str());
         }
     }
+
+    Log(L"Active CPU feature: %s", IsSupportAVX2() ? L"AVX2" : (IsSupportSSE4() ? L"SSE4" : L"Basic"));
 }
 
 Environment::~Environment() {

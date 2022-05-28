@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "environment.h"
 #include "util.h"
 
 
@@ -160,6 +161,8 @@ private:
          * Much like 0, 2, 1, 3 -> 0, 1, 2, 3.
          */
 
+        Environment::GetInstance().Log(L"Deinterleave() start");
+
         // Input is the type for the input data each SIMD intrustion works on (__m128i, __m256i, etc.)
         using Input = std::conditional_t<intrinsicType == 1, __m128i
                     , std::conditional_t<intrinsicType == 2, __m256i
@@ -233,10 +236,14 @@ private:
                 dsts[p] += dstStrides[p];
             }
         }
+
+        Environment::GetInstance().Log(L"Deinterleave() end");
     }
 
     template <int intrinsicType, int componentSize>
     static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride1, int srcStride2, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+        Environment::GetInstance().Log(L"InterleaveUV() start");
+
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , std::array<BYTE, componentSize>>>;
@@ -281,11 +288,15 @@ private:
             src2 += srcStride2;
             dst += dstStride;
         }
+
+        Environment::GetInstance().Log(L"InterleaveUV() end");
     }
 
     template <int colorFamily>
     constexpr static auto InterleaveThree(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
+
+        Environment::GetInstance().Log(L"InterleaveThree() start");
 
         using Input = uint32_t;
         using Output = __m128i;
@@ -319,10 +330,14 @@ private:
             }
             dst += dstStride;
         }
+
+        Environment::GetInstance().Log(L"InterleaveThree() end");
     }
 
     template <int intrinsicType, int shiftSize, bool isRightShift>
     constexpr static auto BitShiftEach16BitInt(BYTE *src, BYTE *dst, int stride, int rowSize, int height) -> void {
+        Environment::GetInstance().Log(L"BitShiftEach16BitInt(%d) start", isRightShift);
+
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
                      , uint16_t>>;
@@ -358,6 +373,8 @@ private:
             src += stride;
             dst += stride;
         }
+
+        Environment::GetInstance().Log(L"BitShiftEach16BitInt(%d) end", isRightShift);
     }
 
     static auto DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;

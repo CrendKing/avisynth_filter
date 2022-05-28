@@ -23,7 +23,8 @@ public:
             return;
         }
 
-        const std::wstring logTemplate = std::format(L"T {:6d} @ {:8d}: {}\n", GetCurrentThreadId(), timeGetTime() - _logStartTime, format);
+        const std::chrono::steady_clock::duration elapsed = std::chrono::steady_clock::now() - _logStartTime;
+        const std::wstring logTemplate = std::format(L"T {:6d} @ {:11d}: {}\n", GetCurrentThreadId(), std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count(), format);
 
         const std::unique_lock logLock(_logMutex);
 
@@ -69,7 +70,7 @@ private:
 
     std::filesystem::path _logPath;
     FILE *_logFile = nullptr;
-    DWORD _logStartTime = 0;
+    std::chrono::steady_clock::time_point _logStartTime;
     std::mutex _logMutex;
 };
 

@@ -38,7 +38,7 @@ private:
     };
 
     static auto VS_CC VpsGetFrameCallback(void *userData, const VSFrame *f, int n, VSNode *node, const char *errorMsg) -> void;
-    static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointStartTime, int &currentFrameRate) -> void;
+    static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, std::chrono::steady_clock::time_point &checkpointTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
     auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, int outputFrameNb, const VSFrame *outputFrame, int sourceFrameNb) -> bool;
@@ -81,11 +81,11 @@ private:
     std::atomic<bool> _isWorkerLatched = false;
 
     int _frameRateCheckpointInputSampleNb;
-    DWORD _frameRateCheckpointInputSampleTime;
+    std::chrono::steady_clock::time_point _frameRateCheckpointInputSampleTime;
     int _frameRateCheckpointOutputFrameNb;
-    DWORD _frameRateCheckpointOutputFrameTime;
+    std::chrono::steady_clock::time_point _frameRateCheckpointOutputFrameTime;
     int _frameRateCheckpointDeliveryFrameNb;
-    DWORD _frameRateCheckpointDeliveryFrameTime;
+    std::chrono::steady_clock::time_point _frameRateCheckpointDeliveryFrameTime;
     int _currentInputFrameRate;
     int _currentOutputFrameRate;
     int _currentDeliveryFrameRate;

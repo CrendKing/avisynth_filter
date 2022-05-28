@@ -43,7 +43,7 @@ static constexpr const int MAX_OUTPUT_FRAME_DURATION_PADDING         = 10;
  * Default to 25 FPS in such cases.
  */
 static constexpr const REFERENCE_TIME DEFAULT_AVG_TIME_PER_FRAME     = 400000;
-static constexpr const int STATUS_PAGE_TIMER_INTERVAL_MS             = 1000;
+static constexpr const std::chrono::milliseconds STATUS_PAGE_TIMER_INTERVAL(1000);
 static constexpr const WCHAR *UNAVAILABLE_SOURCE_PATH                = L"N/A";
 
 /*

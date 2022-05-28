@@ -28,7 +28,12 @@ auto CSynthFilterPropStatus::OnDisconnect() -> HRESULT {
 }
 
 auto CSynthFilterPropStatus::OnActivate() -> HRESULT {
-    if (SetTimer(m_hwnd, IDT_TIMER_STATUS, STATUS_PAGE_TIMER_INTERVAL_MS, nullptr) == 0) {
+    constexpr UINT timeIntervalMs = static_cast<UINT>(std::chrono::duration_cast<std::chrono::milliseconds>(STATUS_PAGE_TIMER_INTERVAL).count());
+    if constexpr (timeIntervalMs == 0) {
+        return E_FAIL;
+    }
+
+    if (SetTimer(m_hwnd, IDT_TIMER_STATUS, timeIntervalMs, nullptr) == 0) {
         return E_FAIL;
     }
 

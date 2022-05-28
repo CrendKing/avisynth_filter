@@ -139,6 +139,8 @@ auto Format::GetStrideAlignedMediaSampleSize(const AM_MEDIA_TYPE &mediaType, int
 auto Format::DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void {
     // process one plane at a time by zeroing all other planes, shuffle it from different pixels together, and fix the position by right shifting
 
+    Environment::GetInstance().Log(L"DeinterleaveY410() start");
+
     using Input = __m128i;
     using Output = uint64_t;
 
@@ -166,11 +168,15 @@ auto Format::DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *,
             dsts[p] += dstStrides[p];
         }
     }
+
+    Environment::GetInstance().Log(L"DeinterleaveY410() end");
 }
 
 auto Format::InterleaveY410(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
     // expand each 16-bit integer to 32-bit, left shift to right position and OR them all
     // due the expansion, only half the size for each source vector is used, therefore we need to cast
+
+    Environment::GetInstance().Log(L"InterleaveY410() start");
 
     using Input = uint64_t;
     using Output = __m128i;
@@ -194,6 +200,8 @@ auto Format::InterleaveY410(std::array<const BYTE *, 3> srcs, const std::array<i
         }
         dst += dstStride;
     }
+
+    Environment::GetInstance().Log(L"InterleaveY410() end");
 }
 
 }

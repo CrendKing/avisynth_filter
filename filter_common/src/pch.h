@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <clocale>
 #include <condition_variable>
 #include <filesystem>

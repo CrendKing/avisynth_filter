@@ -37,7 +37,7 @@ private:
         std::unique_ptr<HDRSideData> hdrSideData;
     };
 
-    static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, DWORD &checkpointTime, int &currentFrameRate) -> void;
+    static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, std::chrono::steady_clock::time_point &checkpointTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
     auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime, DWORD sourceTypeSpecificFlags) -> bool;
@@ -74,11 +74,11 @@ private:
     std::atomic<bool> _isWorkerLatched = false;
 
     int _frameRateCheckpointInputSampleNb;
-    DWORD _frameRateCheckpointInputSampleTime;
+    std::chrono::steady_clock::time_point _frameRateCheckpointInputSampleTime;
     int _frameRateCheckpointOutputFrameNb;
-    DWORD _frameRateCheckpointOutputFrameTime;
+    std::chrono::steady_clock::time_point _frameRateCheckpointOutputFrameTime;
     int _frameRateCheckpointDeliveryFrameNb;
-    DWORD _frameRateCheckpointDeliveryFrameTime;
+    std::chrono::steady_clock::time_point _frameRateCheckpointDeliveryFrameTime;
     int _currentInputFrameRate;
     int _currentOutputFrameRate;
     int _currentDeliveryFrameRate;
