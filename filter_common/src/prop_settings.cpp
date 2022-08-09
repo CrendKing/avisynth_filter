@@ -99,7 +99,7 @@ auto CSynthFilterPropSettings::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPa
             }
         } else if (HIWORD(wParam) == BN_CLICKED) {
             if (const WORD eventTarget = LOWORD(wParam); eventTarget == IDC_BUTTON_EDIT && !_configScriptPath.empty()) {
-                ShellExecuteW(hwnd, L"edit", _configScriptPath.c_str(), nullptr, nullptr, SW_SHOW);
+                ShellExecuteW(hwnd, L"open", _configScriptPath.c_str(), nullptr, nullptr, SW_SHOW);
             } else if (eventTarget == IDC_BUTTON_RELOAD) {
                 _filter->ReloadScript(FrameServerCommon::GetInstance().GetScriptPath());
             } else if (eventTarget == IDC_BUTTON_BROWSE) {

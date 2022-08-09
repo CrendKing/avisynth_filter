@@ -25,6 +25,7 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above, or
 * [VapourSynth](https://github.com/vapoursynth/vapoursynth) R55 (API version 4) and above.
     * In case you have to stay at VapourSynth version R43 (API version 3.5) through R55, use [v1.2.1](https://github.com/CrendKing/avisynth_filter/releases/tag/v1.2.1).
+* Note: It is highly recommended to use [LAV Filters](https://github.com/Nevcairiel/LAVFilters) as the video decoder in your player of choice.
 
 ## Install
 
@@ -86,7 +87,7 @@ This function serves as a heuristic to disconnect the filter itself from DirectS
 
 It can be used to avoid unnecessary processing and improve performance if the script does not modify the source. Avoid to use it during live reloading.
 
-A good example is if your script applies modifications based on video metadata (e.g. FPS < 30), without using this function, even if the condition does not hold the filter still needs to copy every frame. At best, it wastes both CPU and memory resource for nothing. At worst, it breaks hardware acceleration chain for certain filters. For instance, when [LAV Filters](https://github.com/Nevcairiel/LAVFilters) connects directly to [madVR](http://www.madvr.com/) in D3D11 mode, the GPU decoded frames are not copied to memory. If any filter goes between them, the frame needs to be copied.
+A good example is if your script applies modifications based on video metadata (e.g. FPS < 30), without using this function, even if the condition does not hold the filter still needs to copy every frame. At best, it wastes both CPU and memory resource for nothing. At worst, it breaks hardware acceleration chain for certain filters. For instance, when LAV Filters connects directly to [madVR](http://www.madvr.com/) in D3D11 mode, the GPU decoded frames are not copied to memory. If any filter goes between them, the frame needs to be copied.
 
 This function takes no argument.
 

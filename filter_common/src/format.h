@@ -380,16 +380,16 @@ private:
     static auto DeinterleaveY410(const BYTE *src, int srcStride, std::array<BYTE *, 3> dsts, const std::array<int, 3> &dstStrides, int rowSize, int height) -> void;
     static auto InterleaveY410(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void;
 
-    static inline decltype(Deinterleave) *_deinterleaveUVC1Func;
-    static inline decltype(Deinterleave) *_deinterleaveUVC2Func;
-    static inline decltype(Deinterleave) *_deinterleaveY416Func;
-    static inline decltype(Deinterleave) *_deinterleaveRGBC1Func;
-    static inline decltype(InterleaveUV) *_interleaveUVC1Func;
-    static inline decltype(InterleaveUV) *_interleaveUVC2Func;
-    static inline decltype(InterleaveThree) *_interleaveY416Func;
-    static inline decltype(InterleaveThree) *_interleaveRGBC1Func;
-    static inline decltype(BitShiftEach16BitInt) *_rightShiftFunc;
-    static inline decltype(BitShiftEach16BitInt) *_leftShiftFunc;
+    static inline decltype(Deinterleave<0, 1, 2, 2, 1>) *_deinterleaveUVC1Func;
+    static inline decltype(Deinterleave<0, 2, 2, 2, 1>) *_deinterleaveUVC2Func;
+    static inline decltype(Deinterleave<0, 2, 4, 3, 1>) *_deinterleaveY416Func;
+    static inline decltype(Deinterleave<0, 1, 4, 3, 2>) *_deinterleaveRGBC1Func;
+    static inline decltype(InterleaveUV<0, 1>) *_interleaveUVC1Func;
+    static inline decltype(InterleaveUV<0, 2>) *_interleaveUVC2Func;
+    static inline decltype(InterleaveThree<1>) *_interleaveY416Func;
+    static inline decltype(InterleaveThree<2>) *_interleaveRGBC1Func;
+    static inline decltype(BitShiftEach16BitInt<0, 6, true>) *_rightShiftFunc;
+    static inline decltype(BitShiftEach16BitInt<0, 6, false>) *_leftShiftFunc;
 
     static inline int _vectorSize;
 };

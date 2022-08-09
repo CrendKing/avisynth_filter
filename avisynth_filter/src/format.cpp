@@ -137,7 +137,7 @@ auto Format::CopyFromInput(const VideoFormat &videoFormat, const BYTE *srcBuffer
         const int srcUVStride = srcMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
         const int srcUVRowSize = srcMainPlaneRowSize * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(Deinterleave) *deinterleaveUVFunc;
+        decltype(Deinterleave<0, 1, 2, 2, 1>) *deinterleaveUVFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
             deinterleaveUVFunc = _deinterleaveUVC1Func;
         } else {
@@ -217,7 +217,7 @@ auto Format::CopyToOutput(const VideoFormat &videoFormat, const std::array<const
         BYTE *dstUVStart = dstMainPlane + dstMainPlaneSize;
         const int dstUVStride = dstMainPlaneStride * 2 / videoFormat.pixelFormat->subsampleWidthRatio;
 
-        decltype(InterleaveUV) *interleaveUVFunc;
+        decltype(InterleaveUV<0, 1>) *interleaveUVFunc;
         if (videoFormat.videoInfo.ComponentSize() == 1) {
             interleaveUVFunc = _interleaveUVC1Func;
         } else {
