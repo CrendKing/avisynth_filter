@@ -15,10 +15,8 @@ FrameHandler::~FrameHandler() {
     if (_workerThread.joinable()) {
         _isStopping = true;
 
-        BeginFlush();
-        EndFlush([]() -> void {
-            MainFrameServer::GetInstance().StopScript();
-        });
+        // the pairing BeginFlush() is in input pin's Inactive()
+        EndFlush(nullptr);
 
         _workerThread.join();
     }

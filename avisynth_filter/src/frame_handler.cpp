@@ -31,6 +31,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     });
 
     if (_isFlushing || _isStopping) {
+        Environment::GetInstance().Log(L"Reject input sample due to flush or stop");
         return S_FALSE;
     }
 
@@ -45,15 +46,11 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         inputSampleStartTime = _nextSourceFrameNb * MainFrameServer::GetInstance().GetSourceAvgFrameDuration();
     }
 
-    {
-        const std::shared_lock sharedSourceLock(_sourceMutex);
-
-        // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
-            inputSampleStartTime <= lastSampleStartTime) {
-            Environment::GetInstance().Log(L"Rejecting source sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
-            return S_FALSE;
-        }
+    // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
+    if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
+        inputSampleStartTime <= lastSampleStartTime) {
+        Environment::GetInstance().Log(L"Reject input sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
+        return S_FALSE;
     }
 
     RefreshInputFrameRates(_nextSourceFrameNb);
@@ -115,15 +112,15 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         _sourceFrames.emplace(std::piecewise_construct,
                               std::forward_as_tuple(_nextSourceFrameNb),
                               std::forward_as_tuple(frame, inputSampleStartTime, _filter.m_pInput->SampleProps()->dwTypeSpecificFlags, std::move(hdrSideData)));
+        Environment::GetInstance().Log(L"Store source frame: %6d at %10lld ~ %10lld duration(literal) %10lld max_requested %6d extra_buffer %6d",
+                                       _nextSourceFrameNb,
+                                       inputSampleStartTime,
+                                       inputSampleStopTime,
+                                       inputSampleStopTime - inputSampleStartTime,
+                                       _maxRequestedFrameNb.load(),
+                                       _extraSrcBuffer);
+        _nextSourceFrameNb += 1;
     }
-    Environment::GetInstance().Log(L"Stored source frame: %6d at %10lld ~ %10lld duration(literal) %10lld max_requested %6d extra_buffer %6d",
-                                   _nextSourceFrameNb,
-                                   inputSampleStartTime,
-                                   inputSampleStopTime,
-                                   inputSampleStopTime - inputSampleStartTime,
-                                   _maxRequestedFrameNb.load(),
-                                   _extraSrcBuffer);
-    _nextSourceFrameNb += 1;
 
     // delay activating the main frameserver until we have enough pre-buffered frames in store
     if (_nextSourceFrameNb == Environment::GetInstance().GetInitialSrcBuffer()) {
@@ -180,19 +177,18 @@ auto FrameHandler::BeginFlush() -> void {
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
 
+    _isWorkerLatched.wait(false);
+
     Environment::GetInstance().Log(L"FrameHandler finish BeginFlush()");
 }
 
 auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
     Environment::GetInstance().Log(L"FrameHandler start EndFlush()");
 
-    _isWorkerLatched.wait(false);
-
     if (interim) {
         interim();
     }
 
-    _sourceFrames.clear();
     ResetInput();
 
     _isFlushing = false;
@@ -202,6 +198,8 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
 }
 
 auto FrameHandler::ResetInput() -> void {
+    _sourceFrames.clear();
+
     _nextSourceFrameNb = 0;
     _maxRequestedFrameNb = 0;
     _notifyChangedOutputMediaType = false;
@@ -415,7 +413,7 @@ auto FrameHandler::WorkerProc() -> void {
                 _filter.m_pOutput->Deliver(outSample);
                 RefreshDeliveryFrameRates(_nextOutputFrameNb);
 
-                Environment::GetInstance().Log(L"Delivered frame %6d", _nextOutputFrameNb);
+                Environment::GetInstance().Log(L"Deliver frame %6d", _nextOutputFrameNb);
             }
 
             _nextOutputFrameNb += 1;
@@ -423,9 +421,6 @@ auto FrameHandler::WorkerProc() -> void {
 
         GarbageCollect(processSourceFrameIters[0]->first);
     }
-
-    _isWorkerLatched = true;
-    _isWorkerLatched.notify_all();
 
     Environment::GetInstance().Log(L"Stop worker thread");
 }

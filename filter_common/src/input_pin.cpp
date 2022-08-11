@@ -81,14 +81,15 @@ auto CSynthFilterInputPin::Active() -> HRESULT {
         _filter._remoteControl->Start();
     }
 
+    _filter.frameHandler->EndFlush(nullptr);
+
     return S_OK;
 }
 
 auto CSynthFilterInputPin::Inactive() -> HRESULT {
     _filter.frameHandler->BeginFlush();
-    _filter.frameHandler->EndFlush([]() -> void {
-        MainFrameServer::GetInstance().StopScript();
-    });
+    MainFrameServer::GetInstance().StopScript();
+    // keep flushing until Active()
 
     return __super::Inactive();
 }
