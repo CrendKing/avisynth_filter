@@ -264,6 +264,11 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                         isMediaTypesCompatible = true;
                         TraverseFiltersInGraph();
                         frameHandler->StartWorker();
+
+                        if (Environment::GetInstance().IsRemoteControlEnabled()) {
+                            _remoteControl->Start();
+                        }
+
                         break;
                     }
 
@@ -290,6 +295,17 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
     }
 
     return __super::CompleteConnect(direction, pReceivePin);
+}
+
+auto CSynthFilter::StartStreaming() -> HRESULT {
+    AuxFrameServer::GetInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
+    _inputVideoFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType(), &AuxFrameServer::GetInstance());
+    _outputVideoFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType(), &AuxFrameServer::GetInstance());
+
+    // the paired BeginFlush() is in StopStreaming()
+    frameHandler->EndFlush();
+
+    return __super::StartStreaming();
 }
 
 auto CSynthFilter::Receive(IMediaSample *pSample) -> HRESULT {
@@ -360,12 +376,22 @@ auto CSynthFilter::BeginFlush() -> HRESULT {
 
 auto CSynthFilter::EndFlush() -> HRESULT {
     if (IsActive()) {
-        frameHandler->EndFlush([]() -> void {
-            MainFrameServer::GetInstance().StopScript();
-        });
+        frameHandler->WaitForWorkerLatch();
+        MainFrameServer::GetInstance().StopScript();
+        frameHandler->EndFlush();
     }
 
     return __super::EndFlush();
+}
+
+auto CSynthFilter::StopStreaming() -> HRESULT {
+    frameHandler->BeginFlush();
+    frameHandler->WaitForWorkerLatch();
+    MainFrameServer::GetInstance().StopScript();
+
+    // keep flushing until start streaming
+
+    return __super::StopStreaming();
 }
 
 auto STDMETHODCALLTYPE CSynthFilter::GetPages(__RPC__out CAUUID *pPages) -> HRESULT {

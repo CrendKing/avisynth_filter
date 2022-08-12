@@ -15,11 +15,6 @@ public:
 
     auto STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt) -> HRESULT override;
     auto STDMETHODCALLTYPE GetAllocator(__deref_out IMemAllocator **ppAllocator) -> HRESULT override;
-    auto Active() -> HRESULT override;
-    auto Inactive() -> HRESULT override;
-
-private:
-    CSynthFilter &_filter = reinterpret_cast<CSynthFilter &>(*m_pFilter);
 };
 
 }

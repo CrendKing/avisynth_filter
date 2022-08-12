@@ -72,26 +72,4 @@ auto STDMETHODCALLTYPE CSynthFilterInputPin::GetAllocator(__deref_out IMemAlloca
     return S_OK;
 }
 
-auto CSynthFilterInputPin::Active() -> HRESULT {
-    AuxFrameServer::GetInstance().ReloadScript(CurrentMediaType(), true);
-    _filter._inputVideoFormat = Format::GetVideoFormat(CurrentMediaType(), &AuxFrameServer::GetInstance());
-    _filter._outputVideoFormat = Format::GetVideoFormat(_filter.m_pOutput->CurrentMediaType(), &AuxFrameServer::GetInstance());
-
-    if (Environment::GetInstance().IsRemoteControlEnabled()) {
-        _filter._remoteControl->Start();
-    }
-
-    _filter.frameHandler->EndFlush(nullptr);
-
-    return S_OK;
-}
-
-auto CSynthFilterInputPin::Inactive() -> HRESULT {
-    _filter.frameHandler->BeginFlush();
-    MainFrameServer::GetInstance().StopScript();
-    // keep flushing until Active()
-
-    return __super::Inactive();
-}
-
 }

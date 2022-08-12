@@ -20,8 +20,9 @@ public:
     auto AddInputSample(IMediaSample *inputSample) -> HRESULT;
     auto GetSourceFrame(int frameNb) -> const VSFrame *;
     auto BeginFlush() -> void;
-    auto EndFlush(const std::function<void ()> &interim) -> void;
+    auto EndFlush() -> void;
     auto StartWorker() -> void;
+    auto WaitForWorkerLatch() -> void;
     auto GetInputBufferSize() const -> int;
     constexpr auto GetSourceFrameNb() const -> int { return _nextSourceFrameNb; }
     constexpr auto GetOutputFrameNb() const -> int { return _nextOutputFrameNb; }

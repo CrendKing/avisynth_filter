@@ -19,7 +19,6 @@ public:
     DISABLE_COPYING(RemoteControl)
 
     auto Start() -> void;
-    auto IsRunning() const -> bool;
 
 private:
     static auto CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT;

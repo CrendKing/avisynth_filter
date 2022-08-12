@@ -46,11 +46,15 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         inputSampleStartTime = _nextSourceFrameNb * MainFrameServer::GetInstance().GetSourceAvgFrameDuration();
     }
 
-    // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-    if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
-        inputSampleStartTime <= lastSampleStartTime) {
-        Environment::GetInstance().Log(L"Reject input sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
-        return S_FALSE;
+    {
+        const std::shared_lock sharedSourceLock(_sourceMutex);
+
+        // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
+        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
+            inputSampleStartTime <= lastSampleStartTime) {
+            Environment::GetInstance().Log(L"Reject input sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
+            return S_FALSE;
+        }
     }
 
     RefreshInputFrameRates(_nextSourceFrameNb);
@@ -170,7 +174,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         // any pending request to finish before destroying the script
 
         {
-            std::unique_lock uniqueOutputLock(_outputMutex);
+            const std::unique_lock uniqueOutputLock(_outputMutex);
 
             _outputFrames.emplace(_nextOutputFrameNb, nullptr);
         }
@@ -225,12 +229,10 @@ auto FrameHandler::BeginFlush() -> void {
     _newSourceFrameCv.notify_all();
     _deliverSampleCv.notify_all();
 
-    _isWorkerLatched.wait(false);
-
     Environment::GetInstance().Log(L"FrameHandler finish BeginFlush()");
 }
 
-auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
+auto FrameHandler::EndFlush() -> void {
     Environment::GetInstance().Log(L"FrameHandler start EndFlush()");
 
     {
@@ -242,13 +244,9 @@ auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
             }, &AutoReleaseVSFrame::frame);
         });
     }
-
-    if (interim) {
-        interim();
-    }
+    _outputFrames.clear();
 
     ResetInput();
-    _outputFrames.clear();
 
     _isFlushing = false;
     _isFlushing.notify_all();
@@ -267,21 +265,21 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrame *f, i
 
     if (frameHandler->_isFlushing) {
         {
-            std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
+            const std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
 
             frameHandler->_outputFrames.erase(n);
         }
-        frameHandler->_flushOutputSampleCv.notify_all();
-
         AVSF_VPS_API->freeFrame(f);
     } else {
         {
-            std::shared_lock sharedOutputLock(frameHandler->_outputMutex);
+            const std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
 
             frameHandler->_outputFrames[n] = const_cast<VSFrame *>(f);
         }
         frameHandler->_deliverSampleCv.notify_all();
     }
+
+    frameHandler->_flushOutputSampleCv.notify_all();
 }
 
 auto FrameHandler::ResetInput() -> void {
@@ -470,7 +468,7 @@ auto FrameHandler::WorkerProc() -> void {
         }
 
         {
-            std::unique_lock uniqueOutputLock(_outputMutex);
+            const std::unique_lock uniqueOutputLock(_outputMutex);
 
             _outputFrames.erase(iter);
         }

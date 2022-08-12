@@ -43,9 +43,11 @@ public:
     auto CheckTransform(const CMediaType *mtIn, const CMediaType *mtOut) -> HRESULT override;
     auto DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties) -> HRESULT override;
     auto CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -> HRESULT override;
+    auto StartStreaming() -> HRESULT override;
     auto Receive(IMediaSample *pSample) -> HRESULT override;
     auto BeginFlush() -> HRESULT override;
     auto EndFlush() -> HRESULT override;
+    auto StopStreaming() -> HRESULT override;
 
     // ISpecifyPropertyPages
     auto STDMETHODCALLTYPE GetPages(__RPC__out CAUUID *pPages) -> HRESULT override;

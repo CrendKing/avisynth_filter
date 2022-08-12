@@ -46,11 +46,15 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         inputSampleStartTime = _nextSourceFrameNb * MainFrameServer::GetInstance().GetSourceAvgFrameDuration();
     }
 
-    // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
-    if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
-        inputSampleStartTime <= lastSampleStartTime) {
-        Environment::GetInstance().Log(L"Reject input sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
-        return S_FALSE;
+    {
+        const std::shared_lock sharedSourceLock(_sourceMutex);
+
+        // since the key of _sourceFrames is frame number, which only strictly increases, rbegin() returns the last emplaced frame
+        if (const REFERENCE_TIME lastSampleStartTime = _sourceFrames.empty() ? -1 : _sourceFrames.rbegin()->second.startTime;
+            inputSampleStartTime <= lastSampleStartTime) {
+            Environment::GetInstance().Log(L"Reject input sample due to start time going backward: curr %10lld last %10lld", inputSampleStartTime, lastSampleStartTime);
+            return S_FALSE;
+        }
     }
 
     RefreshInputFrameRates(_nextSourceFrameNb);
@@ -177,17 +181,11 @@ auto FrameHandler::BeginFlush() -> void {
     _addInputSampleCv.notify_all();
     _newSourceFrameCv.notify_all();
 
-    _isWorkerLatched.wait(false);
-
     Environment::GetInstance().Log(L"FrameHandler finish BeginFlush()");
 }
 
-auto FrameHandler::EndFlush(const std::function<void ()> &interim) -> void {
+auto FrameHandler::EndFlush() -> void {
     Environment::GetInstance().Log(L"FrameHandler start EndFlush()");
-
-    if (interim) {
-        interim();
-    }
 
     ResetInput();
 

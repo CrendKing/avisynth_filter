@@ -15,8 +15,9 @@ FrameHandler::~FrameHandler() {
     if (_workerThread.joinable()) {
         _isStopping = true;
 
-        // the pairing BeginFlush() is in input pin's Inactive()
-        EndFlush(nullptr);
+        // the paired BeginFlush() is in StopStreaming()
+        WaitForWorkerLatch();
+        EndFlush();
 
         _workerThread.join();
     }
@@ -27,6 +28,10 @@ auto FrameHandler::StartWorker() -> void {
         _isStopping = false;
         _workerThread = std::thread(&FrameHandler::WorkerProc, this);
     }
+}
+
+auto FrameHandler::WaitForWorkerLatch() -> void {
+    _isWorkerLatched.wait(false);
 }
 
 auto FrameHandler::UpdateExtraSrcBuffer() -> void {
@@ -90,31 +95,24 @@ auto FrameHandler::ChangeOutputFormat() -> bool {
 
     _filter.StopStreaming();
 
-    BeginFlush();
-    EndFlush([this]() -> void {
-        AuxFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
-    });
-
     _filter._isInputMediaTypeChanged = false;
     _filter._needReloadScript = false;
 
+    AuxFrameServer::GetInstance().ReloadScript(_filter.m_pInput->CurrentMediaType(), true);
     auto potentialOutputMediaTypes = _filter.InputToOutputMediaType(&_filter.m_pInput->CurrentMediaType());
-    if (const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes, [this](const CMediaType &outputMediaType) -> bool {
+
+    if (const auto newOutputMediaTypeIter = std::ranges::find_if(potentialOutputMediaTypes,
+        [this](const CMediaType &outputMediaType) -> bool {
             /*
              * "QueryAccept (Downstream)" forces the downstream to use the new output media type as-is, which may lead to wrong rendering result
              * "ReceiveConnection" allows downstream to counter-propose suitable media type for the connection
              * after ReceiveConnection(), the next output sample should carry the new output media type, which is handled in PrepareOutputSample()
              */
 
-            if (_isFlushing) {
-                return false;
-            }
-
             const bool result = SUCCEEDED(_filter.m_pOutput->GetConnected()->ReceiveConnection(_filter.m_pOutput, &outputMediaType));
             Environment::GetInstance().Log(L"Attempt to reconnect output pin with media type: output %s result %d",
                                            Format::LookupMediaSubtype(outputMediaType.subtype)->name,
                                            result);
-
             if (result) {
                 _filter.m_pOutput->SetMediaType(&outputMediaType);
                 _filter._outputVideoFormat = Format::GetVideoFormat(outputMediaType, &AuxFrameServer::GetInstance());

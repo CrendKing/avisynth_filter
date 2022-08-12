@@ -27,10 +27,6 @@ auto RemoteControl::Start() -> void {
     }
 }
 
-auto RemoteControl::IsRunning() const -> bool {
-    return _msgThread.joinable();
-}
-
 auto CALLBACK RemoteControl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
     switch (uMsg) {
     case WM_COPYDATA: {
