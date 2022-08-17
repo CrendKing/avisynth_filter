@@ -25,7 +25,7 @@ If you used ffdshow's AviSynth plugin before, you may find these filters similar
 * [AviSynth+](https://github.com/AviSynth/AviSynthPlus) 3.5.1 (interface version 7) and above, or
 * [VapourSynth](https://github.com/vapoursynth/vapoursynth) R55 (API version 4) and above.
     * In case you have to stay at VapourSynth version R43 (API version 3.5) through R55, use [v1.2.1](https://github.com/CrendKing/avisynth_filter/releases/tag/v1.2.1).
-* Note: It is highly recommended to use [LAV Filters](https://github.com/Nevcairiel/LAVFilters) as the video decoder in your player of choice.
+* Note: It is highly recommended to use open sourced video demuxers and decoders such as [LAV Filters](https://github.com/Nevcairiel/LAVFilters) in your player of choice.
 
 ## Install
 
