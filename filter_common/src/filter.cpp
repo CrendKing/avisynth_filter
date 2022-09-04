@@ -265,10 +265,6 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                         TraverseFiltersInGraph();
                         frameHandler->StartWorker();
 
-                        if (Environment::GetInstance().IsRemoteControlEnabled()) {
-                            _remoteControl->Start();
-                        }
-
                         break;
                     }
 
@@ -301,6 +297,11 @@ auto CSynthFilter::StartStreaming() -> HRESULT {
     AuxFrameServer::GetInstance().ReloadScript(m_pInput->CurrentMediaType(), true);
     _inputVideoFormat = Format::GetVideoFormat(m_pInput->CurrentMediaType(), &AuxFrameServer::GetInstance());
     _outputVideoFormat = Format::GetVideoFormat(m_pOutput->CurrentMediaType(), &AuxFrameServer::GetInstance());
+
+    if (Environment::GetInstance().IsRemoteControlEnabled()) {
+        // remote control should start after the input video format is initialized
+        _remoteControl->Start();
+    }
 
     // the paired BeginFlush() is in StopStreaming()
     frameHandler->EndFlush();
