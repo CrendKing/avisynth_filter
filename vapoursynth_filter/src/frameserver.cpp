@@ -3,6 +3,7 @@
 #include "frameserver.h"
 
 #include "api.h"
+#include "constants.h"
 #include "frame_handler.h"
 
 
@@ -45,7 +46,10 @@ FrameServerCommon::FrameServerCommon() {
     _vsScriptApi = getVSScriptAPI(VSSCRIPT_API_VERSION);
     _vsApi = getVapourSynthAPI(VAPOURSYNTH_API_VERSION);
     if (_vsApi == nullptr || _vsScriptApi == nullptr) {
-        throw "VapourSynth API 4.0 is required";
+        const WCHAR *errorMessage = L"Unable to initialize VapourSynth API 4.0";
+        Environment::GetInstance().Log(errorMessage);
+        MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
+        throw;
     }
 
     VSCore *vsCore = _vsApi->createCore(0);
