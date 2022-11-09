@@ -68,6 +68,7 @@ auto Format::GetVideoFormat(const AM_MEDIA_TYPE &mediaType, const FrameServerBas
              */
             ret.pixelAspectRatioNum = vih2->dwPictAspectRatioX * ret.videoInfo.height;
             ret.pixelAspectRatioDen = vih2->dwPictAspectRatioY * ret.videoInfo.width;
+            CoprimeIntegers(ret.pixelAspectRatioNum, ret.pixelAspectRatioDen);
         }
 
         if ((vih2->dwControlFlags & AMCONTROL_USED) && (vih2->dwControlFlags & AMCONTROL_COLORINFO_PRESENT)) {

@@ -32,14 +32,15 @@ auto AuxFrameServer::GenerateMediaType(const Format::PixelFormat &pixelFormat, c
         VIDEOINFOHEADER2 *newVih2 = reinterpret_cast<VIDEOINFOHEADER2 *>(newMediaType.Format());
         newBmi = &newVih2->bmiHeader;
 
-        // generate new DAR if the new SAR differs from the old one
-        // because AviSynth does not tell us anything about DAR, scaled the DAR wit the ratio between new SAR and old SAR
-        if (_scriptVideoInfo.width * abs(newBmi->biHeight) != _scriptVideoInfo.height * newBmi->biWidth) {
-            const long long ax = static_cast<long long>(newVih2->dwPictAspectRatioX) * _scriptVideoInfo.width * std::abs(newBmi->biHeight);
-            const long long ay = static_cast<long long>(newVih2->dwPictAspectRatioY) * _scriptVideoInfo.height * newBmi->biWidth;
-            const long long gcd = std::gcd(ax, ay);
-            newVih2->dwPictAspectRatioX = static_cast<DWORD>(ax / gcd);
-            newVih2->dwPictAspectRatioY = static_cast<DWORD>(ay / gcd);
+        // if the script changes the video dimension, we need to adjust the DAR
+        // assuming the pixel aspect ratio remains the same, new DAR = PAR / new (script) SAR
+        const auto &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
+        if (_scriptVideoInfo.width != sourceVideoInfo.width || _scriptVideoInfo.height != sourceVideoInfo.height) {
+            long long darX = newVih2->dwPictAspectRatioX * sourceVideoInfo.height * _scriptVideoInfo.width;
+            long long darY = newVih2->dwPictAspectRatioY * sourceVideoInfo.width * _scriptVideoInfo.height;
+            CoprimeIntegers(darX, darY);
+            newVih2->dwPictAspectRatioX = static_cast<DWORD>(darX);
+            newVih2->dwPictAspectRatioY = static_cast<DWORD>(darY);
         }
     } else {
         newBmi = &newVih->bmiHeader;
