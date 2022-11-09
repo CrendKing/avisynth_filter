@@ -38,7 +38,7 @@ jobs:
             'output-dir' = 'Win32'
           })
         }
-        Write-Output "::set-output name=matrix::$(@{ include = $matrixItems } | ConvertTo-Json -Compress)"
+        Set-Content -Path $env:GITHUB_OUTPUT -Value "matrix=$(@{ include = $matrixItems } | ConvertTo-Json -Compress)"
 
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}
@@ -49,13 +49,13 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build
         run: pwsh -File build.ps1 ${{ matrix.configuration }} ${{ matrix.platform }}
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.configuration }} ${{ matrix.platform }}
           path: |
