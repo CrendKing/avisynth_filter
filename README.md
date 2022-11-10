@@ -91,6 +91,12 @@ A good example is if your script applies modifications based on video metadata (
 
 This function takes no argument.
 
+#### `AvsFilterGetSourcePath()`
+
+Returns the path to the source video file.
+
+This function takes no argument.
+
 ### VapourSynth
 
 The filter exposes the following variables to the VapourSynth Python script:
@@ -104,6 +110,10 @@ Note that the [`fps`](http://www.vapoursynth.com/doc/pythonreference.html#VideoN
 #### `VpsFilterDisconnect`
 
 This variable does not exist at the entry of the script. Upon return, if this variable exists and has an non-zero value, it disconnects the filter itself from DirectShow filter graph.
+
+#### `VpsFilterSourcePath`
+
+Represents the path to the source video file.
 
 ## API and Remote Control
 

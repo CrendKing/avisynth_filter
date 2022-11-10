@@ -4,7 +4,6 @@
 
 #include "environment.h"
 #include "format.h"
-#include "frame_handler.h"
 #include "singleton.h"
 #include "source_clip.h"
 
@@ -66,7 +65,7 @@ public:
     using FrameServerBase::StopScript;
     auto GetFrame(int frameNb) const -> PVideoFrame;
     auto CreateSourceDummyFrame() const -> PVideoFrame;
-    auto LinkFrameHandler(FrameHandler *frameHandler) const -> void;
+    auto LinkSynthFilter(const CSynthFilter *filter) -> void;
     constexpr auto GetEnv() const -> IScriptEnvironment * { return _env; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
@@ -76,6 +75,7 @@ public:
 private:
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
+    const CSynthFilter *_filter;
 };
 
 class AuxFrameServer

@@ -4,7 +4,12 @@
 
 #include "api.h"
 #include "constants.h"
+#include "filter.h"
 
+
+static constexpr const char *AVS_FUNC_NAME_SOURCE_CLIP = "AvsFilterSource";
+static constexpr const char *AVS_FUNC_NAME_DISCONNECT = "AvsFilterDisconnect";
+static constexpr const char *AVS_FUNC_NAME_GET_SOURCE_PATH = "AvsFilterGetSourcePath";
 
 const AVS_Linkage *AVS_linkage = nullptr;
 
@@ -17,6 +22,12 @@ auto __cdecl Create_AvsFilterSource(AVSValue args, void *user_data, IScriptEnvir
 auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     // the void type is internal in AviSynth and cannot be instantiated by user script, ideal for disconnect heuristic
     return AVSValue();
+}
+
+auto __cdecl Create_AvsFilterGetSourcePath(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
+    const CSynthFilter *filter = *reinterpret_cast<const CSynthFilter **>(user_data);
+    static std::string sourcePathStr = ConvertWideToUtf8(filter->GetVideoSourcePath().native());
+    return AVSValue(sourcePathStr.c_str());
 }
 
 FrameServerCommon::FrameServerCommon() {
@@ -66,8 +77,8 @@ auto FrameServerCommon::CreateEnv() -> IScriptEnvironment * {
 auto FrameServerBase::CreateAndSetupEnv() -> void {
     _sourceClip = new SourceClip();
     _env = FrameServerCommon::CreateEnv();
-    _env->AddFunction("AvsFilterSource", "", Create_AvsFilterSource, _sourceClip);
-    _env->AddFunction("AvsFilterDisconnect", "", Create_AvsFilterDisconnect, nullptr);
+    _env->AddFunction(AVS_FUNC_NAME_SOURCE_CLIP, "", Create_AvsFilterSource, _sourceClip);
+    _env->AddFunction(AVS_FUNC_NAME_DISCONNECT, "", Create_AvsFilterDisconnect, nullptr);
 }
 
 /**
@@ -130,6 +141,7 @@ auto FrameServerBase::StopScript() -> void {
 
 MainFrameServer::MainFrameServer() {
     CreateAndSetupEnv();
+    _env->AddFunction(AVS_FUNC_NAME_GET_SOURCE_PATH, "", Create_AvsFilterGetSourcePath, &_filter);
 }
 
 MainFrameServer::~MainFrameServer() {
@@ -159,8 +171,9 @@ auto MainFrameServer::CreateSourceDummyFrame() const -> PVideoFrame {
     return _env->NewVideoFrame(FrameServerCommon::GetInstance().GetSourceVideoInfo());
 }
 
-auto MainFrameServer::LinkFrameHandler(FrameHandler *frameHandler) const -> void {
-    reinterpret_cast<SourceClip *>(static_cast<void *>(_sourceClip))->SetFrameHandler(frameHandler);
+auto MainFrameServer::LinkSynthFilter(const CSynthFilter *filter) -> void {
+    _filter = filter;
+    reinterpret_cast<SourceClip *>(static_cast<void *>(_sourceClip))->SetFrameHandler(filter->frameHandler.get());
 }
 
 auto AuxFrameServer::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool {

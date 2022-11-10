@@ -53,6 +53,8 @@ private:
 #define AVSF_VPS_API        FrameServerCommon::GetInstance().GetVsApi()
 #define AVSF_VPS_SCRIPT_API FrameServerCommon::GetInstance().GetVsScriptApi()
 
+class CSynthFilter;
+
 class FrameServerBase {
 public:
     constexpr auto GetVsCore() const -> VSCore * { return _vsCore; }
@@ -63,14 +65,13 @@ protected:
 
     DISABLE_COPYING(FrameServerBase)
 
-    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect, const CSynthFilter **filterPtr) -> bool;
     auto StopScript() -> void;
 
     VSScript *_vsScript = nullptr;
     VSCore *_vsCore = nullptr;
     VSNode *_sourceClip = nullptr;
     VSNode *_scriptClip = nullptr;
-    FrameHandler *_frameHandler = nullptr;
     REFERENCE_TIME _scriptAvgFrameDuration = 0;
     std::string _errorString;
 };
@@ -83,7 +84,7 @@ public:
 
     auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect) -> bool;
     using FrameServerBase::StopScript;
-    constexpr auto LinkFrameHandler(FrameHandler *frameHandler) -> void { _frameHandler = frameHandler; }
+    constexpr auto LinkSynthFilter(const CSynthFilter *filter) -> void { _filter = filter; }
     constexpr auto GetScriptClip() const -> VSNode * { return _scriptClip; }
     constexpr auto GetSourceAvgFrameDuration() const -> REFERENCE_TIME { return _sourceAvgFrameDuration; }
     constexpr auto GetSourceAvgFrameRate() const -> int { return _sourceAvgFrameRate; }
@@ -93,6 +94,7 @@ public:
 private:
     REFERENCE_TIME _sourceAvgFrameDuration = 0;
     int _sourceAvgFrameRate = 0;
+    const CSynthFilter *_filter = nullptr;
 };
 
 class AuxFrameServer

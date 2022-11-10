@@ -16,7 +16,7 @@ CSynthFilter::CSynthFilter(LPUNKNOWN pUnk, HRESULT *phr)
     if (_numFilterInstances == 0) {
         Environment::Create();
         FrameServerCommon::Create();
-        MainFrameServer::Create()->LinkFrameHandler(frameHandler.get());
+        MainFrameServer::Create()->LinkSynthFilter(this);
         AuxFrameServer::Create();
         Format::Initialize();
     }
