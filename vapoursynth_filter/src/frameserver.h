@@ -65,7 +65,7 @@ protected:
 
     DISABLE_COPYING(FrameServerBase)
 
-    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect, const CSynthFilter **filterPtr) -> bool;
+    auto ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDisconnect, const CSynthFilter *filter) -> bool;
     auto StopScript() -> void;
 
     VSScript *_vsScript = nullptr;
