@@ -34,11 +34,4 @@ auto JoinStrings(const std::vector<std::wstring> &inputs, std::wstring_view deli
     return ret;
 }
 
-auto CoprimeIntegers(int64_t &a, int64_t &b) -> void {
-    if (const int64_t gcd = std::gcd(a, b); gcd > 1) {
-        a /= gcd;
-        b /= gcd;
-    }
-}
-
 }

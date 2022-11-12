@@ -8,7 +8,14 @@ auto ConvertWideToUtf8(std::wstring_view wideString) -> std::string;
 auto ConvertUtf8ToWide(std::string_view utf8String) -> std::wstring;
 auto DoubleToString(double num, int precision) -> std::wstring;
 auto JoinStrings(const std::vector<std::wstring> &inputs, std::wstring_view delimiter) -> std::wstring;
-auto CoprimeIntegers(int64_t &a, int64_t &b) -> void;
+
+template <typename T>
+constexpr auto CoprimeIntegers(T &a, T &b) -> void {
+    if (const T gcd = std::gcd(a, b); gcd > 1) {
+        a /= gcd;
+        b /= gcd;
+    }
+}
 
 /**
  * ceil(dividend / divisor), assuming both oprands are positive
