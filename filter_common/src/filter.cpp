@@ -102,7 +102,7 @@ auto CSynthFilter::CheckConnect(PIN_DIRECTION direction, IPin *pPin) -> HRESULT 
                         if (std::ranges::find(_availableOutputMediaTypes, outputMediaType) == _availableOutputMediaTypes.end()) {
                             _availableOutputMediaTypes.emplace_back(outputMediaType);
                         }
-                        Environment::GetInstance().Log(L"Add compatible formats: input %5s output %5s", optInputPixelFormat->name, frameServerPixelFormat.name);
+                        Environment::GetInstance().Log(L"Add compatible formats: input %5ls output %5ls", optInputPixelFormat->name, frameServerPixelFormat.name);
                     }
                 }
             } else if (hr == VFW_E_ENUM_OUT_OF_SYNC) {
@@ -134,12 +134,12 @@ auto CSynthFilter::CheckInputType(const CMediaType *mtIn) -> HRESULT {
             result = std::ranges::any_of(_compatibleMediaTypes, [optInputPixelFormat](const MediaTypePair &pair) -> bool {
                 return optInputPixelFormat == pair.inputPixelFormat;
             });
-            Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %5s result %d", optInputPixelFormat->name, result);
+            Environment::GetInstance().Log(L"Pre pin connection CheckInputType(): input %5ls result %d", optInputPixelFormat->name, result);
         } else {
             result = std::ranges::any_of(InputToOutputMediaType(mtIn), [this](const CMediaType &newOutputMediaType) -> bool {
                 return m_pOutput->GetConnected()->QueryAccept(&newOutputMediaType) == S_OK;
             });
-            Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %5s result %d", optInputPixelFormat->name, result);
+            Environment::GetInstance().Log(L"Post pin connection QueryAccept downstream in CheckInputType(): input %5ls result %d", optInputPixelFormat->name, result);
         }
     } else {
         Environment::GetInstance().Log(L"Unknown input media type in CheckInputType()");
@@ -162,7 +162,7 @@ auto CSynthFilter::GetMediaType(int iPosition, CMediaType *pMediaType) -> HRESUL
     }
 
     *pMediaType = _availableOutputMediaTypes[iPosition];
-    Environment::GetInstance().Log(L"GetMediaType() offers media type %2d with %5s", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
+    Environment::GetInstance().Log(L"GetMediaType() offers media type %2d with %5ls", iPosition, MediaTypeToPixelFormat(pMediaType)->name);
 
     return S_OK;
 }
@@ -251,7 +251,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                 Environment::GetInstance().Log(L"Unexpected input or output format");
                 return E_UNEXPECTED;
             }
-            Environment::GetInstance().Log(L"Pins are connected with media types: %5s -> %5s", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
+            Environment::GetInstance().Log(L"Pins are connected with media types: %5ls -> %5ls", optConnectionInputPixelFormat->name, optConnectionOutputPixelFormat->name);
 
             bool isMediaTypesCompatible = false;
             int mediaTypeReconnectionIndex = 0;
@@ -284,7 +284,7 @@ auto CSynthFilter::CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin) -
                     return E_UNEXPECTED;
                 }
 
-                Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %5s", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
+                Environment::GetInstance().Log(L"Attempt to reconnect input pin with media type %5ls", MediaTypeToPixelFormat(reconnectInputMediaType)->name);
                 CheckHr(ReconnectPin(m_pInput, reconnectInputMediaType));
             }
         }
@@ -455,7 +455,7 @@ auto CSynthFilter::GetInputPixelFormat(const AM_MEDIA_TYPE *mediaType) -> const 
             return optInputPixelFormat;
         }
 
-        Environment::GetInstance().Log(L"Reject input format due to settings: %s", optInputPixelFormat->name);
+        Environment::GetInstance().Log(L"Reject input format due to settings: %ls", optInputPixelFormat->name);
     }
 
     return nullptr;
@@ -522,7 +522,7 @@ auto CSynthFilter::TraverseFiltersInGraph() -> void {
         if (FILTER_INFO filterInfo; SUCCEEDED(currFilter->QueryFilterInfo(&filterInfo))) {
             QueryFilterInfoReleaseGraph(filterInfo);
             _videoFilterNames.emplace_back(filterInfo.achName);
-            Environment::GetInstance().Log(L"Filter in graph: %s", filterInfo.achName);
+            Environment::GetInstance().Log(L"Filter in graph: %ls", filterInfo.achName);
         }
 
         const std::optional<IPin *> optOutputPin = FindFirstVideoOutputPin(currFilter);

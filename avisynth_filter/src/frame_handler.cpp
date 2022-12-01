@@ -228,7 +228,7 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
         outSample->SetMediaType(&_filter.m_pOutput->CurrentMediaType());
         _notifyChangedOutputMediaType = false;
 
-        Environment::GetInstance().Log(L"New output format: name %5s, width %5ld, height %5ld",
+        Environment::GetInstance().Log(L"New output format: name %5ls, width %5ld, height %5ld",
                                        _filter._outputVideoFormat.pixelFormat->name,
                                        _filter._outputVideoFormat.bmi.biWidth,
                                        _filter._outputVideoFormat.bmi.biHeight);

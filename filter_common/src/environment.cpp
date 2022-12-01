@@ -36,20 +36,20 @@ Environment::Environment()
             _logStartTime = std::chrono::steady_clock::now();
 
             Log(L"Filter version: %hs", FILTER_VERSION_STRING);
-            Log(L"Configured script file: %s", _scriptPath.filename().c_str());
+            Log(L"Configured script file: %ls", _scriptPath.filename().c_str());
 
             std::ranges::for_each(
                 Format::PIXEL_FORMATS,
                 [this](const WCHAR *name) {
-                    Log(L"Configured input format %5s: %d", name, _enabledInputFormats.contains(name));
+                    Log(L"Configured input format %5ls: %d", name, _enabledInputFormats.contains(name));
                 },
                 &Format::PixelFormat::name);
 
-            Log(L"Loading process: %s", processName.c_str());
+            Log(L"Loading process: %ls", processName.c_str());
         }
     }
 
-    Log(L"Active CPU feature: %s", IsSupportAVX2() ? L"AVX2" : (IsSupportSSE4() ? L"SSE4" : L"Basic"));
+    Log(L"Active CPU feature: %ls", IsSupportAVX2() ? L"AVX2" : (IsSupportSSE4() ? L"SSE4" : L"Basic"));
 }
 
 Environment::~Environment() {
