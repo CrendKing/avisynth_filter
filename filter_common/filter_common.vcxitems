@@ -35,7 +35,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\input_pin.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\macros.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\media_sample.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\min_windows.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\min_windows_macros.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_settings.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\prop_status.h" />

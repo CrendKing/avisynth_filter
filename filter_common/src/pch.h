@@ -4,7 +4,7 @@
 #pragma warning(push)
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS)
 
-#include "min_windows.h"
+#include "min_windows_macros.h"
 
 #include <algorithm>
 #include <array>

@@ -72,7 +72,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\min_windows.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\min_windows_macros.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\macros.h">
