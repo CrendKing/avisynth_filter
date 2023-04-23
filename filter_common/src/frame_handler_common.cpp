@@ -60,7 +60,8 @@ auto FrameHandler::RefreshFrameRatesTemplate(int sampleNb, int &checkpointSample
     bool reachCheckpoint = checkpointTime.time_since_epoch().count() == 0;
 
     if (const std::chrono::steady_clock::duration elapsed = currentTime - checkpointTime; elapsed >= STATUS_PAGE_TIMER_INTERVAL) {
-        currentFrameRate = static_cast<int>(llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, NANOSECONDS, std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count(), 0));
+        currentFrameRate = static_cast<int>(
+            llMulDiv((static_cast<LONGLONG>(sampleNb) - checkpointSampleNb) * FRAME_RATE_SCALE_FACTOR, NANOSECONDS, std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count(), 0));
         reachCheckpoint = true;
     }
 

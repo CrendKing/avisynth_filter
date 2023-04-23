@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "singleton.h"
 #include "registry.h"
+#include "singleton.h"
 
 
 namespace SynthFilter {

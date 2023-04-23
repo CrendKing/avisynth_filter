@@ -4,6 +4,8 @@
 #pragma warning(push)
 #pragma warning(disable: ALL_CODE_ANALYSIS_WARNINGS)
 
+#include "min_windows.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -23,8 +25,6 @@
 #include <thread>
 #include <unordered_set>
 #include <vector>
-
-#include "min_windows.h"
 
 #define _ATL_APARTMENT_THREADED
 #define _ATL_NO_AUTOMATIC_NAMESPACE
@@ -47,9 +47,9 @@
 #ifdef AVSF_AVISYNTH
     #include <avisynth.h>
 #else
-    #include <VapourSynth4.h>
     #include <VSHelper4.h>
     #include <VSScript4.h>
+    #include <VapourSynth4.h>
 #endif
 #include <SimpleIni.h>
 #include <VSConstants4.h>

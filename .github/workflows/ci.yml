@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build
-        run: pwsh -File build.ps1 ${{ matrix.configuration }} ${{ matrix.platform }}
+        run: pwsh -File build.ps1 -configuration ${{ matrix.configuration }} -platform ${{ matrix.platform }}
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3

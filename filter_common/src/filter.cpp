@@ -478,8 +478,7 @@ auto CSynthFilter::FindFirstVideoOutputPin(IBaseFilter *pFilter) -> std::optiona
             break;
         }
 
-        if (CMediaType mediaType; dir == PINDIR_OUTPUT && SUCCEEDED(currPin->ConnectionMediaType(&mediaType)) &&
-            (*mediaType.Type() == MEDIATYPE_Video || *mediaType.Type() == MEDIATYPE_Stream)) {
+        if (CMediaType mediaType; dir == PINDIR_OUTPUT && SUCCEEDED(currPin->ConnectionMediaType(&mediaType)) && (*mediaType.Type() == MEDIATYPE_Video || *mediaType.Type() == MEDIATYPE_Stream)) {
             return currPin;
         }
     }

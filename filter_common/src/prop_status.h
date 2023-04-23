@@ -14,6 +14,7 @@ class
     __declspec(uuid("4661947b-f51b-4b22-a023-482426611b1d"))
 #endif
         CSynthFilterPropStatus : public CBasePropertyPage {
+
 public:
     CSynthFilterPropStatus(LPUNKNOWN pUnk, HRESULT *phr);
 

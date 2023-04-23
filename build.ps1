@@ -1,3 +1,11 @@
+Param(
+    [Parameter(Mandatory)]
+    $configuration,
+    [Parameter(Mandatory)]
+    $platform
+)
+
+
 $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -utf8 -property installationPath -version '[17,99]'
 if (!$vsPath) {
     exit 1
@@ -71,9 +79,6 @@ $workingDir = "${PSScriptRoot}\dep_simpleini"
 if (-Not (Test-Path $workingDir)) {
     git clone https://github.com/brofield/simpleini.git --depth=1 dep_simpleini
 }
-
-$configuration = $args[0]
-$platform = $args[1]
 
 MSBuild.exe -property:"Configuration=${configuration};Platform=${platform}" -maxCpuCount avisynth_filter.sln
 exit $LASTEXITCODE

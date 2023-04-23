@@ -69,11 +69,9 @@ auto CSynthFilterPropStatus::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wPara
         const std::wstring outputParStr = DoubleToString(static_cast<double>(videoFormat.pixelAspectRatioNum) / videoFormat.pixelAspectRatioDen, parPrecision);
 
         SetDlgItemTextW(hwnd, IDC_TEXT_INPUT_BUFFER_SIZE_VALUE, std::to_wstring(_filter->frameHandler->GetInputBufferSize()).c_str());
-        SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_NUMBER_VALUE, std::format(L"{} -> {} -> {}",
-                        _filter->frameHandler->GetSourceFrameNb(),
-                        _filter->frameHandler->GetOutputFrameNb(),
-                        _filter->frameHandler->GetDeliveryFrameNb())
-                        .c_str());
+        SetDlgItemTextW(hwnd,
+                        IDC_TEXT_FRAME_NUMBER_VALUE,
+                        std::format(L"{} -> {} -> {}", _filter->frameHandler->GetSourceFrameNb(), _filter->frameHandler->GetOutputFrameNb(), _filter->frameHandler->GetDeliveryFrameNb()).c_str());
 
         SetDlgItemTextW(hwnd, IDC_TEXT_FRAME_RATE_VALUE, std::format(L"{} -> {} -> {}", inputFrameRateStr, outputFrameRateStr, deliveryFrameRateStr).c_str());
         SetDlgItemTextW(hwnd, IDC_TEXT_PAR_VALUE, outputParStr.c_str());

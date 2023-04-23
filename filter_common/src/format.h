@@ -88,8 +88,8 @@ public:
     static auto LookupMediaSubtype(const CLSID &mediaSubtype) -> const PixelFormat *;
     static auto LookupFrameServerFormatId(int frameServerFormatId) {
         return PIXEL_FORMATS | std::views::filter([frameServerFormatId](const PixelFormat &pixelFormat) -> bool {
-            return frameServerFormatId == pixelFormat.frameServerFormatId;
-        });
+                   return frameServerFormatId == pixelFormat.frameServerFormatId;
+               });
     }
 
     template <typename T, typename = std::enable_if_t<std::is_base_of_v<AM_MEDIA_TYPE, std::decay_t<T>>>>
@@ -219,7 +219,7 @@ private:
 
                     if constexpr (srcNumComponents == 2) {
                         dataVec = _mm256_permute4x64_epi64(srcShuffle, _UV_PERMUTE_INDEX);
-                    } if constexpr (srcNumComponents == 4) {
+                    } else if constexpr (srcNumComponents == 4) {
                         dataVec = _mm256_permutevar8x32_epi32(srcShuffle, _FOUR_PERMUTE_INDEX);
                     }
                 } else {
