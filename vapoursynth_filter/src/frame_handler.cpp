@@ -297,7 +297,7 @@ auto FrameHandler::ResetInput() -> void {
 
 auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, int outputFrameNb, const VSFrame *outputFrame, int sourceFrameNb) -> bool {
     const VSMap *frameProps = AVSF_VPS_API->getFramePropertiesRO(outputFrame);
-    int propGetError;
+    int propGetError = peSuccess;
     const int64_t frameDurationNum = AVSF_VPS_API->mapGetInt(frameProps, FRAME_PROP_NAME_DURATION_NUM, 0, &propGetError);
     const int64_t frameDurationDen = AVSF_VPS_API->mapGetInt(frameProps, FRAME_PROP_NAME_DURATION_DEN, 0, &propGetError);
     int64_t frameDuration;

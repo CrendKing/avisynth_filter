@@ -7,7 +7,7 @@ namespace SynthFilter {
 
 #define DISABLE_COPYING(T) \
     T(const T &) = delete; \
-    T &operator=(const T &) = delete;
+    auto operator=(const T &) -> T & = delete;
 
 #define CTOR_WITHOUT_COPYING(T) \
     T() = default;              \
