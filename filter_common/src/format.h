@@ -293,7 +293,7 @@ private:
     }
 
     template <int colorFamily>
-    constexpr static auto InterleaveThree(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
+    static constexpr auto InterleaveThree(std::array<const BYTE *, 3> srcs, const std::array<int, 3> &srcStrides, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         // Extract 32-bit integers from each sources and form 128-bit integer, then shuffle to the correct order
 
         Environment::GetInstance().Log(L"InterleaveThree() start");
@@ -335,7 +335,7 @@ private:
     }
 
     template <int intrinsicType, int shiftSize, bool isRightShift>
-    constexpr static auto BitShiftEach16BitInt(BYTE *src, BYTE *dst, int stride, int rowSize, int height) -> void {
+    static constexpr auto BitShiftEach16BitInt(BYTE *src, BYTE *dst, int stride, int rowSize, int height) -> void {
         Environment::GetInstance().Log(L"BitShiftEach16BitInt(%d) start", isRightShift);
 
         using Vector = std::conditional_t<intrinsicType == 1, __m128i

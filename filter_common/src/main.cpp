@@ -19,7 +19,9 @@
 
 namespace SynthFilter {
 
-static REGFILTERPINS REG_PINS[] {
+namespace {
+
+REGFILTERPINS REG_PINS[] {
     {
         .strName = nullptr,                  // pin name (obsolete)
         .bRendered = FALSE,                  // is pin rendered?
@@ -45,7 +47,7 @@ static REGFILTERPINS REG_PINS[] {
     },
 };
 
-static constexpr AMOVIESETUP_FILTER REG_FILTER {
+constexpr AMOVIESETUP_FILTER REG_FILTER {
     .clsID = &__uuidof(CSynthFilter),                 // filter CLSID
     .strName = FILTER_NAME_FULL,                      // filter name
     .dwMerit = MERIT_DO_NOT_USE + 1,                  // filter merit
@@ -54,7 +56,7 @@ static constexpr AMOVIESETUP_FILTER REG_FILTER {
 };
 
 template <typename T>
-static constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
+constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
     CUnknown *newInstance = new T(pUnk, phr);
     if (newInstance == nullptr) {
         *phr = E_OUTOFMEMORY;
@@ -63,7 +65,7 @@ static constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> C
     return newInstance;
 }
 
-static auto RegisterFilter() -> HRESULT {
+auto RegisterFilter() -> HRESULT {
     std::vector<REGPINTYPES> pinTypes;
     for (const Format::PixelFormat &pixelFormat : Format::PIXEL_FORMATS) {
         pinTypes.emplace_back(&MEDIATYPE_Video, &pixelFormat.mediaSubtype);
@@ -82,6 +84,8 @@ static auto RegisterFilter() -> HRESULT {
     }
 
     return hr;
+}
+
 }
 
 }

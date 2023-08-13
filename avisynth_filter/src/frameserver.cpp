@@ -7,9 +7,13 @@
 #include "filter.h"
 
 
-static constexpr const char *AVS_FUNC_NAME_SOURCE_CLIP = "AvsFilterSource";
-static constexpr const char *AVS_FUNC_NAME_DISCONNECT = "AvsFilterDisconnect";
-static constexpr const char *AVS_FUNC_NAME_GET_SOURCE_PATH = "AvsFilterGetSourcePath";
+namespace {
+
+constexpr const char *AVS_FUNC_NAME_SOURCE_CLIP     = "AvsFilterSource";
+constexpr const char *AVS_FUNC_NAME_DISCONNECT      = "AvsFilterDisconnect";
+constexpr const char *AVS_FUNC_NAME_GET_SOURCE_PATH = "AvsFilterGetSourcePath";
+
+}
 
 const AVS_Linkage *AVS_linkage = nullptr;
 
@@ -26,7 +30,7 @@ auto __cdecl Create_AvsFilterDisconnect(AVSValue args, void *user_data, IScriptE
 
 auto __cdecl Create_AvsFilterGetSourcePath(AVSValue args, void *user_data, IScriptEnvironment *env) -> AVSValue {
     const CSynthFilter *filter = *reinterpret_cast<const CSynthFilter **>(user_data);
-    static std::string sourcePathStr = ConvertWideToUtf8(filter->GetVideoSourcePath().native());
+    const std::string sourcePathStr = ConvertWideToUtf8(filter->GetVideoSourcePath().native());
     return AVSValue(sourcePathStr.c_str());
 }
 

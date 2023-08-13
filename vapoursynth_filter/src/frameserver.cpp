@@ -9,11 +9,13 @@
 
 namespace SynthFilter {
 
-static constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
-static constexpr const char *VPS_VAR_NAME_DISCONNECT = "VpsFilterDisconnect";
-static constexpr const char *VPS_VAR_NAME_SOURCE_PATH = "VpsFilterSourcePath";
+namespace {
 
-static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrame * {
+constexpr const char *VPS_VAR_NAME_SOURCE_NODE = "VpsFilterSource";
+constexpr const char *VPS_VAR_NAME_DISCONNECT  = "VpsFilterDisconnect";
+constexpr const char *VPS_VAR_NAME_SOURCE_PATH = "VpsFilterSourcePath";
+
+auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) -> const VSFrame * {
     const CSynthFilter *filter = reinterpret_cast<const CSynthFilter *>(instanceData);
 
     if (filter == nullptr) {
@@ -22,6 +24,8 @@ static auto VS_CC SourceGetFrame(int n, int activationReason, void *instanceData
     } else {
         return filter->frameHandler->GetSourceFrame(n);
     }
+}
+
 }
 
 AutoReleaseVSFrame::AutoReleaseVSFrame(VSFrame *newFrame)

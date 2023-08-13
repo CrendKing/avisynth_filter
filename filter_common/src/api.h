@@ -19,13 +19,15 @@ enum class AvsState {
     Error,
 };
 
-static constexpr const int API_VERSION                           = 1;
-static constexpr const char *API_WND_CLASS_NAME                  = "AvsFilterRemoteControlClass";
-static constexpr const char *API_CSV_DELIMITER                   = ";";
+namespace {
+
+constexpr const int API_VERSION                           = 1;
+constexpr const char *API_WND_CLASS_NAME                  = "AvsFilterRemoteControlClass";
+constexpr const char *API_CSV_DELIMITER                   = ";";
 
 // scale the fractional numbers by a factor and convert to integer for API messaging
-static constexpr const int PAR_SCALE_FACTOR                      = 1000;
-static constexpr const int FRAME_RATE_SCALE_FACTOR               = 1000;
+constexpr const int PAR_SCALE_FACTOR                      = 1000;
+constexpr const int FRAME_RATE_SCALE_FACTOR               = 1000;
 
 ////// filter related messages //////
 
@@ -33,14 +35,14 @@ static constexpr const int FRAME_RATE_SCALE_FACTOR               = 1000;
  * input : none
  * output: current API version in integer
  */
-static constexpr const ULONG_PTR API_MSG_GET_API_VERSION         = 100;
+constexpr const ULONG_PTR API_MSG_GET_API_VERSION         = 100;
 
 /**
  * input : none
  * output: list of video filter names joined by the delimiter
  * note  : the order of filters is preserved
  */
-static constexpr const ULONG_PTR API_MSG_GET_VIDEO_FILTERS       = 101;
+constexpr const ULONG_PTR API_MSG_GET_VIDEO_FILTERS       = 101;
 
 ////// input related messages //////
 
@@ -48,19 +50,19 @@ static constexpr const ULONG_PTR API_MSG_GET_VIDEO_FILTERS       = 101;
  * input : none
  * output: input video's width
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_WIDTH         = 200;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_WIDTH         = 200;
 
 /**
  * input : none
  * output: input video's height
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_HEIGHT        = 201;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_HEIGHT        = 201;
 
 /**
  * input : none
  * output: input video's pixel aspect ratio, scaled by PAR_SCALE_FACTOR
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_PAR           = 202;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_PAR           = 202;
 
 /**
  * input : none
@@ -68,38 +70,38 @@ static constexpr const ULONG_PTR API_MSG_GET_INPUT_PAR           = 202;
  * note  : unlike API_MSG_GET_SOURCE_AVG_FPS, this FPS could vary if the input video
  *         has variable frame rate, or source filter delivers sample in stuttering way
  */
-static constexpr const ULONG_PTR API_MSG_GET_CURRENT_INPUT_FPS   = 203;
+constexpr const ULONG_PTR API_MSG_GET_CURRENT_INPUT_FPS   = 203;
 
 /**
  * input : none
  * output: input video's source path
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_SOURCE_PATH   = 204;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_SOURCE_PATH   = 204;
 
 /**
  * input : none
  * output: input video's codec in FourCC
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_CODEC         = 205;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_CODEC         = 205;
 
 /**
  * input : none
  * output: input video's HDR type
  * note  : 0 means no HDR, 1 means has HDR
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_HDR_TYPE      = 206;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_HDR_TYPE      = 206;
 
 /**
  * input : none
  * output: input video's HDR liminance, in cd/m2
  */
-static constexpr const ULONG_PTR API_MSG_GET_INPUT_HDR_LUMINANCE = 207;
+constexpr const ULONG_PTR API_MSG_GET_INPUT_HDR_LUMINANCE = 207;
 
 /**
  * input : none
  * output: average frames per second from the source video, scaled by FRAME_RATE_SCALE_FACTOR
  */
-static constexpr const ULONG_PTR API_MSG_GET_SOURCE_AVG_FPS      = 208;
+constexpr const ULONG_PTR API_MSG_GET_SOURCE_AVG_FPS      = 208;
 
 ////// output related messages //////
 
@@ -107,7 +109,7 @@ static constexpr const ULONG_PTR API_MSG_GET_SOURCE_AVG_FPS      = 208;
  * input : none
  * output: current output video's frames per second, scaled by FRAME_RATE_SCALE_FACTOR
  */
-static constexpr const ULONG_PTR API_MSG_GET_CURRENT_OUTPUT_FPS  = 300;
+constexpr const ULONG_PTR API_MSG_GET_CURRENT_OUTPUT_FPS  = 300;
 
 ////// FrameServer related messages //////
 
@@ -115,26 +117,27 @@ static constexpr const ULONG_PTR API_MSG_GET_CURRENT_OUTPUT_FPS  = 300;
  * input : none
  * output: current FrameServer environment state, in AvsState
  */
-static constexpr const ULONG_PTR API_MSG_GET_AVS_STATE           = 400;
+constexpr const ULONG_PTR API_MSG_GET_AVS_STATE           = 400;
 
 /**
  * input : none
  * output: current FrameServer environment error message, if available
  * return: FALSE if there is no error, TRUE otherwise
  */
-static constexpr const ULONG_PTR API_MSG_GET_AVS_ERROR           = 401;
+constexpr const ULONG_PTR API_MSG_GET_AVS_ERROR           = 401;
 
 /**
  * input : none
  * output: effective FrameServer source file path, if available
  * return: FALSE if FrameServer script file is effective, TRUE otherwise
  */
-static constexpr const ULONG_PTR API_MSG_GET_AVS_SOURCE_FILE     = 402;
+constexpr const ULONG_PTR API_MSG_GET_AVS_SOURCE_FILE     = 402;
 
 /**
  * input : FrameServer script file path
  * output: none
  */
-static constexpr const ULONG_PTR API_MSG_SET_AVS_SOURCE_FILE     = 403;
+constexpr const ULONG_PTR API_MSG_SET_AVS_SOURCE_FILE     = 403;
 
+}
 }
