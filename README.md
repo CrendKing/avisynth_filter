@@ -154,7 +154,7 @@ else:
 
 ## Build
 
-A script `build.ps1` is included to automate the build process. It obtains dependencies and starts compilation. Before running `build.ps1`, make sure you have the latest [Visual Studio](https://visualstudio.microsoft.com/) and [git](https://git-scm.com/download/win) installed. When running the script, pass the target configuration and platform as arguments, e.g. `build.ps1 Debug x64` or `build.ps1 Release x86`.
+A script `build.ps1` is included to automate the build process. It obtains dependencies and starts compilation. Before running `build.ps1`, make sure you have the latest [Visual Studio](https://visualstudio.microsoft.com/) and [git](https://git-scm.com/download/win) installed. When running the script, pass the target configuration and platform as arguments, e.g. `build.ps1 -configuration Debug -platform x64` or `build.ps1 -configuration Release -platform x86`.
 
 ## Credit
 

@@ -1,22 +1,18 @@
 Param(
-    [Parameter(Mandatory)]
-    $configuration,
-    [Parameter(Mandatory)]
-    $platform
+    $configuration = 'release',
+    $platform = 'x64'
 )
 
 
-$vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -utf8 -property installationPath -version '[17,99]'
+$vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -utf8 -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if (!$vsPath) {
     exit 1
 }
-
-Import-Module "${vsPath}\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
-Enter-VsDevShell -VsInstallPath $vsPath -DevCmdArguments "-arch=amd64 -host_arch=amd64 -no_logo" -SkipAutomaticLocation
+& "${vsPath}\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -SkipAutomaticLocation | Out-Null
 
 $workingDir = "${PSScriptRoot}\dep_avisynth_plus"
-if (-Not (Test-Path $workingDir)) {
-    mkdir $workingDir
+if (!(Test-Path $workingDir)) {
+    New-Item -ItemType Directory $workingDir -ErrorAction SilentlyContinue
     Set-Location $workingDir
 
     git clone 'https://github.com/AviSynth/AviSynthPlus.git' --sparse --depth=1 --filter=blob:none
@@ -31,8 +27,8 @@ if (-Not (Test-Path $workingDir)) {
         foreach ($asset in $rel.assets) {
             if ($asset.name -like 'AviSynthPlus_*-filesonly.7z') {
                 Invoke-WebRequest $asset.browser_download_url -OutFile $asset.name
-                7z e $asset.name -olibs\32 '*\x86\c_api\*.lib'
-                7z e $asset.name -olibs\64 '*\x64\c_api\*.lib'
+                7z e $asset.name -olibs\32 '*\x86\Output\c_api\*.lib'
+                7z e $asset.name -olibs\64 '*\x64\Output\c_api\*.lib'
                 $foundAsset = $true
                 break
             }
@@ -47,8 +43,8 @@ if (-Not (Test-Path $workingDir)) {
 }
 
 $workingDir = "${PSScriptRoot}\dep_vapoursynth"
-if (-Not (Test-Path $workingDir)) {
-    mkdir $workingDir
+if (!(Test-Path $workingDir)) {
+    New-Item -ItemType Directory $workingDir -ErrorAction SilentlyContinue
     Set-Location $workingDir
 
     $latestRelease = Invoke-RestMethod -Headers @{ 'Accept' = 'application/vnd.github.v3+json' } 'https://api.github.com/repos/vapoursynth/vapoursynth/releases'
@@ -76,7 +72,7 @@ if (-Not (Test-Path $workingDir)) {
 Set-Location $PSScriptRoot
 
 $workingDir = "${PSScriptRoot}\dep_simpleini"
-if (-Not (Test-Path $workingDir)) {
+if (!(Test-Path $workingDir)) {
     git clone https://github.com/brofield/simpleini.git --depth=1 dep_simpleini
 }
 
