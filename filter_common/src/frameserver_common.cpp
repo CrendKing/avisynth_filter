@@ -36,9 +36,11 @@ auto AuxFrameServer::GenerateMediaType(const Format::PixelFormat &pixelFormat, c
         // assuming the pixel aspect ratio remains the same, new DAR = PAR / new (script) SAR
         const auto &sourceVideoInfo = FrameServerCommon::GetInstance()._sourceVideoInfo;
         if (_scriptVideoInfo.width != sourceVideoInfo.width || _scriptVideoInfo.height != sourceVideoInfo.height) {
-            newVih2->dwPictAspectRatioX = newVih2->dwPictAspectRatioX * sourceVideoInfo.height * _scriptVideoInfo.width;
-            newVih2->dwPictAspectRatioY = newVih2->dwPictAspectRatioY * sourceVideoInfo.width * _scriptVideoInfo.height;
-            CoprimeIntegers(newVih2->dwPictAspectRatioX, newVih2->dwPictAspectRatioY);
+            unsigned long long darX = static_cast<unsigned long long>(newVih2->dwPictAspectRatioX) * sourceVideoInfo.height * _scriptVideoInfo.width;
+            unsigned long long darY = static_cast<unsigned long long>(newVih2->dwPictAspectRatioY) * sourceVideoInfo.width * _scriptVideoInfo.height;
+            CoprimeIntegers(darX, darY);
+            newVih2->dwPictAspectRatioX = static_cast<DWORD>(darX);
+            newVih2->dwPictAspectRatioY = static_cast<DWORD>(darY);
         }
     } else {
         newBmi = &newVih->bmiHeader;
