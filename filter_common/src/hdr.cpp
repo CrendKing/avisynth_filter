@@ -48,6 +48,14 @@ auto HDRSideData::ReadFrom(IMediaSideData *from) -> void {
         StoreSideData(IID_MediaSideDataHDR10Plus, data, dataSize);
     }
 
+    if (SUCCEEDED(from->GetSideData(IID_MediaSideDataDOVIRPU, &data, &dataSize))) {
+        StoreSideData(IID_MediaSideDataDOVIRPU, data, dataSize);
+    }
+
+    if (SUCCEEDED(from->GetSideData(IID_MediaSideDataDOVIMetadata, &data, &dataSize))) {
+        StoreSideData(IID_MediaSideDataDOVIMetadata, data, dataSize);
+    }
+
     if (SUCCEEDED(from->GetSideData(IID_MediaSideData3DOffset, &data, &dataSize))) {
         StoreSideData(IID_MediaSideData3DOffset, data, dataSize);
     }
@@ -64,6 +72,14 @@ auto HDRSideData::WriteTo(IMediaSideData *to) const -> void {
 
     if (!_hdr10PlusData.empty()) {
         to->SetSideData(IID_MediaSideDataHDR10Plus, _hdr10PlusData.data(), _hdr10PlusData.size());
+    }
+
+    if (!_doviRPUData.empty()) {
+        to->SetSideData(IID_MediaSideDataDOVIRPU, _doviRPUData.data(), _doviRPUData.size());
+    }
+
+    if (!_doviMetaData.empty()) {
+        to->SetSideData(IID_MediaSideDataDOVIMetadata, _doviMetaData.data(), _doviMetaData.size());
     }
 
     if (!_hdr3DOffsetData.empty()) {
@@ -95,6 +111,22 @@ auto HDRSideData::GetHDR10PlusData() const -> std::optional<const BYTE *> {
     return _hdr10PlusData.data();
 }
 
+auto HDRSideData::GetDoViRPUData() const -> std::optional<const BYTE *> {
+    if (_doviRPUData.empty()) {
+        return std::nullopt;
+    }
+
+    return _doviRPUData.data();
+}
+
+auto HDRSideData::GetDoViMetaData() const -> std::optional<const BYTE *> {
+    if (_doviMetaData.empty()) {
+        return std::nullopt;
+    }
+
+    return _doviMetaData.data();
+}
+
 auto HDRSideData::GetHDR3DOffsetData() const -> std::optional<const BYTE *> {
     if (_hdr3DOffsetData.empty()) {
         return std::nullopt;
@@ -114,6 +146,14 @@ auto HDRSideData::GetDataByGUID(GUID guidType) -> std::vector<BYTE> * {
 
     if (guidType == IID_MediaSideDataHDR10Plus) {
         return &_hdr10PlusData;
+    }
+
+    if (guidType == IID_MediaSideDataDOVIRPU) {
+        return &_doviRPUData;
+    }
+
+    if (guidType == IID_MediaSideDataDOVIMetadata) {
+        return &_doviMetaData;
     }
 
     if (guidType == IID_MediaSideData3DOffset) {

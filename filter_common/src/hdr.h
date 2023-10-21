@@ -21,6 +21,8 @@ public:
     auto GetHDRData() const -> std::optional<const BYTE *>;
     auto GetHDRContentLightLevelData() const -> std::optional<const BYTE *>;
     auto GetHDR10PlusData() const -> std::optional<const BYTE *>;
+    auto GetDoViRPUData() const -> std::optional<const BYTE *>;
+    auto GetDoViMetaData() const -> std::optional<const BYTE *>;
     auto GetHDR3DOffsetData() const -> std::optional<const BYTE *>;
 
 private:
@@ -30,6 +32,8 @@ private:
     std::vector<BYTE> _hdrData;
     std::vector<BYTE> _hdrContentLightLevelData;
     std::vector<BYTE> _hdr10PlusData;
+    std::vector<BYTE> _doviRPUData;
+    std::vector<BYTE> _doviMetaData;
     std::vector<BYTE> _hdr3DOffsetData;
 };
 

@@ -106,6 +106,12 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                     _filter._inputVideoFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
                 }
             }
+
+            const BYTE* doviData;
+            size_t doviSz = 0;
+            hdrSideData->RetrieveSideData(IID_MediaSideDataDOVIMetadata, &doviData, &doviSz);
+            if (doviSz > 0)
+                AVSF_VPS_API->mapSetData(frameProps, "_DoVi", (const char*)doviData, (int)doviSz, dtBinary, maReplace);
         }
     }
 
@@ -386,11 +392,10 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, in
     Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
 
     const auto iter = _sourceFrames.find(sourceFrameNb);
-    ASSERT(iter != _sourceFrames.end());
-
-    if (const ATL::CComQIPtr<IMediaSideData> sideData(outSample); sideData != nullptr) {
-        iter->second.hdrSideData->WriteTo(sideData);
-    }
+    if(iter != _sourceFrames.end())
+        if (const ATL::CComQIPtr<IMediaSideData> sideData(outSample); sideData != nullptr) {
+            iter->second.hdrSideData->WriteTo(sideData);
+        }
 
     RefreshOutputFrameRates(outputFrameNb);
 

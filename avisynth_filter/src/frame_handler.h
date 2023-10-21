@@ -41,7 +41,7 @@ private:
     static auto RefreshFrameRatesTemplate(int sampleNb, int &checkpointSampleNb, std::chrono::steady_clock::time_point &checkpointTime, int &currentFrameRate) -> void;
 
     auto ResetInput() -> void;
-    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime, DWORD sourceTypeSpecificFlags) -> bool;
+    auto PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime, DWORD sourceTypeSpecificFlags, int &sourceFrameNb) -> bool;
     auto WorkerProc() -> void;
     auto GarbageCollect(int srcFrameNb) -> void;
     auto ChangeOutputFormat() -> bool;

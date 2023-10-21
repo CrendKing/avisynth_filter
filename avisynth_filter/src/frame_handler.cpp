@@ -73,6 +73,7 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
         AVSF_AVS_API->propSetFloat(frameProps, FRAME_PROP_NAME_ABS_TIME, inputSampleStartTime / static_cast<double>(UNITS), PROPAPPENDMODE_REPLACE);
         AVSF_AVS_API->propSetInt(frameProps, "_SARNum", _filter._inputVideoFormat.pixelAspectRatioNum, PROPAPPENDMODE_REPLACE);
         AVSF_AVS_API->propSetInt(frameProps, "_SARDen", _filter._inputVideoFormat.pixelAspectRatioDen, PROPAPPENDMODE_REPLACE);
+        AVSF_AVS_API->propSetInt(frameProps, FRAME_PROP_NAME_SOURCE_FRAME_NB, _nextSourceFrameNb, PROPAPPENDMODE_REPLACE);
 
         if (const std::optional<int> &optColorRange = _filter._inputVideoFormat.colorSpaceInfo.colorRange) {
             AVSF_AVS_API->propSetInt(frameProps, "_ColorRange", *optColorRange, PROPAPPENDMODE_REPLACE);
@@ -106,6 +107,16 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
                 } else {
                     _filter._inputVideoFormat.hdrLuminance = static_cast<int>(reinterpret_cast<const MediaSideDataHDR *>(*optHdr)->max_display_mastering_luminance);
                 }
+            }
+
+            if (FrameServerCommon::GetInstance().IsFramePropsSupported()) {
+                AVSMap* frameProps = AVSF_AVS_API->getFramePropsRW(frame);
+
+                const BYTE* doviData;
+                size_t doviSz = 0;
+                hdrSideData->RetrieveSideData(IID_MediaSideDataDOVIMetadata, &doviData, &doviSz);
+                if (doviSz > 0)
+                    AVSF_AVS_API->propSetData(frameProps, "_DoVi", (const char*)doviData, (int)doviSz, PROPAPPENDMODE_REPLACE);
             }
         }
     }
@@ -207,7 +218,8 @@ auto FrameHandler::ResetInput() -> void {
     _currentInputFrameRate = 0;
 }
 
-auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime, DWORD sourceTypeSpecificFlags) -> bool {
+auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, REFERENCE_TIME startTime, REFERENCE_TIME stopTime, DWORD sourceTypeSpecificFlags, int& sourceFrameNb) -> bool {
+    sourceFrameNb = -1;
     if (FAILED(_filter.m_pOutput->GetDeliveryBuffer(&outSample, &startTime, &stopTime, 0))) {
         // avoid releasing the invalid pointer in case the function change it to some random invalid address
         outSample.Detach();
@@ -269,6 +281,8 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
                         } else {
                             sampleProps.dwTypeSpecificFlags = 0;
                         }
+
+                        sourceFrameNb = static_cast<int>(AVSF_AVS_API->propGetInt(frameProps, FRAME_PROP_NAME_SOURCE_FRAME_NB, 0, &propGetError));
                     } else {
                         // there is no way to convey interlace status without the "_FieldBased" frame property
                         // default to progressive to avoid unwanted deinterlacing
@@ -403,9 +417,20 @@ auto FrameHandler::WorkerProc() -> void {
 
             RefreshOutputFrameRates(_nextOutputFrameNb);
 
-            if (ATL::CComPtr<IMediaSample> outSample; PrepareOutputSample(outSample, outputStartTime, outputStopTime, processSourceFrameIters[0]->second.typeSpecificFlags)) {
+            int sourceFrameNb;
+            if (ATL::CComPtr<IMediaSample> outSample; PrepareOutputSample(outSample, outputStartTime, outputStopTime, processSourceFrameIters[0]->second.typeSpecificFlags, sourceFrameNb)) {
                 if (const ATL::CComQIPtr<IMediaSideData> sideData(outSample); sideData != nullptr) {
-                    processSourceFrameIters[0]->second.hdrSideData->WriteTo(sideData);
+                    bool ok = false;
+                    if (sourceFrameNb >= 0) { //must be always set with AVS 3.6+
+                        const auto iter = _sourceFrames.find(sourceFrameNb);
+                        if(iter != _sourceFrames.end())
+                        {
+                            iter->second.hdrSideData->WriteTo(sideData);
+                            ok = true;
+                        }
+                    }
+                    if(!ok)
+                        processSourceFrameIters[0]->second.hdrSideData->WriteTo(sideData);
                 }
 
                 _filter.m_pOutput->Deliver(outSample);

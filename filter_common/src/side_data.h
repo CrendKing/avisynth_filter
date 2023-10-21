@@ -130,6 +130,109 @@ struct MediaSideDataHDR10Plus
 };
 #pragma pack(pop)
 
+// {BAE40E6C-5B93-4170-90CC-5D5F02A29638}
+DEFINE_GUID(IID_MediaSideDataDOVIRPU, 0xbae40e6c, 0x5b93, 0x4170, 0x90, 0xcc, 0x5d, 0x5f, 0x2, 0xa2, 0x96, 0x38);
+
+// {277EE779-13F4-434E-BDEC-3D6F8C0E15D2}
+DEFINE_GUID(IID_MediaSideDataDOVIMetadata, 0x277ee779, 0x13f4, 0x434e, 0xbd, 0xec, 0x3d, 0x6f, 0x8c, 0xe, 0x15, 0xd2);
+
+#pragma pack(push, 1)
+// Dolby Vision metadata
+// Refer to the specification for the meaning of the fields
+struct MediaSideDataDOVIMetadata
+{
+    struct
+    {
+        uint8_t rpu_type;
+        uint16_t rpu_format;
+        uint8_t vdr_rpu_profile;
+        uint8_t vdr_rpu_level;
+        uint8_t chroma_resampling_explicit_filter_flag;
+        uint8_t coef_data_type; /* informative, lavc always converts to fixed */
+        uint8_t coef_log2_denom;
+        uint8_t vdr_rpu_normalized_idc;
+        uint8_t bl_video_full_range_flag;
+        uint8_t bl_bit_depth;  /* [8, 16] */
+        uint8_t el_bit_depth;  /* [8, 16] */
+        uint8_t vdr_bit_depth; /* [8, 16] */
+        uint8_t spatial_resampling_filter_flag;
+        uint8_t el_spatial_resampling_filter_flag;
+        uint8_t disable_residual_flag;
+    } Header;
+
+    struct
+    {
+        uint8_t vdr_rpu_id;
+        uint8_t mapping_color_space;
+        uint8_t mapping_chroma_format_idc;
+
+        struct
+        {
+#define LAV_DOVI_MAX_PIECES 8
+            uint8_t num_pivots;                           /* [2, 9] */
+            uint16_t pivots[LAV_DOVI_MAX_PIECES + 1]; /* sorted ascending */
+            uint8_t mapping_idc[LAV_DOVI_MAX_PIECES];     /* 0 polynomial, 1 mmr */
+
+            /* polynomial */
+            uint8_t poly_order[LAV_DOVI_MAX_PIECES];    /* [1, 2] */
+            int64_t poly_coef[LAV_DOVI_MAX_PIECES][3]; /* x^0, x^1, x^2 */
+
+            /* mmr */
+            uint8_t mmr_order[LAV_DOVI_MAX_PIECES]; /* [1, 3] */
+            int64_t mmr_constant[LAV_DOVI_MAX_PIECES];
+            int64_t mmr_coef[LAV_DOVI_MAX_PIECES][3 /* order - 1 */][7];
+        } curves[3]; /* per component */
+
+        /* Non-linear inverse quantization */
+        uint8_t nlq_method_idc; // -1 none, 0 linear dz
+        uint32_t num_x_partitions;
+        uint32_t num_y_partitions;
+        struct
+        {
+            uint16_t nlq_offset;
+            uint64_t vdr_in_max;
+
+            /* linear dz */
+            uint64_t linear_deadzone_slope;
+            uint64_t linear_deadzone_threshold;
+        } nlq[3]; /* per component */
+    } Mapping;
+
+    struct
+    {
+        uint8_t dm_metadata_id;
+        uint8_t scene_refresh_flag;
+
+        /**
+         * Coefficients of the custom Dolby Vision IPT-PQ matrices. These are to be
+         * used instead of the matrices indicated by the frame's colorspace tags.
+         * The output of rgb_to_lms_matrix is to be fed into a BT.2020 LMS->RGB
+         * matrix based on a Hunt-Pointer-Estevez transform, but without any
+         * crosstalk. (See the definition of the ICtCp colorspace for more
+         * information.)
+         */
+        double ycc_to_rgb_matrix[9]; /* before PQ linearization */
+        double ycc_to_rgb_offset[3]; /* input offset of neutral value */
+        double rgb_to_lms_matrix[9]; /* after PQ linearization */
+
+        /**
+         * Extra signal metadata (see Dolby patents for more info).
+         */
+        uint16_t signal_eotf;
+        uint16_t signal_eotf_param0;
+        uint16_t signal_eotf_param1;
+        uint32_t signal_eotf_param2;
+        uint8_t signal_bit_depth;
+        uint8_t signal_color_space;
+        uint8_t signal_chroma_format;
+        uint8_t signal_full_range_flag; /* [0, 3] */
+        uint16_t source_min_pq;
+        uint16_t source_max_pq;
+        uint16_t source_diagonal;
+    } ColorMetadata;
+};
+#pragma pack(pop)
+
 // -----------------------------------------------------------------
 // 3D Plane Offset Side Data
 // -----------------------------------------------------------------
@@ -158,5 +261,18 @@ struct MediaSideData3DOffset
 DEFINE_GUID(IID_MediaSideDataEIA608CC, 0x40fefd7f, 0x85dd, 0x4335, 0xa8, 0x4, 0x8a, 0x33, 0xb0, 0xbf, 0x7b, 0x81);
 
 // There is no struct definition. The data is supplied as a list of 3 byte CC data packets (control byte + cc_data1/2)
+
+// -----------------------------------------------------------------
+// Media Control Flags
+// -----------------------------------------------------------------
+
+// {B5411CE3-3B21-4FD6-80A8-CE682969F795}
+DEFINE_GUID(IID_MediaSideDataControlFlags, 0xb5411ce3, 0x3b21, 0x4fd6, 0x80, 0xa8, 0xce, 0x68, 0x29, 0x69, 0xf7, 0x95);
+
+// No struct definition, just a single DWORD for additional flags
+enum MediaSideDataControlFlags
+{
+    MediaSideDataControlFlags_EndOfSequence = (1 << 0),
+};
 
 }
