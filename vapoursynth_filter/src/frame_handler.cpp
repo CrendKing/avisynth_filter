@@ -81,14 +81,15 @@ auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     AVSF_VPS_API->mapSetInt(frameProps, "_Transfer", _filter._inputVideoFormat.colorSpaceInfo.transfer, maReplace);
 
     const DWORD typeSpecificFlags = _filter.m_pInput->SampleProps()->dwTypeSpecificFlags;
-    int rfpFieldBased;
-    if (typeSpecificFlags & AM_VIDEO_FLAG_WEAVE) {
-        rfpFieldBased = VSFieldBased::VSC_FIELD_PROGRESSIVE;
-    } else if (typeSpecificFlags & AM_VIDEO_FLAG_FIELD1FIRST) {
-        rfpFieldBased = VSFieldBased::VSC_FIELD_TOP;
-    } else {
-        rfpFieldBased = VSFieldBased::VSC_FIELD_BOTTOM;
-    }
+    const int rfpFieldBased = [&]() {
+        if (typeSpecificFlags & AM_VIDEO_FLAG_WEAVE) {
+            return VSFieldBased::VSC_FIELD_PROGRESSIVE;
+        } else if (typeSpecificFlags & AM_VIDEO_FLAG_FIELD1FIRST) {
+            return VSFieldBased::VSC_FIELD_TOP;
+        } else {
+            return VSFieldBased::VSC_FIELD_BOTTOM;
+        }
+    }();
     AVSF_VPS_API->mapSetInt(frameProps, FRAME_PROP_NAME_FIELD_BASED, rfpFieldBased, maReplace);
     AVSF_VPS_API->mapSetInt(frameProps, FRAME_PROP_NAME_TYPE_SPECIFIC_FLAGS, typeSpecificFlags, maReplace);
 
