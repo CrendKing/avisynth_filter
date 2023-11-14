@@ -54,7 +54,6 @@ if (!(Test-Path $workingDir)) {
             if ($asset.name -like 'VapourSynth64-Portable-R*.7z') {
                 Invoke-WebRequest $asset.browser_download_url -OutFile $asset.name
                 7z e $asset.name -oinclude 'sdk\include\*'
-                7z e $asset.name -olibs\32 'sdk\lib32\*'
                 7z e $asset.name -olibs\64 'sdk\lib64\*'
                 $foundAsset = $true
                 break
