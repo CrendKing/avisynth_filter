@@ -37,6 +37,7 @@
 #include <dxva.h>
 #include <immintrin.h>
 #include <initguid.h>
+#include <isa_availability.h>
 #include <processthreadsapi.h>
 #include <shellapi.h>
 
