@@ -48,9 +48,9 @@
 #ifdef AVSF_AVISYNTH
     #include <avisynth.h>
 #else
+    #include <VapourSynth4.h>
     #include <VSHelper4.h>
     #include <VSScript4.h>
-    #include <VapourSynth4.h>
 #endif
 #include <SimpleIni.h>
 #include <VSConstants4.h>

@@ -6,11 +6,8 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "regsvr32",
-            "args": ["${workspaceFolder}/debug/avisynth_filter_64.ax"],
+            "args": ["${workspaceFolder}/x64/Debug/vapoursynth_filter_64.ax"],
             "cwd": "${workspaceFolder}",
-            "sourceFileMap": {
-                "d:/a/avisynth_filter/avisynth_filter": "${workspaceFolder}"
-            },
         }
     ]
 }

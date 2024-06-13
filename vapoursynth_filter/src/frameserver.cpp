@@ -50,14 +50,14 @@ FrameServerCommon::FrameServerCommon() {
     Environment::GetInstance().Log(L"FrameServerCommon()");
 
     _vsScriptApi = getVSScriptAPI(VSSCRIPT_API_VERSION);
-    _vsApi = getVapourSynthAPI(VAPOURSYNTH_API_VERSION);
-    if (_vsApi == nullptr || _vsScriptApi == nullptr) {
+    if (_vsScriptApi == nullptr) {
         const WCHAR *errorMessage = L"Unable to initialize VapourSynth API 4.0";
         Environment::GetInstance().Log(errorMessage);
         MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
         throw;
     }
 
+    _vsApi = _vsScriptApi->getVSAPI(VAPOURSYNTH_API_VERSION);
     VSCore *vsCore = _vsApi->createCore(0);
     VSCoreInfo coreInfo;
     _vsApi->getCoreInfo(vsCore, &coreInfo);
@@ -99,8 +99,8 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
     const VSVideoInfo &sourceVideoInfo = Format::GetVideoFormat(mediaType, this).videoInfo;
     FrameServerCommon::GetInstance()._sourceVideoInfo = sourceVideoInfo;
-    _sourceClip = AVSF_VPS_API->createVideoFilter2("VpsFilter_Source", &sourceVideoInfo, SourceGetFrame, nullptr, fmParallelRequests, nullptr, 0, const_cast<CSynthFilter *>(filter), GetVsCore());
-    AVSF_VPS_API->setCacheMode(_sourceClip, 0);
+    _sourceClip = AVSF_VPS_API->createVideoFilter2("VpsFilter_Source", &sourceVideoInfo, SourceGetFrame, nullptr, fmParallel, nullptr, 0, const_cast<CSynthFilter *>(filter), GetVsCore());
+    AVSF_VPS_API->setCacheMode(_sourceClip, cmForceDisable);
 
     VSMap *sourceInputs = AVSF_VPS_API->createMap();
     AVSF_VPS_API->mapSetNode(sourceInputs, VPS_VAR_NAME_SOURCE_NODE, _sourceClip, 0);

@@ -1,6 +1,7 @@
+[CmdletBinding()]
 Param(
-    $configuration = 'release',
-    $platform = 'x64'
+    $Configuration = 'release',
+    $Platform = 'x64'
 )
 
 
@@ -75,5 +76,5 @@ if (!(Test-Path $workingDir)) {
     git clone https://github.com/brofield/simpleini.git --depth=1 dep_simpleini
 }
 
-MSBuild.exe -property:"Configuration=${configuration};Platform=${platform}" -maxCpuCount -nologo avisynth_filter.sln
+MSBuild.exe -property:"Configuration=${Configuration};Platform=${Platform}" -maxCpuCount -nologo avisynth_filter.sln
 exit $LASTEXITCODE
