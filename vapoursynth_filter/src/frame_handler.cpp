@@ -11,24 +11,28 @@ namespace SynthFilter {
 auto FrameHandler::AddInputSample(IMediaSample *inputSample) -> HRESULT {
     HRESULT hr;
 
-    _addInputSampleCv.wait(_filter.m_csReceive, [this]() -> bool {
-        if (_isFlushing) {
-            return true;
-        }
+    {
+        std::shared_lock sharedSourceLock(_sourceMutex);
 
-        if (_nextSourceFrameNb <= Environment::GetInstance().GetInitialSrcBuffer()) {
-            return true;
-        }
+        _addInputSampleCv.wait(sharedSourceLock, [this]() -> bool {
+            if (_isFlushing) {
+                return true;
+            }
 
-        UpdateExtraSrcBuffer();
+            if (_nextSourceFrameNb <= Environment::GetInstance().GetInitialSrcBuffer()) {
+                return true;
+            }
 
-        // at least NUM_SRC_FRAMES_PER_PROCESSING source frames are needed in queue for stop time calculation
-        if (static_cast<int>(_sourceFrames.size()) < NUM_SRC_FRAMES_PER_PROCESSING + _extraSrcBuffer) {
-            return true;
-        }
+            UpdateExtraSrcBuffer();
 
-        return _nextSourceFrameNb <= _lastUsedSourceFrameNb + Environment::GetInstance().GetInitialSrcBuffer() + NUM_SRC_FRAMES_PER_PROCESSING;
-    });
+            // at least NUM_SRC_FRAMES_PER_PROCESSING source frames are needed in queue for stop time calculation
+            if (static_cast<int>(_sourceFrames.size()) < NUM_SRC_FRAMES_PER_PROCESSING + _extraSrcBuffer) {
+                return true;
+            }
+
+            return _nextSourceFrameNb <= _lastUsedSourceFrameNb + Environment::GetInstance().GetInitialSrcBuffer() + NUM_SRC_FRAMES_PER_PROCESSING;
+        });
+    }
 
     if (_isFlushing || _isStopping) {
         Environment::GetInstance().Log(L"Reject input sample due to flush or stop");
