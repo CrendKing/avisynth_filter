@@ -7,38 +7,42 @@ on:
       - test
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   prepare:
     runs-on: windows-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-    - id: set-matrix
-      run: |
-        $matrixItems = New-Object System.Collections.ArrayList
-        $matrixItems.Add(@{
-          configuration = 'Debug'
-          platform = 'x64'
-          'output-dir' = 'x64'
-        })
-        $matrixItems.Add(@{
-          configuration = 'Debug'
-          platform = 'x86'
-          'output-dir' = 'Win32'
-        })
-        if ($env:GITHUB_REF -like 'refs/heads/master*') {
+      - id: set-matrix
+        run: |
+          $matrixItems = New-Object System.Collections.ArrayList
           $matrixItems.Add(@{
-            configuration = 'Release'
+            configuration = 'Debug'
             platform = 'x64'
             'output-dir' = 'x64'
           })
           $matrixItems.Add(@{
-            configuration = 'Release'
+            configuration = 'Debug'
             platform = 'x86'
             'output-dir' = 'Win32'
           })
-        }
-        Set-Content -Path $env:GITHUB_OUTPUT -Value "matrix=$(@{ include = $matrixItems } | ConvertTo-Json -Compress)"
+          if ($env:GITHUB_REF -like 'refs/heads/master*') {
+            $matrixItems.Add(@{
+              configuration = 'Release'
+              platform = 'x64'
+              'output-dir' = 'x64'
+            })
+            $matrixItems.Add(@{
+              configuration = 'Release'
+              platform = 'x86'
+              'output-dir' = 'Win32'
+            })
+          }
+          Set-Content -Path $env:GITHUB_OUTPUT -Value "matrix=$(@{ include = $matrixItems } | ConvertTo-Json -Compress)"
 
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}
