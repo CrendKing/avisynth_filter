@@ -28,8 +28,8 @@ if (!(Test-Path $workingDir)) {
         foreach ($asset in $rel.assets) {
             if ($asset.name -like 'AviSynthPlus_*-filesonly.7z') {
                 Invoke-WebRequest $asset.browser_download_url -OutFile $asset.name
-                7z e $asset.name -olibs\32 '*\x86\Output\c_api\*.lib'
-                7z e $asset.name -olibs\64 '*\x64\Output\c_api\*.lib'
+                7z e $asset.name -olibs\32 '*\x86\c_api\*.lib'
+                7z e $asset.name -olibs\64 '*\x64\c_api\*.lib'
                 $foundAsset = $true
                 break
             }
