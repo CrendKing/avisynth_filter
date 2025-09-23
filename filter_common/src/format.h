@@ -244,44 +244,55 @@ private:
     static constexpr auto InterleaveUV(const BYTE *src1, const BYTE *src2, int srcStride1, int srcStride2, BYTE *dst, int dstStride, int rowSize, int height) -> void {
         Environment::GetInstance().Log(L"InterleaveUV() start");
 
+        using Component = std::array<BYTE, componentSize>;
         using Vector = std::conditional_t<intrinsicType == 1, __m128i
                      , std::conditional_t<intrinsicType == 2, __m256i
-                     , std::array<BYTE, componentSize>>>;
+                     , Component>>;
 
-        const int cycles = DivideRoundUp(rowSize, sizeof(Vector) * 2);
+        const int mainCycles = rowSize / (sizeof(Vector) * 2);
+        const int remainderCycles = (rowSize / 2 - mainCycles * sizeof(Vector)) / sizeof(Component);
 
         for (int y = 0; y < height; ++y) {
-            const Vector *src1Line = reinterpret_cast<const Vector *>(src1);
-            const Vector *src2Line = reinterpret_cast<const Vector *>(src2);
-            Vector *dstLine = reinterpret_cast<Vector *>(dst);
+            const Vector *currSrc1AsVector = reinterpret_cast<const Vector *>(src1);
+            const Vector *currSrc2AsVector = reinterpret_cast<const Vector *>(src2);
+            Vector *currDstAsVector = reinterpret_cast<Vector *>(dst);
 
-            for (int i = 0; i < cycles; ++i) {
-                const Vector src1Vec = *src1Line++;
-                const Vector src2Vec = *src2Line++;
+            for (int i = 0; i < mainCycles; ++i) {
+                const Vector src1Vector = *currSrc1AsVector++;
+                const Vector src2Vector = *currSrc2AsVector++;
 
                 if constexpr (intrinsicType == 1) {
                     if constexpr (componentSize == 1) {
-                        *dstLine++ = _mm_unpacklo_epi8(src1Vec, src2Vec);
-                        *dstLine++ = _mm_unpackhi_epi8(src1Vec, src2Vec);
+                        *currDstAsVector++ = _mm_unpacklo_epi8(src1Vector, src2Vector);
+                        *currDstAsVector++ = _mm_unpackhi_epi8(src1Vector, src2Vector);
                     } else if constexpr (componentSize == 2) {
-                        *dstLine++ = _mm_unpacklo_epi16(src1Vec, src2Vec);
-                        *dstLine++ = _mm_unpackhi_epi16(src1Vec, src2Vec);
+                        *currDstAsVector++ = _mm_unpacklo_epi16(src1Vector, src2Vector);
+                        *currDstAsVector++ = _mm_unpackhi_epi16(src1Vector, src2Vector);
                     }
                 } else if constexpr (intrinsicType == 2) {
-                    const Vector src1Permute = _mm256_permute4x64_epi64(src1Vec, _UV_PERMUTE_INDEX);
-                    const Vector src2Permute = _mm256_permute4x64_epi64(src2Vec, _UV_PERMUTE_INDEX);
+                    const Vector src1Permute = _mm256_permute4x64_epi64(src1Vector, _UV_PERMUTE_INDEX);
+                    const Vector src2Permute = _mm256_permute4x64_epi64(src2Vector, _UV_PERMUTE_INDEX);
 
                     if constexpr (componentSize == 1) {
-                        *dstLine++ = _mm256_unpacklo_epi8(src1Permute, src2Permute);
-                        *dstLine++ = _mm256_unpackhi_epi8(src1Permute, src2Permute);
+                        *currDstAsVector++ = _mm256_unpacklo_epi8(src1Permute, src2Permute);
+                        *currDstAsVector++ = _mm256_unpackhi_epi8(src1Permute, src2Permute);
                     } else if constexpr (componentSize == 2) {
-                        *dstLine++ = _mm256_unpacklo_epi16(src1Permute, src2Permute);
-                        *dstLine++ = _mm256_unpackhi_epi16(src1Permute, src2Permute);
+                        *currDstAsVector++ = _mm256_unpacklo_epi16(src1Permute, src2Permute);
+                        *currDstAsVector++ = _mm256_unpackhi_epi16(src1Permute, src2Permute);
                     }
                 } else {
-                    *dstLine++ = src1Vec;
-                    *dstLine++ = src2Vec;
+                    *currDstAsVector++ = src1Vector;
+                    *currDstAsVector++ = src2Vector;
                 }
+            }
+
+            const Component *currSrc1AsComponent = reinterpret_cast<const Component *>(currSrc1AsVector);
+            const Component *currSrc2AsComponent = reinterpret_cast<const Component *>(currSrc2AsVector);
+            Component *currDstAsComponent = reinterpret_cast<Component *>(currDstAsVector);
+
+            for (int i = 0; i < remainderCycles; ++i) {
+                *currDstAsComponent++ = *currSrc1AsComponent++;
+                *currDstAsComponent++ = *currSrc2AsComponent++;
             }
 
             src1 += srcStride1;
