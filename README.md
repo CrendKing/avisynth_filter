@@ -49,6 +49,37 @@ Run uninstall.cmd to unregister the filters and clean up user data.
 
 运行 uninstall.cmd 删除注册信息和用户信息。
 
+## Example scripts
+
+Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.
+
+### AviSynth
+
+```
+AvsFilterSource()
+
+fps = Round(FrameRate())
+if (fps < 20) {
+    Subtitle("This video has low FPS")
+    Prefetch(4)
+} else {
+    AvsFilterDisconnect()
+}
+```
+
+### VapourSynth
+
+```
+from vapoursynth import core
+import math
+
+fps = round(VpsFilterSource.fps)
+if fps < 20:
+    core.text.Text(VpsFilterSource, 'This video has low FPS').set_output()
+else:
+    VpsFilterDisconnect = True
+```
+
 ## Usage
 
 ### Common
@@ -120,37 +151,6 @@ Represents the path to the source video file.
 Since version 0.6.0, these filters allow other programs to remotely control it via API. By default the functionality is disabled and can be activated from settings (requires restarting the video player after changing).
 
 For details of the API, please refer to the comments in source file [api.h](https://github.com/CrendKing/avisynth_filter/blob/master/filter_common/src/api.h).
-
-## Example scripts
-
-Add a line of text to videos with less than 20 FPS. Otherwise disconnect the filter.
-
-### AviSynth
-
-```
-AvsFilterSource()
-
-fps = Round(FrameRate())
-if (fps < 20) {
-    Subtitle("This video has low FPS")
-    Prefetch(4)
-} else {
-    AvsFilterDisconnect()
-}
-```
-
-### VapourSynth
-
-```
-from vapoursynth import core
-import math
-
-fps = round(VpsFilterSource.fps)
-if fps < 20:
-    core.text.Text(VpsFilterSource, 'This video has low FPS').set_output()
-else:
-    VpsFilterDisconnect = True
-```
 
 ## Build
 
