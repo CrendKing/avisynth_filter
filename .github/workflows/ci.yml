@@ -53,13 +53,13 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build
         run: pwsh -File build.ps1 -configuration ${{ matrix.configuration }} -platform ${{ matrix.platform }}
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.configuration }} ${{ matrix.platform }}
           path: |
