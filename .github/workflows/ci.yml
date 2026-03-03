@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   prepare:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -46,20 +46,20 @@ jobs:
 
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     needs: prepare
     strategy:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
       fail-fast: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build
         run: pwsh -File build.ps1 -configuration ${{ matrix.configuration }} -platform ${{ matrix.platform }}
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.configuration }} ${{ matrix.platform }}
           path: |
