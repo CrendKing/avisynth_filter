@@ -49,11 +49,43 @@ auto AutoReleaseVSFrame::Destroy() -> void {
 FrameServerCommon::FrameServerCommon() {
     Environment::GetInstance().Log(L"FrameServerCommon()");
 
-    _vsScriptApi = getVSScriptAPI(VSSCRIPT_API_VERSION);
-    if (_vsScriptApi == nullptr) {
-        const WCHAR *errorMessage = L"Unable to initialize VapourSynth API 4.0";
-        Environment::GetInstance().Log(errorMessage);
-        MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
+    wchar_t *vsscript_path;
+    _wdupenv_s(&vsscript_path, nullptr, L"VSSCRIPT_PATH");
+    const HMODULE vsscript_lib = LoadLibraryExW(vsscript_path != nullptr ? vsscript_path : L"VSScript.dll", nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    free(vsscript_path);
+
+    typedef VS_CC const VSSCRIPTAPI *(*getVSScriptAPI_fn)(int);
+    typedef VS_CC const char *(*getVSScriptAPILastError_fn)(void);
+
+    getVSScriptAPI_fn getVSScriptAPI_func = nullptr;
+    getVSScriptAPILastError_fn getVSScriptAPILastError_func = nullptr;
+
+    if (vsscript_lib != nullptr) {
+        getVSScriptAPI_func = reinterpret_cast<getVSScriptAPI_fn>(GetProcAddress(vsscript_lib, "getVSScriptAPI"));
+        getVSScriptAPILastError_func = reinterpret_cast<getVSScriptAPILastError_fn>(GetProcAddress(vsscript_lib, "getVSScriptAPILastError"));
+    }
+
+    const char *unknownErrorMessage = "Last error unknown";
+    std::string errorMessage;
+
+    if (getVSScriptAPI_func != nullptr) {
+        _vsScriptApi = getVSScriptAPI_func(VSSCRIPT_API_VERSION);
+        if (_vsScriptApi == nullptr) {
+            const char *lastErrorMessage = getVSScriptAPILastError_func ? getVSScriptAPILastError_func() : unknownErrorMessage;
+            errorMessage = std::format("Failed to initialize VapourSynth VSScript library: {}", lastErrorMessage);
+        }
+    } else {
+        errorMessage = "Failed to load VapourSynth VSScript library";
+    }
+
+    if (!errorMessage.empty()) {
+        const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, errorMessage.data(), (int) errorMessage.size(), NULL, 0);
+        std::wstring errorMessageWide(sizeNeeded, 0);
+        MultiByteToWideChar(CP_UTF8, 0, errorMessage.data(), static_cast<int>(errorMessage.size()), errorMessageWide.data(), sizeNeeded);
+
+        Environment::GetInstance().Log(errorMessageWide);
+        MessageBoxW(nullptr, errorMessageWide.c_str(), FILTER_NAME_FULL, MB_ICONERROR);
+
         throw;
     }
 

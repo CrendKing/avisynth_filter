@@ -48,25 +48,14 @@ if (!(Test-Path $workingDir)) {
     New-Item -ItemType Directory $workingDir -ErrorAction SilentlyContinue
     Set-Location $workingDir
 
-    $latestRelease = Invoke-RestMethod -Headers @{ 'Accept' = 'application/vnd.github.v3+json' } 'https://api.github.com/repos/vapoursynth/vapoursynth/releases'
-    $foundAsset = $false
-    foreach ($rel in $releases) {
-        foreach ($asset in $latestRelease.assets) {
-            if ($asset.name -like 'VapourSynth64-Portable-R*.7z') {
-                Invoke-WebRequest $asset.browser_download_url -OutFile $asset.name
-                7z e $asset.name -oinclude 'sdk\include\*'
-                7z e $asset.name -olibs\64 'sdk\lib64\*'
-                $foundAsset = $true
-                break
-            }
-        }
+    $githubApiUrl = 'https://api.github.com/repos/vapoursynth/vapoursynth/contents/include'
+    $files = Invoke-RestMethod $githubApiUrl
 
-        if ($foundAsset) {
-            break
+    foreach ($file in $files) {
+        if ($file.type -eq 'file') {
+            Invoke-WebRequest $file.download_url -OutFile $file.name
         }
     }
-
-    Remove-Item '*.7z'
 }
 
 Set-Location $PSScriptRoot

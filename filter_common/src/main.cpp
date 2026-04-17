@@ -12,9 +12,6 @@
 
 #ifdef AVSF_AVISYNTH
     #pragma comment(lib, "AviSynth")
-#else
-    #pragma comment(lib, "VapourSynth")
-    #pragma comment(lib, "VSScript")
 #endif
 
 namespace SynthFilter {

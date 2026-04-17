@@ -24,13 +24,9 @@
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)dep_vapoursynth\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dep_vapoursynth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>AVSF_VAPOURSYNTH;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)dep_vapoursynth\libs\$(PlatformArchitecture);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>VSScript.dll</DelayLoadDLLs>
-    </Link>
     <ResourceCompile>
       <PreprocessorDefinitions>AVSF_VAPOURSYNTH;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
