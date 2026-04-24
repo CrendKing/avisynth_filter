@@ -65,13 +65,14 @@ FrameServerCommon::FrameServerCommon() {
         getVSScriptAPILastError_func = reinterpret_cast<getVSScriptAPILastError_fn>(GetProcAddress(vsscript_lib, "getVSScriptAPILastError"));
     }
 
-    const char *unknownErrorMessage = "Last error unknown";
+    const char *unknownErrorMessage = "last error unknown";
     std::string errorMessage;
 
     if (getVSScriptAPI_func != nullptr) {
         _vsScriptApi = getVSScriptAPI_func(VSSCRIPT_API_VERSION);
         if (_vsScriptApi == nullptr) {
-            const char *lastErrorMessage = getVSScriptAPILastError_func ? getVSScriptAPILastError_func() : unknownErrorMessage;
+            const char *vsErrorMessage = getVSScriptAPILastError_func != nullptr ? getVSScriptAPILastError_func() : nullptr;
+            const char *lastErrorMessage = vsErrorMessage != nullptr ? vsErrorMessage : unknownErrorMessage;
             errorMessage = std::format("Failed to initialize VapourSynth VSScript library: {}", lastErrorMessage);
         }
     } else {
