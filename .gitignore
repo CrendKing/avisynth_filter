@@ -5,10 +5,9 @@ Win32/
 x64/
 x86/
 
-*.sln.startup.json
-*.zip
+/*.sln.startup.json
+/*.zip
 /dep_*/
 /filter_common/src/git_hash.h
 /wiki/
-release*.cmd
-scripts/
+/scripts/

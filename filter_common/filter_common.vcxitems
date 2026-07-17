@@ -9,7 +9,11 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <PreBuildEvent>
-      <Command>for /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH "%%H"&gt; "$(MSBuildThisFileDirectory)src\git_hash.h"</Command>
+      <Command>
+        if "$(Configuration)" == "Release" (
+          for /f "tokens=* delims=" %%H in ('git rev-parse --short HEAD') do @echo #define FILTER_GIT_HASH "%%H"&gt; "$(MSBuildThisFileDirectory)src\git_hash.h"
+        )
+      </Command>
     </PreBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)src;$(SolutionDir)baseclasses\src;$(SolutionDir)dep_simpleini;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
