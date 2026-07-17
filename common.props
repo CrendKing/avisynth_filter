@@ -5,6 +5,11 @@
     <LinkIncremental Condition="'$(Configuration)' == 'Debug'">true</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)' == 'Release'">false</LinkIncremental>
     <TargetName>$(ProjectName)_$(PlatformArchitecture)</TargetName>
+
+    <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Debug|Win32'">WIN32;_DEBUG;_WINDOWS</CommonPreprocessorDefinitions>
+    <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">_DEBUG;_WINDOWS</CommonPreprocessorDefinitions>
+    <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Release|Win32'">WIN32;NDEBUG;_WINDOWS</CommonPreprocessorDefinitions>
+    <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">NDEBUG;_WINDOWS</CommonPreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -24,7 +29,6 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -37,10 +41,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization Condition="'$(Configuration)' == 'Debug'">Disabled</Optimization>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Debug|Win32'">WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Release|Win32'">WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(CommonPreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary Condition="'$(Configuration)' == 'Debug'">MultiThreadedDebug</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)' == 'Release'">MultiThreaded</RuntimeLibrary>
       <SDLCheck>true</SDLCheck>
@@ -48,6 +49,9 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>$(CommonPreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
     <Link>
       <EnableCOMDATFolding Condition="'$(Configuration)' == 'Release'">true</EnableCOMDATFolding>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>

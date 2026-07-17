@@ -5,12 +5,12 @@
 
 namespace SynthFilter {
 
-#include "git_hash.h"
-
 #ifdef _DEBUG
     #define FILTER_VARIANT       " [Debug]"
+    #define FILTER_GIT_HASH      "HEAD"
 #else
     #define FILTER_VARIANT
+    #include "git_hash.h"
 #endif
 
 #define STRINGIZE_HELPER(x)      #x
