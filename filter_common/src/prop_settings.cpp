@@ -1,4 +1,4 @@
-// License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE
+// License: https://github.com/CrendKing/avisynth_filter/blob/master/LICENSE.txt
 
 #include "prop_settings.h"
 
