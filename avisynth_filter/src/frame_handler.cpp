@@ -287,7 +287,8 @@ auto FrameHandler::PrepareOutputSample(ATL::CComPtr<IMediaSample> &outSample, RE
             }
 
             Format::WriteSample(_filter._outputVideoFormat, outputFrame, outputBuffer);
-        } catch (AvisynthError) {
+        } catch (const AvisynthError &error) {
+            Environment::GetInstance().Log(ConvertUtf8ToWide(error.msg));
             return false;
         }
     }

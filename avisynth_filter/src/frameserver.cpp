@@ -38,6 +38,11 @@ FrameServerCommon::FrameServerCommon() {
     Environment::GetInstance().Log(L"FrameServerCommon()");
 
     IScriptEnvironment *env = CreateEnv();
+    if (env == nullptr) {
+        MessageBoxW(nullptr, L"Failed to load and initialize AviSynth library", FILTER_NAME_FULL, MB_ICONERROR);
+        throw "AviSynth error";
+    }
+
     AVS_linkage = env->GetAVSLinkage();
 
     _versionString = env->Invoke("Eval", AVSValue("VersionString()")).AsString();
@@ -48,7 +53,8 @@ FrameServerCommon::FrameServerCommon() {
         env->CheckVersion(8);
         _isFramePropsSupported = true;
         Environment::GetInstance().Log(L"AviSynth supports frame properties");
-    } catch (...) {
+    } catch (const AvisynthError &error) {
+        Environment::GetInstance().Log(ConvertUtf8ToWide(error.msg));
     }
 
     env->DeleteScriptEnvironment();
@@ -67,15 +73,13 @@ auto FrameServerCommon::CreateEnv() -> IScriptEnvironment * {
     CreateScriptEnvironment2() was not exported that way, thus has different names between x64 and x86 builds.
     We don't use any new feature from IScriptEnvironment2 anyway.
     */
-    IScriptEnvironment *env = CreateScriptEnvironment(MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION);
-    if (env == nullptr) {
-        const WCHAR *errorMessage = L"CreateScriptEnvironment() returns nullptr";
-        Environment::GetInstance().Log(errorMessage);
-        MessageBoxW(nullptr, errorMessage, FILTER_NAME_FULL, MB_ICONERROR);
-        throw;
-    }
 
-    return env;
+    __try {
+        return CreateScriptEnvironment(MINIMUM_AVISYNTH_PLUS_INTERFACE_VERSION);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        Environment::GetInstance().Log(L"AviSynth CreateScriptEnvironment() failed, error code %u", GetExceptionCode());
+        return nullptr;
+    }
 }
 
 auto FrameServerBase::CreateAndSetupEnv() -> void {
@@ -104,8 +108,8 @@ auto FrameServerBase::ReloadScript(const AM_MEDIA_TYPE &mediaType, bool ignoreDi
 
         try {
             invokeResult = _env->Invoke("Import", AVSValue(args.data(), static_cast<int>(args.size())), argNames.data());
-        } catch (AvisynthError &err) {
-            _errorString = err.msg;
+        } catch (const AvisynthError &error) {
+            _errorString = error.msg;
         }
     }
 

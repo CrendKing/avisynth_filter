@@ -80,14 +80,12 @@ FrameServerCommon::FrameServerCommon() {
     }
 
     if (!errorMessage.empty()) {
-        const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, errorMessage.data(), (int) errorMessage.size(), NULL, 0);
-        std::wstring errorMessageWide(sizeNeeded, 0);
-        MultiByteToWideChar(CP_UTF8, 0, errorMessage.data(), static_cast<int>(errorMessage.size()), errorMessageWide.data(), sizeNeeded);
+        const std::wstring errorMessageWide = ConvertUtf8ToWide(errorMessage);
 
         Environment::GetInstance().Log(errorMessageWide);
         MessageBoxW(nullptr, errorMessageWide.c_str(), FILTER_NAME_FULL, MB_ICONERROR);
 
-        throw;
+        throw "VapourSynth error";
     }
 
     _vsApi = _vsScriptApi->getVSAPI(VAPOURSYNTH_API_VERSION);

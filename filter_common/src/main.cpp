@@ -54,12 +54,18 @@ constexpr AMOVIESETUP_FILTER REG_FILTER {
 
 template <typename T>
 constexpr auto CALLBACK CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) -> CUnknown * {
-    CUnknown *newInstance = new T(pUnk, phr);
-    if (newInstance == nullptr) {
-        *phr = E_OUTOFMEMORY;
-    }
+    try {
+        T *newInstance = new T(pUnk, phr);
 
-    return newInstance;
+        if (newInstance == nullptr) {
+            *phr = E_OUTOFMEMORY;
+        }
+
+        return newInstance;
+    } catch (...) {
+        *phr = E_FAIL;
+        return nullptr;
+    }
 }
 
 auto RegisterFilter() -> HRESULT {
