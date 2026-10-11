@@ -35,7 +35,7 @@ Environment::Environment()
         if (_logFile != nullptr) {
             _logStartTime = std::chrono::steady_clock::now();
 
-            Log(L"Filter version: %hs", FILTER_VERSION_STRING);
+            Log(L"Filter version: %hs", FILTER_VERSION_LONG);
             Log(L"Configured script file: %ls", _scriptPath.filename().c_str());
 
             std::ranges::for_each(

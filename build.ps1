@@ -65,5 +65,10 @@ if (!(Test-Path $workingDir)) {
     git clone https://github.com/brofield/simpleini.git --depth=1 dep_simpleini
 }
 
-MSBuild.exe -property:"Configuration=${Configuration};Platform=${Platform}" -maxCpuCount -nologo avisynth_filter.sln
+$gitHash = try { git rev-parse --short HEAD } catch {}
+if ($gitHash) {
+    $gitHashProp = "-property:FilterGitHash=${gitHash}"
+}
+
+MSBuild.exe -property:"Configuration=${Configuration};Platform=${Platform}" $gitHashProp -maxCpuCount -nologo avisynth_filter.sln
 exit $LASTEXITCODE

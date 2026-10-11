@@ -10,6 +10,7 @@
     <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">_DEBUG;_WINDOWS</CommonPreprocessorDefinitions>
     <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Release|Win32'">WIN32;NDEBUG;_WINDOWS</CommonPreprocessorDefinitions>
     <CommonPreprocessorDefinitions Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">NDEBUG;_WINDOWS</CommonPreprocessorDefinitions>
+    <CommonPreprocessorDefinitions Condition="'$(FilterGitHash)' != ''">FILTER_GIT_HASH="$(FilterGitHash)"</CommonPreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
