@@ -31,6 +31,7 @@
       <AdditionalOptions>/Zc:strictStrings- %(AdditionalOptions)</AdditionalOptions>
       <BasicRuntimeChecks Condition="'$(Configuration)' == 'Debug'">EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
       <EnableParallelCodeGeneration Condition="'$(Configuration)' == 'Release'">true</EnableParallelCodeGeneration>
       <FunctionLevelLinking Condition="'$(Configuration)' == 'Release'">true</FunctionLevelLinking>
       <IntrinsicFunctions Condition="'$(Configuration)' == 'Release'">true</IntrinsicFunctions>
@@ -47,7 +48,7 @@
     </ClCompile>
     <Link>
       <EnableCOMDATFolding Condition="'$(Configuration)' == 'Release'">true</EnableCOMDATFolding>
-      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <OptimizeReferences Condition="'$(Configuration)' == 'Release'">true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
     </Link>

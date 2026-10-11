@@ -1,6 +1,6 @@
 [CmdletBinding()]
 Param(
-    $Configuration = 'release',
+    $Configuration = 'Release',
     $Platform = 'x64'
 )
 
