@@ -258,7 +258,6 @@ auto FrameHandler::EndFlush() -> void {
 auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrame *f, int n, VSNode *node, const char *errorMsg) -> void {
     if (f == nullptr) {
         Environment::GetInstance().Log(L"Fail to generate output frame %6d with message: %hs", n, errorMsg);
-        return;
     }
 
     FrameHandler *frameHandler = static_cast<FrameHandler *>(userData);
@@ -274,6 +273,16 @@ auto VS_CC FrameHandler::VpsGetFrameCallback(void *userData, const VSFrame *f, i
     } else {
         {
             const std::unique_lock uniqueOutputLock(frameHandler->_outputMutex);
+
+            if (f == nullptr) {
+                const auto prevFrameIter = frameHandler->_outputFrames.find(n - 1);
+                if (prevFrameIter == frameHandler->_outputFrames.end()) {
+                    return;
+                } else {
+                    f = AVSF_VPS_API->addFrameRef(prevFrameIter->second.frame);
+                    Environment::GetInstance().Log(L"Fallback by reusing the previous frame");
+                }
+            }
 
             frameHandler->_outputFrames[n] = const_cast<VSFrame *>(f);
         }
